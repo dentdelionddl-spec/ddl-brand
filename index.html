@@ -53,10 +53,11 @@ button{cursor:pointer}
 .brandtitle .dot{width:10px;height:10px;border-radius:3px}
 .brandsub{font-family:var(--mono);font-size:10px;letter-spacing:.1em;color:var(--mut);text-transform:uppercase}
 .spacer{flex:1}
-.monthnav{display:flex;align-items:center;gap:2px;background:var(--card);border:1px solid var(--line);border-radius:999px;padding:3px}
-.monthnav button{border:0;background:transparent;padding:4px 9px;border-radius:999px;color:var(--mut)}
+.monthnav{display:flex;align-items:center;gap:0;background:transparent;border:0;border-radius:0;padding:0}
+.monthnav button{border:0;background:transparent;padding:4px 7px;border-radius:8px;color:var(--mut)}
+.monthnav button:last-child{padding-right:0}
 .monthnav button:hover{background:var(--line2);color:var(--ink)}
-.monthnav .cur{font-family:var(--mono);font-size:12px;font-weight:600;color:var(--ink);padding:4px 4px;min-width:96px;text-align:center}
+.monthnav .cur{font-family:var(--mono);font-size:12px;font-weight:600;color:var(--ink);padding:4px 2px;min-width:88px;text-align:center}
 .tabrow{display:flex;align-items:center;gap:12px;max-width:1240px;width:100%}
 .tabrow .monthnav{margin-left:auto;flex:0 0 auto;margin-top:12px}
 .tabs{display:flex;gap:2px;margin-top:12px;overflow-x:auto;scrollbar-width:none;flex:1;min-width:0}
