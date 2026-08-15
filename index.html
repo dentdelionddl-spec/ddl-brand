@@ -369,6 +369,9 @@ function render(){
   </div>`;
   try{ $('#view').innerHTML = viewHtml(); }
   catch(e){ console.error(e); $('#view').innerHTML = '<div class="card"><div class="empty"><b>이 화면을 그리지 못했습니다</b>' + esc(String(e.message||e)) + '<br><br><button class="btn btn--sm" data-act="go-summary">요약으로 이동</button></div></div>'; }
+  const bb=document.querySelector('.brandbar'), tb=document.querySelector('.topbar');
+  if(bb&&tb) tb.style.top=bb.offsetHeight+'px';
+  if(!window.__stickFix){ window.__stickFix=1; window.addEventListener('resize',()=>{ const b=document.querySelector('.brandbar'), t=document.querySelector('.topbar'); if(b&&t) t.style.top=b.offsetHeight+'px'; }); }
   bind();
 }
 
