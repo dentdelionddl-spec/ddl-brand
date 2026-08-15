@@ -508,7 +508,7 @@ function calendarView(){
     cells.push(`<div class="cell ${ds===TODAY?'cell--today':''}">
       <div class="cell__d ${dow===0?'cell__sun':''}">${d}</div>
       ${evs.map(e=>`<button class="ev ${e.done?'ev--done':''}" data-content="${e.id}" style="border-left-color:${hueBg(TYPE_HUE[e.type]||0,55)}">${e.end&&e.end!==e.date?(ds===e.date?'▶ ':(ds===e.end?'■ ':'· ')):''}${esc(e.type)} · ${esc(e.title||'')}</button>`).join('')}
-      ${tks.map(t=>`<button class="ev ev--task ${t.done?'ev--done':''}" data-edit-task="${t.id}" title="업무">${t.done?'✓':'□'} ${t.start&&t.start!==t.due?(ds===t.start?'▶ ':(ds===t.due?'■ ':'· ')):''}${esc(t.title)}</button>`).join('')}
+      ${tks.map(t=>`<span class="ev ev--task ${t.done?'ev--done':''}"><b data-toggle-task-btn="${t.id}" title="완료 표시" style="cursor:pointer;padding:0 3px 0 0">${t.done?'✓':'□'}</b><span data-edit-task="${t.id}" style="cursor:pointer">${t.start&&t.start!==t.due?(ds===t.start?'▶ ':(ds===t.due?'■ ':'· ')):''}${esc(t.title)}</span></span>`).join('')}
       <button class="cell__add" data-newdate="${ds}" aria-label="${d}일 추가">+</button>
     </div>`);
   }
@@ -549,135 +549,28 @@ function tasksView(){
   const b=brandOf(UI.brand);
   const all=tasksOf(b.id);
   const open=all.filter(t=>!t.done), done=all.filter(t=>t.done);
+  const showDone = UI.taskDone===true;
+  const list = showDone? done : open;
   const sorter=(x,y)=>(x.due||'9999').localeCompare(y.due||'9999')||PRIOS.indexOf(x.priority)-PRIOS.indexOf(y.priority);
-  const soonEnd=dateStr(new Date(today.getFullYear(),today.getMonth(),today.getDate()+7));
-
-  const areas=areasIn(b.id);
-  const groups = areas.length? areas : ['미분류'];
-  const sections=groups.map(a=>{
-    const list=open.filter(t=>((t.area||'').trim()||'미분류')===a).sort(sorter);
-    const week=list.filter(t=>t.due&&t.due<=soonEnd);
-    const later=list.filter(t=>!week.includes(t));
-    if(!list.length) return `<div class="areahd"><h3>${a}</h3><span class="line"></span><span class="eyebrow">0건</span></div>
-      <div class="empty" style="border:1px dashed var(--line);border-radius:8px">열린 업무 없음</div>`;
-    return `<div class="areahd"><h3>${a}</h3><span class="line"></span><span class="eyebrow">${list.length}건</span></div>
-      <div class="tasks2">
-        <div><div class="eyebrow" style="margin-bottom:6px">7일 이내 · ${week.length}</div>${week.map(t=>taskRow(t)).join('')||'<div class="empty" style="border:1px dashed var(--line);border-radius:8px">없음</div>'}</div>
-        <div><div class="eyebrow" style="margin-bottom:6px">이후 · ${later.length}</div>${later.map(t=>taskRow(t)).join('')||'<div class="empty" style="border:1px dashed var(--line);border-radius:8px">없음</div>'}</div>
-      </div>`;
-  }).join('');
-
+  const areas=[...new Set(list.map(t=>(t.area||'').trim()||'미분류'))]
+    .sort((x,y)=>list.filter(t=>((t.area||'').trim()||'미분류')===y).length - list.filter(t=>((t.area||'').trim()||'미분류')===x).length);
   const pct = all.length? Math.round(done.length/all.length*100):0;
-  return `<div style="display:flex;align-items:center;gap:12px;margin-bottom:6px">
-      <div class="mono" style="font-size:13px">진행률 <b>${pct}%</b> <span style="color:var(--mut)">(${done.length}/${all.length})</span></div>
-      <div class="track" style="flex:1;max-width:320px"><i style="width:${pct}%;background:${hueBg(b.hue,58)}"></i></div>
-      <div class="spacer"></div>
+  return `<div style="display:flex;align-items:center;gap:12px;margin-bottom:12px;flex-wrap:wrap">
+      <div class="tabs" style="margin:0;border:1px solid var(--line);border-radius:999px;padding:2px;background:var(--card)">
+        <button class="tab" data-taskview="todo" aria-selected="${!showDone}" style="border:0;border-radius:999px;padding:6px 14px">할 일 ${open.length}</button>
+        <button class="tab" data-taskview="done" aria-selected="${showDone}" style="border:0;border-radius:999px;padding:6px 14px">완료 ${done.length}</button>
+      </div>
+      <div class="mono" style="font-size:12.5px;color:var(--mut)">진행률 ${pct}%</div>
+      <div class="track" style="flex:1;max-width:260px"><i style="width:${pct}%;background:${hueBg(b.hue,58)}"></i></div>
+      <div class="spacer" style="flex:1"></div>
       <button class="btn btn--primary btn--sm" data-act="task-new">업무 추가</button>
     </div>
-    ${sections}
-    ${done.length?`<div class="areahd"><h3>완료</h3><span class="line"></span><span class="eyebrow">${done.length}건</span></div>
-      <div class="tasks2"><div>${done.slice(0,20).map(t=>taskRow(t,true)).join('')}</div><div></div></div>`:''}`;
-}
-
-/* ---------- KPI ---------- */
-function kpiView(){
-  const b=brandOf(UI.brand), ym=UI.ym;
-  const {goal,actual}=totals(b.id,ym);
-  const pacePct=Math.round(paceRatio(ym)*100);
-  const pct = goal? actual/goal*100 : 0;
-  const acts=actionsOf(b.id,ym);
-  return `
-  <section class="card">
-    <div class="card__hd"><h3>목표 매출</h3><span class="eyebrow" style="margin-left:auto">${ymLabel(ym)}</span></div>
-    <div class="card__bd">
-      <div style="display:flex;align-items:baseline;gap:10px;margin-bottom:12px">
-        <div class="mono" style="font-size:30px;font-weight:600;letter-spacing:-.02em">${man(actual)}<span style="font-size:13px;color:var(--mut)">만원</span></div>
-        <div class="mono" style="font-size:12.5px;color:var(--mut)">목표 ${man(goal)}만 · 달성 ${Math.round(pct)}%</div>
-        <div class="spacer" style="flex:1"></div>
-        <span class="tag ${pct>=pacePct?'tag--ok':'tag--high'}">진도 ${pacePct}%</span>
-      </div>
-      <div class="track" style="height:18px">
-        <i style="width:${Math.min(100,pct)}%;background:${pct<pacePct-5?'#C9A0A8':hueBg(b.hue,58)}"></i>
-        <span class="pace" style="left:${Math.min(100,pacePct)}%"></span>
-      </div>
-      <div class="eyebrow" style="margin-top:10px">목표·실적 숫자는 매출·손익 탭에서 채널별로 입력합니다</div>
-    </div>
-  </section>
-
-  <div style="display:flex;align-items:center;gap:10px;margin:18px 0 8px">
-    <h3 style="margin:0;font-size:13px;font-weight:700">월별 액션플랜</h3>
-    <span class="eyebrow">목표 매출을 만들기 위한 행동 지표</span>
-    <div class="spacer" style="flex:1"></div>
-    <button class="btn btn--primary btn--sm" data-act="action-new">액션플랜 추가</button>
-  </div>
-  ${acts.length? acts.map(a=>actionCard(a,b)).join('')
-   : `<div class="card"><div class="empty"><b>이 달 액션플랜이 없습니다</b>"릴스 12편 발행", "29CM 상품 30개 등록"처럼 매출을 만드는 행동을 적고, 그 아래에 실제 업무를 붙이세요.</div></div>`}`;
-}
-function actionCard(a,b){
-  const pr=actionProgress(a);
-  const tasks=(a.taskIds||[]).map(taskById).filter(Boolean)
-    .sort((x,y)=>(x.due||'9999').localeCompare(y.due||'9999'));
-  const missing=(a.taskIds||[]).length - tasks.length;
-  return `<section class="card" style="margin-bottom:12px">
-    <div class="card__hd">
-      <h3>${esc(a.title)}</h3>
-      <span class="mono" style="font-size:12px;color:var(--mut)">${pr.byTask?`업무 ${pr.cur}/${pr.goal}`:`${won(pr.cur)} / ${won(pr.goal)}${a.unit?' '+esc(a.unit):''}`}</span>
-      <button class="btn btn--ghost btn--sm" data-edit-action="${a.id}" style="margin-left:auto">편집</button>
-    </div>
-    <div class="card__bd">
-      <div class="track" style="margin-bottom:12px"><i style="width:${pr.pct}%;background:${hueBg(b.hue,58)}"></i></div>
-      ${a.memo?`<div style="font-size:12.5px;color:var(--mut);margin-bottom:10px;white-space:pre-wrap">${esc(a.memo)}</div>`:''}
-      <div class="eyebrow" style="margin-bottom:6px">세부 업무 ${tasks.length}건${missing?` · 연결 끊김 ${missing}`:''}</div>
-      ${tasks.map(t=>taskRow(t,true)).join('')||'<div class="empty" style="border:1px dashed var(--line);border-radius:8px">아직 붙인 업무가 없습니다</div>'}
-      <div style="display:flex;gap:8px;margin-top:10px">
-        <button class="btn btn--sm" data-link-action="${a.id}">기존 업무 연결</button>
-        <button class="btn btn--sm" data-newtask-action="${a.id}">새 업무 만들기</button>
-      </div>
-    </div>
-  </section>`;
-}
-function actionModal(id){
-  const isNew=!id;
-  const a=isNew? {id:uid(),brandId:UI.brand,ym:UI.ym,title:'',goal:'',cur:'',unit:'',memo:'',taskIds:[]}
-               : DB.actions.find(x=>x.id===id);
-  modal({
-    title:isNew?'액션플랜 추가':'액션플랜 편집',
-    body:`<label class="f"><span>액션플랜</span><input type="text" id="a_title" value="${esc(a.title)}" placeholder="릴스 12편 발행" /></label>
-      <div class="row2">
-        <label class="f"><span>목표치 (비우면 업무 완료율로 계산)</span><input type="number" id="a_goal" value="${a.goal||''}" /></label>
-        <label class="f"><span>현재치</span><input type="number" id="a_cur" value="${a.cur||''}" /></label>
-      </div>
-      <label class="f"><span>단위</span><input type="text" id="a_unit" value="${esc(a.unit||'')}" placeholder="편 · 건 · 회" /></label>
-      <label class="f"><span>메모</span><textarea id="a_memo" rows="3">${esc(a.memo||'')}</textarea></label>`,
-    onSave:()=>{
-      const v=$('#a_title').value.trim(); if(!v){ toast('액션플랜 이름을 입력하세요'); return false; }
-      a.title=v; a.goal=$('#a_goal').value; a.cur=$('#a_cur').value;
-      a.unit=$('#a_unit').value.trim(); a.memo=$('#a_memo').value; a.ym=UI.ym;
-      a.dirty=true; if(isNew) DB.actions.push(a);
-    },
-    onDelete:isNew?null:()=>{ DB.actions=DB.actions.filter(x=>x.id!==id); }
-  });
-}
-function linkTaskModal(actionId){
-  const a=DB.actions.find(x=>x.id===actionId); if(!a) return;
-  const cand=tasksOf(a.brandId).filter(t=>!(a.taskIds||[]).includes(t.id))
-    .sort((x,y)=>(y.due||'').localeCompare(x.due||''));
-  modal({
-    title:'업무 연결',
-    saveLabel:'연결',
-    body: cand.length? `<div style="max-height:52vh;overflow:auto">${cand.map(t=>`
-        <label class="tk" style="cursor:pointer">
-          <input type="checkbox" value="${t.id}" class="linkT" style="margin-top:3px" />
-          <div class="tk__t"><div class="tk__title">${esc(t.title)}</div>
-            <div class="tk__meta">${t.area?`<span class="tag">${esc(t.area)}</span>`:''}${t.due?`<span class="eyebrow">${t.due}</span>`:''}${t.done?'<span class="tag tag--ok">완료</span>':''}</div></div>
-        </label>`).join('')}</div>`
-      : `<div class="empty"><b>연결할 업무가 없습니다</b>업무 탭이나 캘린더에서 먼저 업무를 만드세요.</div>`,
-    onSave:()=>{
-      const picked=[...document.querySelectorAll('.linkT:checked')].map(el=>el.value);
-      if(!picked.length) return;
-      a.taskIds=[...(a.taskIds||[]), ...picked]; a.dirty=true;
-    }
-  });
+    ${!list.length? `<div class="card"><div class="empty"><b>${showDone?'완료한 업무가 없습니다':'할 일이 없습니다'}</b>${showDone?'체크한 업무가 여기로 모입니다.':'업무를 추가하거나 노션 주간 플랜에서 내려받으세요.'}</div></div>`
+    : areas.map(a=>{
+      const rows=list.filter(t=>((t.area||'').trim()||'미분류')===a).sort(sorter);
+      return `<div class="areahd"><h3>${esc(a)}</h3><span class="line"></span><span class="eyebrow">${rows.length}건</span></div>
+        ${rows.map(t=>taskRow(t,true)).join('')}`;
+    }).join('')}`;
 }
 
 /* ---------- 콘텐츠 기획안 ---------- */
@@ -1128,7 +1021,7 @@ const KIND={
     props:t=>({ 'Task':{title:[{text:{content:t.title}}]}, 'Brand':{select:{name:brandOf(t.brandId)?.name||''}},
       ...(t.area?{'Week':{select:{name:t.area}}}:{}),
       ...(t.due?{'Due':{date:{start:t.start||t.due, ...(t.start&&t.start!==t.due?{end:t.due}:{})}}}:{}),
-      'Status':{select:{name:t.done?'Done':'To do'}},
+      'Status':{status:{name:t.done?'Done':'To do'}},
       ...(t.owner?{'담당자':{multi_select:[{name:t.owner}]}}:{}),
       ...(t.memo?{'상세':{rich_text:[{text:{content:t.memo.slice(0,1900)}}]}}:{}) }) },
   sales:{ db:'sales',
@@ -1234,7 +1127,7 @@ async function pullAll(quiet){
           priority:rec.priority||'보통',
           due: dd?.end||dd?.start||'', start: dd?.end?(dd?.start||''):'',
           title:ttl(P['Task']), owner:P['담당자']?.multi_select?.[0]?.name||'',
-          memo:txt(P['상세']), done:sel(P['Status'])==='Done'});
+          memo:txt(P['상세']), done:(P['Status']?.status?.name||sel(P['Status']))==='Done'});
       }
       if(kind==='sales'){ Object.assign(rec,{brandId:brandByName(sel(P['브랜드'])), ym:txt(P['월']),
         channel:sel(P['채널']), goal:P['목표']?.number||0, actual:P['실적']?.number||0}); }
@@ -1267,6 +1160,7 @@ function bind(){
     saveUI(); render();
   });
   document.querySelectorAll('[data-tab]').forEach(el=>el.onclick=()=>{ UI.tab=el.dataset.tab; saveUI(); render(); });
+  document.querySelectorAll('[data-taskview]').forEach(el=>el.onclick=()=>{ UI.taskDone=(el.dataset.taskview==='done'); saveUI(); render(); });
   document.querySelectorAll('[data-mo]').forEach(el=>el.onclick=()=>{
     const n=Number(el.dataset.mo); UI.ym = n===0? ymOf(today) : ymShift(UI.ym,n); saveUI(); render();
   });
@@ -1280,6 +1174,11 @@ function bind(){
   document.querySelectorAll('[data-link-action]').forEach(el=>el.onclick=()=>linkTaskModal(el.dataset.linkAction));
   document.querySelectorAll('[data-newtask-action]').forEach(el=>el.onclick=()=>taskModal(null,'',el.dataset.newtaskAction));
   document.querySelectorAll('[data-edit-brand]').forEach(el=>el.onclick=()=>brandModal(el.dataset.editBrand));
+  document.querySelectorAll('[data-toggle-task-btn]').forEach(el=>el.onclick=(e)=>{
+    e.stopPropagation();
+    const t=DB.tasks.find(x=>x.id===el.dataset.toggleTaskBtn); if(!t) return;
+    t.done=!t.done; t.dirty=true; save(); render();
+  });
   document.querySelectorAll('[data-toggle-task]').forEach(el=>el.onchange=()=>{
     const t=DB.tasks.find(x=>x.id===el.dataset.toggleTask); t.done=el.checked; t.dirty=true; save(); render();
   });
