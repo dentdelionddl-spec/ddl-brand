@@ -546,6 +546,11 @@ function taskRow(t,compact){
   </div>`;
 }
 
+function autoWeek(iso){
+  if(!iso) return '';
+  const [y,m,d]=iso.split('-').map(Number);
+  return `${m}월 ${Math.ceil(d/7)}주차`;
+}
 function weekKey(w){
   const m=/(\d+)\s*월\s*(\d+)\s*주/.exec(w||''); 
   return m? (Number(m[1])*10+Number(m[2])) : 999;
@@ -1018,8 +1023,10 @@ function moveItem(payload,target){
     c.date=target; c.dirty=true;
   } else {
     const t=DB.tasks.find(x=>x.id===id); if(!t) return;
+    const wasAuto = !t.week || t.week===autoWeek(t.due);
     if(t.start&&t.due){ const delta=daysBetween(t.due,target); t.start=shiftDays(t.start,delta); t.due=target; }
     else t.due=target;
+    if(wasAuto) t.week=autoWeek(t.due);
     t.dirty=true;
   }
   save(); render();
@@ -1099,22 +1106,26 @@ function taskModal(id,due,actionId,startAt){
     title:isNew?'업무 추가':'업무 편집',
     body:`<label class="f"><span>업무</span><input type="text" id="t_title" value="${esc(t.title)}" placeholder="예: 29CM 상품등록 · 시그니처 1차 작업지시" /></label>
       <div class="row2">
-        <label class="f"><span>주차</span>
-          <input type="text" id="t_week" value="${esc(t.week||'')}" list="weekSuggest" placeholder="8월 3주차" autocomplete="off" />
-          <datalist id="weekSuggest">${[...new Set(DB.tasks.map(x=>x.week).filter(Boolean))].sort((a,b)=>weekKey(a)-weekKey(b)).map(a=>`<option value="${esc(a)}"></option>`).join('')}</datalist></label>
+        <label class="f"><span>영역</span>
+          <input type="text" id="t_area" value="${esc(t.area||'')}" list="areaSuggest" placeholder="콘텐츠" autocomplete="off" />
+          <datalist id="areaSuggest">${allAreas().map(a=>`<option value="${esc(a)}"></option>`).join('')}</datalist></label>
         <label class="f"><span>우선순위</span><select id="t_prio">${opt(PRIOS,t.priority)}</select></label>
         <label class="f"><span>시작일 (선택)</span><input type="date" id="t_start" value="${t.start||''}" /></label>
         <label class="f"><span>마감일</span><input type="date" id="t_due" value="${t.due||''}" /></label>
         <label class="f"><span>담당</span><select id="t_owner"><option value="">미지정</option>${opt(OWNERS,t.owner)}</select></label>
       </div>
+      <label class="f"><span>주차 (마감일에서 자동 · 고쳐도 됩니다)</span>
+        <input type="text" id="t_week" value="${esc(t.week||autoWeek(t.due))}" list="weekSuggest" placeholder="8월 3주차" autocomplete="off" />
+        <datalist id="weekSuggest">${[...new Set(DB.tasks.map(x=>x.week).filter(Boolean))].sort((a,b)=>weekKey(a)-weekKey(b)).map(a=>`<option value="${esc(a)}"></option>`).join('')}</datalist></label>
       <label class="f"><span>상세</span><textarea id="t_memo" rows="2">${esc(t.memo||'')}</textarea></label>
       <label style="display:flex;gap:8px;align-items:center"><input type="checkbox" id="t_done" ${t.done?'checked':''} style="width:16px;height:16px;accent-color:var(--ink)" /> 완료</label>`,
     onSave:()=>{
       const v=$('#t_title').value.trim(); if(!v){ toast('업무 내용을 입력하세요'); return false; }
-      t.title=v; t.week=$('#t_week').value.trim(); t.area=''; t.priority=$('#t_prio').value;
+      t.title=v; t.area=$('#t_area').value.trim(); t.priority=$('#t_prio').value;
       t.due=$('#t_due').value; const ts=$('#t_start').value;
       if(ts&&t.due&&ts>t.due){ toast('시작일이 마감일보다 늦습니다'); return false; }
-      t.start=ts; t.owner=$('#t_owner').value; t.memo=$('#t_memo').value.trim(); t.done=$('#t_done').checked;
+      t.start=ts; t.week=$('#t_week').value.trim()||autoWeek(t.due);
+      t.owner=$('#t_owner').value; t.memo=$('#t_memo').value.trim(); t.done=$('#t_done').checked;
       t.dirty=true;
       if(isNew){ DB.tasks.push(t);
         if(actionId){ const ac=DB.actions.find(x=>x.id===actionId); if(ac){ ac.taskIds=[...(ac.taskIds||[]), t.id]; ac.dirty=true; } } }
@@ -1186,7 +1197,8 @@ const KIND={
       '메모':{rich_text:[{text:{content:c.memo||''}}]}, '로컬ID':{rich_text:[{text:{content:c.id}}]} }) },
   tasks:{ db:'tasks',
     props:t=>({ 'Task':{title:[{text:{content:t.title}}]}, 'Brand':{select:{name:brandOf(t.brandId)?.name||''}},
-      ...(t.week?{'Week':{select:{name:t.week}}}:{}),
+      ...((t.week||autoWeek(t.due))?{'Week':{select:{name:t.week||autoWeek(t.due)}}}:{}),
+      ...(t.area?{'영역':{select:{name:t.area}}}:{}),
       ...(t.due?{'Due':{date:{start:t.start||t.due, ...(t.start&&t.start!==t.due?{end:t.due}:{})}}}:{}),
       'Status':{status:{name:t.done?'Done':'To do'}},
       ...(t.owner?{'담당자':{multi_select:[{name:t.owner}]}}:{}),
@@ -1293,7 +1305,7 @@ async function pullAll(quiet){
         const bn=sel(P['Brand']); const bid=DB.brands.find(b=>b.name===bn)?.id;
         if(!bid){ DB[kind]=DB[kind].filter(r=>r!==rec); continue; }
         const dd=P['Due']?.date;
-        Object.assign(rec,{brandId:bid, area:'', week:sel(P['Week'])||'',
+        Object.assign(rec,{brandId:bid, area:sel(P['영역'])||'', week:sel(P['Week'])||'',
           priority:rec.priority||'보통',
           due: dd?.end||dd?.start||'', start: dd?.end?(dd?.start||''):'',
           title:ttl(P['Task']), owner:P['담당자']?.multi_select?.[0]?.name||'',
