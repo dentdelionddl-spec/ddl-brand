@@ -406,12 +406,13 @@ function summaryView(){
   const saved=salesOf(b.id,ym), {goal,actual}=totals(b.id,ym);
   const rows=(goal||actual)? b.channels.map(ch=>saved.find(s=>s.channel===ch)||{channel:ch,goal:0,actual:0})
                              .concat(saved.filter(s=>!b.channels.includes(s.channel))) : [];
-  const pace=paceRatio(ym), pacePct=Math.round(pace*100);
+  const pacePct=Math.round(paceRatio(ym)*100);
   const cs=contentsOf(b.id,ym);
   const counts=TYPES.map(t=>[t,cs.filter(c=>c.type===t).length]);
-  const zero=counts.filter(([,n])=>n===0).length;
-  const ts=tasksOf(b.id).filter(t=>!t.done&&t.due).sort((x,y)=>x.due.localeCompare(y.due)).slice(0,7);
-  const ps=productsOf(b.id);
+  const openTasks=tasksOf(b.id).filter(t=>!t.done);
+  const todayTasks=openTasks.filter(t=>t.due===TODAY || (t.start&&t.due&&t.start<=TODAY&&TODAY<=t.due))
+    .sort((x,y)=>PRIOS.indexOf(x.priority)-PRIOS.indexOf(y.priority));
+  const overdue=openTasks.filter(t=>t.due&&t.due<TODAY).sort((x,y)=>x.due.localeCompare(y.due));
 
   const gauges = rows.length? rows.map(r=>{
     const pct=r.goal? (r.actual/r.goal*100):0;
@@ -424,77 +425,69 @@ function summaryView(){
         <span class="pace" style="left:${Math.min(100,pacePct)}%"></span>
       </div>
     </div>`;
-  }).join('') : `<div class="empty"><b>이 달 채널 목표가 없습니다</b>매출 탭에서 채널별 목표를 넣으면 여기에 진행률이 뜹니다.</div>`;
+  }).join('') : `<div class="empty"><b>이 달 채널 목표가 없습니다</b>매출·손익 탭에서 채널별 목표를 넣으면 여기에 진행률이 망니다.</div>`;
 
   return `
-  <div class="grid g2">
-    <section class="card">
-      <div class="card__hd"><h3>채널별 목표 대비 실적</h3>
-        <span class="eyebrow" style="margin-left:auto">${ymLabel(ym)}</span></div>
-      <div class="card__bd">
-        <div style="display:flex;align-items:baseline;gap:10px;margin-bottom:14px">
-          <div class="mono" style="font-size:26px;font-weight:600;letter-spacing:-.02em">${man(actual)}<span style="font-size:13px;color:var(--mut)">만원</span></div>
-          <div class="mono" style="font-size:12px;color:var(--mut)">목표 ${man(goal)}만 · 달성 ${goal?Math.round(actual/goal*100):0}%</div>
-          <div class="spacer"></div>
-          <span class="tag ${goal&&actual/goal*100>=pacePct?'tag--ok':'tag--high'}">진도 ${pacePct}%</span>
-        </div>
-        ${gauges}
-        <div class="legend">
-          <span><i class="key" style="background:${hueBg(b.hue,58)}"></i>정상 페이스</span>
-          <span><i class="key" style="background:#C9A0A8"></i>페이스 미달</span>
-          <span><i class="key" style="background:var(--ink);width:2px;height:11px"></i>오늘 기준 진도선</span>
-        </div>
+  <section class="card">
+    <div class="card__hd"><h3>목표 대비 실적</h3>
+      <span class="eyebrow" style="margin-left:auto">${ymLabel(ym)}</span></div>
+    <div class="card__bd">
+      <div style="display:flex;align-items:baseline;gap:10px;margin-bottom:14px">
+        <div class="mono" style="font-size:26px;font-weight:600;letter-spacing:-.02em">${man(actual)}<span style="font-size:13px;color:var(--mut)">만원</span></div>
+        <div class="mono" style="font-size:12px;color:var(--mut)">목표 ${man(goal)}만 · 달성 ${goal?Math.round(actual/goal*100):0}%</div>
+        <div class="spacer"></div>
+        <span class="tag ${goal&&actual/goal*100>=pacePct?'tag--ok':'tag--high'}">진도 ${pacePct}%</span>
       </div>
-    </section>
+      ${gauges}
+      <div class="legend">
+        <span><i class="key" style="background:${hueBg(b.hue,58)}"></i>정상 페이스</span>
+        <span><i class="key" style="background:#C9A0A8"></i>페이스 미달</span>
+        <span><i class="key" style="background:var(--ink);width:2px;height:11px"></i>오늘 기준 진도선</span>
+      </div>
+    </div>
+  </section>
 
+  <div class="grid g2" style="margin-top:14px">
     <section class="card">
-      <div class="card__hd"><h3>임박 업무</h3>
+      <div class="card__hd"><h3>오늘 해야 할 업무</h3>
+        <span class="eyebrow">${todayTasks.length}건</span>
         <button class="btn btn--sm" data-act="task-new" style="margin-left:auto">업무 추가</button></div>
       <div class="card__bd">
-        ${ts.length? ts.map(t=>taskRow(t,true)).join('') : `<div class="empty"><b>마감이 걸린 업무가 없습니다</b>업무 탭에서 마감일을 넣으면 여기에 임박 순으로 모입니다.</div>`}
+        ${todayTasks.length? todayTasks.map(t=>taskRow(t,true)).join('')
+          : `<div class="empty"><b>오늘 마감인 업무가 없습니다</b>업무 탭에서 마감일을 넣으면 그날 여기에 망니다.</div>`}
       </div>
     </section>
-  </div>
 
-  <div class="grid" style="margin-top:14px">
     <section class="card">
-      <div class="card__hd"><h3>콘텐츠 · 운영 현황</h3>
-        <span class="eyebrow" style="margin-left:auto">${zero?`${zero}개 유형이 이달 비어 있음`:'전 유형 진행 중'}</span></div>
+      <div class="card__hd"><h3>지난 업무</h3>
+        ${overdue.length?`<span class="tag tag--urgent">${overdue.length}건 지연</span>`:'<span class="eyebrow">없음</span>'}</div>
       <div class="card__bd">
-        <div class="eyebrow" style="margin-bottom:6px">콘텐츠</div>
-        <div class="types" style="grid-template-columns:repeat(2,1fr);margin-bottom:14px">
-          ${counts.filter(([t])=>CONTENT_TYPES.includes(t)).map(([t,n])=>`<div class="type ${n===0?'type--zero':''}">
-            <div class="type__n">${n}</div><div class="type__l">${t}</div></div>`).join('')}
-        </div>
-        <div class="eyebrow" style="margin-bottom:6px">운영</div>
-        <div class="types" style="grid-template-columns:repeat(5,1fr)">
-          ${counts.filter(([t])=>OPS_TYPES.includes(t)).map(([t,n])=>`<div class="type ${n===0?'type--zero':''}">
-            <div class="type__n">${n}</div><div class="type__l">${t}</div></div>`).join('')}
-        </div>
+        ${overdue.length? overdue.map(t=>taskRow(t,true)).join('')
+          : `<div class="empty"><b>지연된 업무가 없습니다</b>마감일이 지난 미완료 업무가 여기에 모입니다.</div>`}
       </div>
     </section>
   </div>
 
   <div class="grid g2" style="margin-top:14px">
     <section class="card">
-      <div class="card__hd"><h3>제품 파이프라인</h3>
-        <button class="btn btn--sm" data-act="prod-new" style="margin-left:auto">제품 추가</button></div>
+      <div class="card__hd"><h3>콘텐츠 운영 현황</h3>
+        <span class="eyebrow" style="margin-left:auto">${counts.filter(([t,n])=>OPS_TYPES.includes(t)&&n===0).length}개 유형 비어 있음</span></div>
       <div class="card__bd">
-        <div class="types" style="grid-template-columns:repeat(4,1fr)">
-          ${PSTATUS.filter(s=>s!=='드랍').map(s=>`<div class="type"><div class="type__n">${ps.filter(p=>p.status===s).length}</div><div class="type__l">${s}</div></div>`).join('')}
+        <div class="types" style="grid-template-columns:repeat(5,1fr)">
+          ${counts.filter(([t])=>OPS_TYPES.includes(t)).map(([t,n])=>`<div class="type ${n===0?'type--zero':''}">
+            <div class="type__n">${n}</div><div class="type__l">${t}</div></div>`).join('')}
         </div>
       </div>
     </section>
+
     <section class="card">
-      <div class="card__hd"><h3>이달 등록 현황</h3></div>
+      <div class="card__hd"><h3>EGC / UGC</h3>
+        <span class="eyebrow" style="margin-left:auto">${ymLabel(ym)}</span></div>
       <div class="card__bd">
-        <table><tbody>
-          <tr><td>콘텐츠·운영 항목</td><td class="num">${cs.length}건</td></tr>
-          <tr><td>완료 처리</td><td class="num">${cs.filter(c=>c.done).length}건</td></tr>
-          <tr><td>열린 업무</td><td class="num">${tasksOf(b.id).filter(t=>!t.done).length}건</td></tr>
-          <tr><td>등록 제품</td><td class="num">${ps.length}건</td></tr>
-          <tr><td>콘텐츠 기획안</td><td class="num">${plansOf(b.id,ym).length}건</td></tr>
-        </tbody></table>
+        <div class="types" style="grid-template-columns:repeat(2,1fr)">
+          ${counts.filter(([t])=>CONTENT_TYPES.includes(t)).map(([t,n])=>`<div class="type ${n===0?'type--zero':''}">
+            <div class="type__n">${n}</div><div class="type__l">${t}</div></div>`).join('')}
+        </div>
       </div>
     </section>
   </div>`;
