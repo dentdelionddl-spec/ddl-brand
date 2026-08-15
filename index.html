@@ -129,6 +129,8 @@ tr:last-child td{border-bottom:0}
 .cell:hover .cell__add{color:var(--ink);background:var(--line2)}
 .ev{display:block;width:100%;text-align:left;border:0;border-left:3px solid;border-radius:4px;background:#F6F6F2;padding:3px 5px;margin-top:3px;font-size:11px;line-height:1.3;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .ev:hover{background:#EDEDE7}
+.ev--task{background:#EEF1FA;border-left-color:var(--accent)}
+.ev--task:hover{background:#E4E9F7}
 .ev--done{opacity:.45;text-decoration:line-through}
 @media(max-width:700px){.cell{min-height:82px}.ev{font-size:10px}}
 
@@ -183,17 +185,34 @@ tr:last-child td{border-bottom:0}
    저장: 로컬(localStorage) → 노션(Cloudflare Worker 경유) 선택 동기화
    ========================================================= */
 
-const TYPES = ['피드','릴스','스레드','제품 업로드','제품 입고','공구','기획전','오프라인'];
-const TYPE_HUE = {'피드':214,'릴스':330,'스레드':262,'제품 업로드':160,'제품 입고':38,'공구':18,'기획전':288,'오프라인':122};
-const AREAS = ['콘텐츠','채널운영','제품개발','기타'];
+const CONTENT_TYPES = ['EGC','UGC'];
+const OPS_TYPES = ['제품 업로드','제품 입고','공구','기획전','오프라인'];
+const TYPES = [...CONTENT_TYPES, ...OPS_TYPES];
+const TYPE_HUE = {'EGC':262,'UGC':330,'제품 업로드':160,'제품 입고':38,'공구':18,'기획전':288,'오프라인':122};
+const catOf = t => CONTENT_TYPES.includes(t) ? '콘텐츠' : '운영';
+/* 업무 영역은 고정값이 아니라 입력된 내용에서 자동 수집됩니다 */
+function areasIn(bid){
+  const count={};
+  for(const t of DB.tasks){ const a=(t.area||'').trim(); if(!a) continue;
+    if(bid && t.brandId!==bid) continue; count[a]=(count[a]||0)+1; }
+  return Object.keys(count).sort((x,y)=>count[y]-count[x]||x.localeCompare(y,'ko'));
+}
+function allAreas(){ return areasIn(null); }
 const PRIOS = ['긴급','높음','보통','낮음'];
-const OWNERS = ['승호','산들','효정','재욱'];
+const OWNERS = ['승호','산들','효정','재욱','정모'];
 const PSTATUS = ['기획','발주','생산중','입고','업로드','판매중','드랍'];
+const WEEKS = ['1주차','2주차','3주차','4주차','5주차'];
+const COST_KINDS = ['원가','광고비','수수료','인건비','기타'];
 
 const SEED_BRANDS = [
-  {id:'aube',  name:'AUBE SEOUL', ko:'오브서울', hue:340, client:'', channels:['자사몰','무신사','29CM','플랫폼','기타']},
-  {id:'fludk', name:'FLUD K',     ko:'플러드케이', hue:96, client:'', channels:['자사몰','무신사','29CM','플랫폼','기타']},
-  {id:'ootn',  name:'OOTN',       ko:'오오티엔',  hue:40,  client:'', channels:['자사몰','무신사','플랫폼','기타']}
+  {id:'ootn',     name:'OOTN',       ko:'오오티엔',   hue:40,  client:'', channels:['자사몰','무신사','플랫폼','기타']},
+  {id:'aube',     name:'AUBE SEOUL', ko:'오브서울',   hue:340, client:'', channels:['자사몰','무신사','29CM','플랫폼','기타']},
+  {id:'fludk',    name:'FLUD K',     ko:'플러드케이', hue:96,  client:'', channels:['자사몰','무신사','29CM','플랫폼','기타']},
+  {id:'vivicate', name:'VIVICATE',   ko:'비비케이트', hue:262, client:'이케이아이엔티', channels:['자사몰','ZVZO','29CM','플랫폼','기타']},
+  {id:'ruhel',    name:'RUHEL',      ko:'루엘',       hue:200, client:'', channels:['자사몰','해외','플랫폼','기타']},
+  {id:'arikiv',   name:'ARIKIV',     ko:'아리키브',   hue:24,  client:'', channels:['자사몰','무신사','29CM','플랫폼','기타']},
+  {id:'factory',  name:'공장',       ko:'용저우 공장', hue:210, client:'', channels:['오더','샘플','기타']},
+  {id:'ddl',      name:'DDL',        ko:'팀 디디엘',  hue:280, client:'', channels:['대행료','기타']}
 ];
 
 /* ---------- storage (localStorage, 실패 시 메모리) ---------- */
@@ -207,9 +226,12 @@ const store={
 /* 노션 DB (프로젝트 DDL > 🗂 브랜드 관리 아래에 생성됨) */
 const NOTION_DB={
   contents:'22c3381ad8e44f239be74fdd3243eba3',
-  tasks:'047f49d200d74848b78adbb90f93906a',
+  tasks:'1b390d2a35db48d796e26edaa0834a6a', /* 브랜드별 주간 플랜 > Weekly Plan */
   sales:'5ca27a6560214303bc77b2da9e48ce02',
-  products:'ddd18f71b6c9475abc59f74881cff410'
+  products:'ddd18f71b6c9475abc59f74881cff410',
+  plans:'30a5544647d84123b4ad5e106c48c64e',
+  costs:'e33ee267da7d43fd86f72c28fa888114',
+  actions:'21f72c37590f48dba49455f0c705b4ab'
 };
 const NOTION_HUB='https://app.notion.com/p/3bd4f7cd6b86816cbc56ef161bf47379';
 const PROXY_URL='https://ddl-brand.vercel.app/api/notion';
@@ -218,17 +240,22 @@ const blank = () => ({
   v:1,
   settings:{ workerUrl:PROXY_URL, db:{...NOTION_DB}, lastSync:null },
   brands: JSON.parse(JSON.stringify(SEED_BRANDS)),
-  contents:[], tasks:[], sales:[], products:[]
+  contents:[], tasks:[], sales:[], products:[], plans:[], costs:[], actions:[]
 });
 
 let DB;
 try{ DB = JSON.parse(store.get(KEY)) || blank(); }catch(e){ DB = blank(); }
-for(const k of ['contents','tasks','sales','products']) if(!Array.isArray(DB[k])) DB[k]=[];
+for(const k of ['contents','tasks','sales','products','plans','costs','actions']) if(!Array.isArray(DB[k])) DB[k]=[];
 if(!DB.settings) DB.settings=blank().settings;
 if(!DB.settings.db) DB.settings.db={...NOTION_DB};
 for(const k in NOTION_DB) if(!DB.settings.db[k]) DB.settings.db[k]=NOTION_DB[k];
 if(!DB.settings.workerUrl) DB.settings.workerUrl=PROXY_URL;
 if(!DB.brands||!DB.brands.length) DB.brands=JSON.parse(JSON.stringify(SEED_BRANDS));
+for(const sb of SEED_BRANDS) if(!DB.brands.some(b=>b.id===sb.id)) DB.brands.push(JSON.parse(JSON.stringify(sb)));
+DB.brands.sort((a,b)=>{ const oa=SEED_BRANDS.findIndex(x=>x.id===a.id), ob=SEED_BRANDS.findIndex(x=>x.id===b.id);
+  return (oa<0?99:oa)-(ob<0?99:ob); });
+for(const k of ['plans','costs','actions']) if(!Array.isArray(DB[k])) DB[k]=[];
+for(const c of DB.contents){ if(['피드','릴스','스레드'].includes(c.type)){ c.type='EGC'; c.dirty=true; } }
 
 const save=()=>{ store.set(KEY,JSON.stringify(DB)); if(typeof autoSync==='function') autoSync(); };
 
@@ -258,9 +285,23 @@ function toast(msg,ms=2200){
 /* ---------- selectors ---------- */
 const inMonth=(d,ym)=>String(d||'').slice(0,7)===ym;
 const contentsOf=(bid,ym)=>DB.contents.filter(c=>c.brandId===bid&&inMonth(c.date,ym));
+const spans=(r,ds)=>{ const a=r.date||r.start, b=r.end||a; return a && ds>=a && ds<=b; };
+const contentsSpanning=(bid,ym)=>DB.contents.filter(c=>c.brandId===bid&&(inMonth(c.date,ym)||inMonth(c.end,ym)||(c.date&&c.end&&c.date<ym+'-01'&&c.end>ym+'-31')));
+const tasksSpanning=(bid,ym)=>tasksOf(bid).filter(t=>inMonth(t.due,ym)||inMonth(t.start,ym));
 const salesOf=(bid,ym)=>DB.sales.filter(s=>s.brandId===bid&&s.ym===ym);
 const tasksOf=bid=>DB.tasks.filter(t=>t.brandId===bid);
 const productsOf=bid=>DB.products.filter(p=>p.brandId===bid);
+const plansOf=(bid,ym)=>DB.plans.filter(p=>p.brandId===bid&&p.ym===ym);
+const costsOf=(bid,ym)=>DB.costs.filter(c=>c.brandId===bid&&c.ym===ym);
+const costTotal=(bid,ym)=>costsOf(bid,ym).reduce((a,c)=>a+Number(c.amount||0),0);
+const actionsOf=(bid,ym)=>DB.actions.filter(a=>a.brandId===bid&&a.ym===ym);
+const taskById=id=>DB.tasks.find(t=>t.id===id);
+function actionProgress(a){
+  const ids=(a.taskIds||[]).map(taskById).filter(Boolean);
+  if(Number(a.goal)>0) return { cur:Number(a.cur||0), goal:Number(a.goal), pct:Math.min(100,Number(a.cur||0)/Number(a.goal)*100), byTask:false };
+  const done=ids.filter(t=>t.done).length;
+  return { cur:done, goal:ids.length, pct: ids.length? done/ids.length*100 : 0, byTask:true };
+}
 function totals(bid,ym){
   const rows=salesOf(bid,ym);
   return { goal:rows.reduce((a,r)=>a+Number(r.goal||0),0), actual:rows.reduce((a,r)=>a+Number(r.actual||0),0) };
@@ -278,7 +319,8 @@ function ymLabel(ym){ const [y,m]=ym.split('-'); return `${y}년 ${Number(m)}월
    RENDER
    ========================================================= */
 function render(){
-  const special = UI.brand==='__all'||UI.brand==='__set';
+  if(UI.brand==='__all') UI.brand=DB.brands[0]?.id||'__set';
+  const special = UI.brand==='__set';
   if(!special){ const b=brandOf(UI.brand)||DB.brands[0]; UI.brand=b?.id||'__set'; }
   $('#app').innerHTML=`
   <div class="app">
@@ -293,7 +335,7 @@ function render(){
 }
 
 function brandBar(){
-  const tab=(id,label,meta,color,on)=>`<button class="btab ${id==='__all'?'btab--util':''}" data-brand="${id}" aria-current="${on}"
+  const tab=(id,label,meta,color,on)=>`<button class="btab ${id==='__set'?'btab--util':''}" data-brand="${id}" aria-current="${on}"
       style="border-bottom-color:${on?color:'transparent'}">
       <span class="btab__n">${esc(label)}</span>${meta?`<span class="btab__p">${esc(meta)}</span>`:''}</button>`;
   return `<nav class="brandbar" aria-label="브랜드">
@@ -303,7 +345,6 @@ function brandBar(){
       const meta = goal? Math.round(actual/goal*100)+'%' : '—';
       return tab(br.id, br.name, meta, hueBg(br.hue,58), UI.brand===br.id);
     }).join('')}
-    ${tab('__all','전체','','#9AA0A9',UI.brand==='__all')}
     ${tab('__set','설정',DB.settings.workerUrl?(DB.settings.auto===false?'수동':'자동'):'로컬','#9AA0A9',UI.brand==='__set')}
   </nav>`;
 }
@@ -312,17 +353,14 @@ function topbar(){
   if(UI.brand==='__set') return `<header class="topbar"><div class="tophead">
       <h1 class="brandtitle">설정 · 동기화</h1><div class="spacer"></div>
     </div><div class="tabs"></div></header>`;
-  if(UI.brand==='__all') return `<header class="topbar"><div class="tophead">
-      <h1 class="brandtitle">모든 브랜드 비교</h1>
-      <div class="spacer"></div>${monthNav()}
-    </div><div class="tabs"></div></header>`;
+
   const b=brandOf(UI.brand);
-  const tabs=[['summary','요약'],['calendar','콘텐츠 캘린더'],['tasks','업무'],['sales','매출'],['products','제품']];
+  const tabs=[['summary','요약'],['calendar','캘린더'],['kpi','KPI'],['tasks','업무'],['plans','콘텐츠'],['sales','매출·손익'],['products','제품']];
   return `<header class="topbar">
     <div class="tophead">
       <div>
-        <h1 class="brandtitle"><span class="dot" style="background:${hueBg(b.hue,50)}"></span>${esc(b.name)}</h1>
-        <div class="brandsub">${esc(b.ko||'')}${b.client?' · '+esc(b.client):''}</div>
+        <h1 class="brandtitle">${esc(b.name)}</h1>
+        <div class="brandsub">${esc(b.ko||'')}</div>
       </div>
       <div class="spacer"></div>
       ${monthNav()}
@@ -341,10 +379,11 @@ const monthNav=()=>`<div class="monthnav">
 
 function viewHtml(){
   if(UI.brand==='__set') return settingsView();
-  if(UI.brand==='__all') return allView();
   switch(UI.tab){
     case 'calendar': return calendarView();
     case 'tasks': return tasksView();
+    case 'plans': return plansView();
+    case 'kpi': return kpiView();
     case 'sales': return salesView();
     case 'products': return productsView();
     default: return summaryView();
@@ -409,11 +448,17 @@ function summaryView(){
 
   <div class="grid" style="margin-top:14px">
     <section class="card">
-      <div class="card__hd"><h3>콘텐츠 · 운영 유형별 발행</h3>
+      <div class="card__hd"><h3>콘텐츠 · 운영 현황</h3>
         <span class="eyebrow" style="margin-left:auto">${zero?`${zero}개 유형이 이달 비어 있음`:'전 유형 진행 중'}</span></div>
       <div class="card__bd">
-        <div class="types">
-          ${counts.map(([t,n])=>`<div class="type ${n===0?'type--zero':''}">
+        <div class="eyebrow" style="margin-bottom:6px">콘텐츠</div>
+        <div class="types" style="grid-template-columns:repeat(2,1fr);margin-bottom:14px">
+          ${counts.filter(([t])=>CONTENT_TYPES.includes(t)).map(([t,n])=>`<div class="type ${n===0?'type--zero':''}">
+            <div class="type__n">${n}</div><div class="type__l">${t}</div></div>`).join('')}
+        </div>
+        <div class="eyebrow" style="margin-bottom:6px">운영</div>
+        <div class="types" style="grid-template-columns:repeat(5,1fr)">
+          ${counts.filter(([t])=>OPS_TYPES.includes(t)).map(([t,n])=>`<div class="type ${n===0?'type--zero':''}">
             <div class="type__n">${n}</div><div class="type__l">${t}</div></div>`).join('')}
         </div>
       </div>
@@ -438,6 +483,7 @@ function summaryView(){
           <tr><td>완료 처리</td><td class="num">${cs.filter(c=>c.done).length}건</td></tr>
           <tr><td>열린 업무</td><td class="num">${tasksOf(b.id).filter(t=>!t.done).length}건</td></tr>
           <tr><td>등록 제품</td><td class="num">${ps.length}건</td></tr>
+          <tr><td>콘텐츠 기획안</td><td class="num">${plansOf(b.id,ym).length}건</td></tr>
         </tbody></table>
       </div>
     </section>
@@ -449,24 +495,27 @@ function calendarView(){
   const b=brandOf(UI.brand), ym=UI.ym;
   const [y,m]=ym.split('-').map(Number);
   const first=new Date(y,m-1,1), dim=new Date(y,m,0).getDate(), lead=first.getDay();
-  const cs=contentsOf(b.id,ym);
+  const cs=contentsSpanning(b.id,ym);
+  const dayTasks=tasksSpanning(b.id,ym);
   const cells=[];
   for(let i=0;i<lead;i++) cells.push(`<div class="cell cell--out"></div>`);
   for(let d=1;d<=dim;d++){
     const ds=`${y}-${pad(m)}-${pad(d)}`;
-    const evs=cs.filter(c=>c.date===ds);
+    const evs=cs.filter(c=>spans(c,ds));
     const dow=new Date(y,m-1,d).getDay();
+    const tks=dayTasks.filter(t=>spans({date:t.start||t.due,end:t.due},ds));
     cells.push(`<div class="cell ${ds===TODAY?'cell--today':''}">
       <div class="cell__d ${dow===0?'cell__sun':''}">${d}</div>
-      ${evs.map(e=>`<button class="ev ${e.done?'ev--done':''}" data-content="${e.id}" style="border-left-color:${hueBg(TYPE_HUE[e.type]||0,55)}">${esc(e.type)} · ${esc(e.title||'')}</button>`).join('')}
-      <button class="cell__add" data-newdate="${ds}" aria-label="${d}일 항목 추가">+</button>
+      ${evs.map(e=>`<button class="ev ${e.done?'ev--done':''}" data-content="${e.id}" style="border-left-color:${hueBg(TYPE_HUE[e.type]||0,55)}">${e.end&&e.end!==e.date?(ds===e.date?'▶ ':(ds===e.end?'■ ':'· ')):''}${esc(e.type)} · ${esc(e.title||'')}</button>`).join('')}
+      ${tks.map(t=>`<button class="ev ev--task ${t.done?'ev--done':''}" data-edit-task="${t.id}" title="업무">${t.done?'✓':'□'} ${t.start&&t.start!==t.due?(ds===t.start?'▶ ':(ds===t.due?'■ ':'· ')):''}${esc(t.title)}</button>`).join('')}
+      <button class="cell__add" data-newdate="${ds}" aria-label="${d}일 추가">+</button>
     </div>`);
   }
   while(cells.length%7) cells.push(`<div class="cell cell--out"></div>`);
 
   return `<section class="card">
     <div class="card__hd"><h3>${ymLabel(ym)} 운영 캘린더</h3>
-      <span class="eyebrow">피드 · 릴스 · 스레드 · 업로드 · 입고 · 공구 · 기획전 · 오프라인</span>
+      <span class="eyebrow">운영 · 콘텐츠 · 업무가 함께 표시됩니다</span>
       <button class="btn btn--sm btn--primary" data-newdate="${ym}-${pad(Math.min(today.getDate(),dim))}" style="margin-left:auto">항목 추가</button></div>
     <div class="cal">
       ${['일','월','화','수','목','금','토'].map(d=>`<div class="cal__dow">${d}</div>`).join('')}
@@ -487,7 +536,7 @@ function taskRow(t,compact){
       <div class="tk__meta">
         ${dd}
         <span class="tag ${pcls}">${esc(t.priority||'보통')}</span>
-        ${compact?`<span class="tag">${esc(t.area||'기타')}</span>`:''}
+        ${compact&&t.area?`<span class="tag">${esc(t.area)}</span>`:''}
         ${t.owner?`<span class="tag">${esc(t.owner)}</span>`:''}
         ${t.due?`<span class="eyebrow">${t.due.slice(5)}</span>`:''}
       </div>
@@ -502,8 +551,10 @@ function tasksView(){
   const sorter=(x,y)=>(x.due||'9999').localeCompare(y.due||'9999')||PRIOS.indexOf(x.priority)-PRIOS.indexOf(y.priority);
   const soonEnd=dateStr(new Date(today.getFullYear(),today.getMonth(),today.getDate()+7));
 
-  const sections=AREAS.map(a=>{
-    const list=open.filter(t=>t.area===a).sort(sorter);
+  const areas=areasIn(b.id);
+  const groups = areas.length? areas : ['미분류'];
+  const sections=groups.map(a=>{
+    const list=open.filter(t=>((t.area||'').trim()||'미분류')===a).sort(sorter);
     const week=list.filter(t=>t.due&&t.due<=soonEnd);
     const later=list.filter(t=>!week.includes(t));
     if(!list.length) return `<div class="areahd"><h3>${a}</h3><span class="line"></span><span class="eyebrow">0건</span></div>
@@ -527,7 +578,190 @@ function tasksView(){
       <div class="tasks2"><div>${done.slice(0,20).map(t=>taskRow(t,true)).join('')}</div><div></div></div>`:''}`;
 }
 
-/* ---------- 매출 ---------- */
+/* ---------- KPI ---------- */
+function kpiView(){
+  const b=brandOf(UI.brand), ym=UI.ym;
+  const {goal,actual}=totals(b.id,ym);
+  const pacePct=Math.round(paceRatio(ym)*100);
+  const pct = goal? actual/goal*100 : 0;
+  const acts=actionsOf(b.id,ym);
+  return `
+  <section class="card">
+    <div class="card__hd"><h3>목표 매출</h3><span class="eyebrow" style="margin-left:auto">${ymLabel(ym)}</span></div>
+    <div class="card__bd">
+      <div style="display:flex;align-items:baseline;gap:10px;margin-bottom:12px">
+        <div class="mono" style="font-size:30px;font-weight:600;letter-spacing:-.02em">${man(actual)}<span style="font-size:13px;color:var(--mut)">만원</span></div>
+        <div class="mono" style="font-size:12.5px;color:var(--mut)">목표 ${man(goal)}만 · 달성 ${Math.round(pct)}%</div>
+        <div class="spacer" style="flex:1"></div>
+        <span class="tag ${pct>=pacePct?'tag--ok':'tag--high'}">진도 ${pacePct}%</span>
+      </div>
+      <div class="track" style="height:18px">
+        <i style="width:${Math.min(100,pct)}%;background:${pct<pacePct-5?'#C9A0A8':hueBg(b.hue,58)}"></i>
+        <span class="pace" style="left:${Math.min(100,pacePct)}%"></span>
+      </div>
+      <div class="eyebrow" style="margin-top:10px">목표·실적 숫자는 매출·손익 탭에서 채널별로 입력합니다</div>
+    </div>
+  </section>
+
+  <div style="display:flex;align-items:center;gap:10px;margin:18px 0 8px">
+    <h3 style="margin:0;font-size:13px;font-weight:700">월별 액션플랜</h3>
+    <span class="eyebrow">목표 매출을 만들기 위한 행동 지표</span>
+    <div class="spacer" style="flex:1"></div>
+    <button class="btn btn--primary btn--sm" data-act="action-new">액션플랜 추가</button>
+  </div>
+  ${acts.length? acts.map(a=>actionCard(a,b)).join('')
+   : `<div class="card"><div class="empty"><b>이 달 액션플랜이 없습니다</b>"릴스 12편 발행", "29CM 상품 30개 등록"처럼 매출을 만드는 행동을 적고, 그 아래에 실제 업무를 붙이세요.</div></div>`}`;
+}
+function actionCard(a,b){
+  const pr=actionProgress(a);
+  const tasks=(a.taskIds||[]).map(taskById).filter(Boolean)
+    .sort((x,y)=>(x.due||'9999').localeCompare(y.due||'9999'));
+  const missing=(a.taskIds||[]).length - tasks.length;
+  return `<section class="card" style="margin-bottom:12px">
+    <div class="card__hd">
+      <h3>${esc(a.title)}</h3>
+      <span class="mono" style="font-size:12px;color:var(--mut)">${pr.byTask?`업무 ${pr.cur}/${pr.goal}`:`${won(pr.cur)} / ${won(pr.goal)}${a.unit?' '+esc(a.unit):''}`}</span>
+      <button class="btn btn--ghost btn--sm" data-edit-action="${a.id}" style="margin-left:auto">편집</button>
+    </div>
+    <div class="card__bd">
+      <div class="track" style="margin-bottom:12px"><i style="width:${pr.pct}%;background:${hueBg(b.hue,58)}"></i></div>
+      ${a.memo?`<div style="font-size:12.5px;color:var(--mut);margin-bottom:10px;white-space:pre-wrap">${esc(a.memo)}</div>`:''}
+      <div class="eyebrow" style="margin-bottom:6px">세부 업무 ${tasks.length}건${missing?` · 연결 끊김 ${missing}`:''}</div>
+      ${tasks.map(t=>taskRow(t,true)).join('')||'<div class="empty" style="border:1px dashed var(--line);border-radius:8px">아직 붙인 업무가 없습니다</div>'}
+      <div style="display:flex;gap:8px;margin-top:10px">
+        <button class="btn btn--sm" data-link-action="${a.id}">기존 업무 연결</button>
+        <button class="btn btn--sm" data-newtask-action="${a.id}">새 업무 만들기</button>
+      </div>
+    </div>
+  </section>`;
+}
+function actionModal(id){
+  const isNew=!id;
+  const a=isNew? {id:uid(),brandId:UI.brand,ym:UI.ym,title:'',goal:'',cur:'',unit:'',memo:'',taskIds:[]}
+               : DB.actions.find(x=>x.id===id);
+  modal({
+    title:isNew?'액션플랜 추가':'액션플랜 편집',
+    body:`<label class="f"><span>액션플랜</span><input type="text" id="a_title" value="${esc(a.title)}" placeholder="릴스 12편 발행" /></label>
+      <div class="row2">
+        <label class="f"><span>목표치 (비우면 업무 완료율로 계산)</span><input type="number" id="a_goal" value="${a.goal||''}" /></label>
+        <label class="f"><span>현재치</span><input type="number" id="a_cur" value="${a.cur||''}" /></label>
+      </div>
+      <label class="f"><span>단위</span><input type="text" id="a_unit" value="${esc(a.unit||'')}" placeholder="편 · 건 · 회" /></label>
+      <label class="f"><span>메모</span><textarea id="a_memo" rows="3">${esc(a.memo||'')}</textarea></label>`,
+    onSave:()=>{
+      const v=$('#a_title').value.trim(); if(!v){ toast('액션플랜 이름을 입력하세요'); return false; }
+      a.title=v; a.goal=$('#a_goal').value; a.cur=$('#a_cur').value;
+      a.unit=$('#a_unit').value.trim(); a.memo=$('#a_memo').value; a.ym=UI.ym;
+      a.dirty=true; if(isNew) DB.actions.push(a);
+    },
+    onDelete:isNew?null:()=>{ DB.actions=DB.actions.filter(x=>x.id!==id); }
+  });
+}
+function linkTaskModal(actionId){
+  const a=DB.actions.find(x=>x.id===actionId); if(!a) return;
+  const cand=tasksOf(a.brandId).filter(t=>!(a.taskIds||[]).includes(t.id))
+    .sort((x,y)=>(y.due||'').localeCompare(x.due||''));
+  modal({
+    title:'업무 연결',
+    saveLabel:'연결',
+    body: cand.length? `<div style="max-height:52vh;overflow:auto">${cand.map(t=>`
+        <label class="tk" style="cursor:pointer">
+          <input type="checkbox" value="${t.id}" class="linkT" style="margin-top:3px" />
+          <div class="tk__t"><div class="tk__title">${esc(t.title)}</div>
+            <div class="tk__meta">${t.area?`<span class="tag">${esc(t.area)}</span>`:''}${t.due?`<span class="eyebrow">${t.due}</span>`:''}${t.done?'<span class="tag tag--ok">완료</span>':''}</div></div>
+        </label>`).join('')}</div>`
+      : `<div class="empty"><b>연결할 업무가 없습니다</b>업무 탭이나 캘린더에서 먼저 업무를 만드세요.</div>`,
+    onSave:()=>{
+      const picked=[...document.querySelectorAll('.linkT:checked')].map(el=>el.value);
+      if(!picked.length) return;
+      a.taskIds=[...(a.taskIds||[]), ...picked]; a.dirty=true;
+    }
+  });
+}
+
+/* ---------- 콘텐츠 기획안 ---------- */
+function linkify(t){
+  return esc(t).replace(/(https?:\/\/[^\s<]+|(?:www\.)?[a-z0-9-]+\.[a-z]{2,}\/[^\s<]*)/gi, m=>{
+    const href = m.startsWith('http')? m : 'https://'+m;
+    return `<a href="${href}" target="_blank" rel="noopener" style="color:var(--accent);word-break:break-all">${m}</a>`;
+  });
+}
+function plansView(){
+  const b=brandOf(UI.brand), ym=UI.ym;
+  const list=plansOf(b.id,ym);
+  const byWeek=WEEKS.map(w=>[w, list.filter(p=>p.week===w)]);
+  const has=list.length;
+  return `<div style="display:flex;align-items:center;gap:10px;margin-bottom:12px">
+      <div class="eyebrow">${ymLabel(ym)} 기획안 ${has}건</div>
+      <div class="spacer" style="flex:1"></div>
+      <button class="btn btn--primary btn--sm" data-act="plan-new">기획안 추가</button>
+    </div>
+    ${!has? `<div class="card"><div class="empty"><b>이 달 기획안이 없습니다</b>주차별로 주제·레퍼런스·상세 내용을 적어두면 팀원이 같은 화면에서 봅니다.</div></div>`
+    : byWeek.filter(([,ps])=>ps.length).map(([w,ps])=>`
+      <div class="areahd"><h3>${w}</h3><span class="line"></span><span class="eyebrow">${ps.length}건</span></div>
+      ${ps.map(p=>planCard(p,b)).join('')}
+    `).join('')}`;
+}
+function planCard(p,b){
+  const refs=(p.refs||'').split('\n').map(r=>r.trim()).filter(Boolean);
+  return `<section class="card" style="margin-bottom:12px">
+    <div class="card__hd">
+      ${p.axis?`<span class="tag" style="border-color:${hueBg(b.hue,75)};color:${hueBg(b.hue,42)}">${esc(p.axis)}</span>`:''}
+      <h3>${esc(p.title||'(제목 없음)')}</h3>
+      ${p.done?'<span class="tag tag--ok">완료</span>':''}
+      <button class="btn btn--ghost btn--sm" data-edit-plan="${p.id}" style="margin-left:auto">편집</button>
+    </div>
+    <div class="card__bd">
+      ${refs.length?`<div class="eyebrow" style="margin-bottom:5px">레퍼런스</div>
+        <div style="margin-bottom:12px;font-size:12.5px;line-height:1.8">${refs.map(r=>linkify(r)).join('<br>')}</div>`:''}
+      ${p.body?`<div style="white-space:pre-wrap;font-size:13px;line-height:1.75">${linkify(p.body)}</div>`:'<div class="eyebrow">내용 없음</div>'}
+    </div>
+  </section>`;
+}
+function planModal(id){
+  const isNew=!id;
+  const p=isNew? {id:uid(),brandId:UI.brand,ym:UI.ym,week:'1주차',axis:'',title:'',refs:'',body:'',done:false}
+               : DB.plans.find(x=>x.id===id);
+  modal({
+    title:isNew?'기획안 추가':'기획안 편집',
+    body:`<div class="row2">
+        <label class="f"><span>주차</span><select id="p_week">${opt(WEEKS,p.week)}</select></label>
+        <label class="f"><span>축 (트래픽 · 브릿지 등)</span><input type="text" id="p_axis" value="${esc(p.axis)}" placeholder="트래픽" /></label>
+      </div>
+      <label class="f"><span>주제</span><input type="text" id="p_title" value="${esc(p.title)}" placeholder="중국 공장·시장 방문 + 대표의 셀렉/제작 과정" /></label>
+      <label class="f"><span>레퍼런스 (한 줄에 하나)</span><textarea id="p_refs" rows="3" placeholder="instagram.com/reel/...">${esc(p.refs)}</textarea></label>
+      <label class="f"><span>기획 내용</span><textarea id="p_body" rows="10" placeholder="초반 2-3초 중국 현장, 공장 등 전문적인 느낌으로 후킹&#10;- 여러 니트/우븐 제품을 직접 만져보고 비교하는 모습&#10;- 왜 이건 안되고 이건 괜찮은지 대표 기준 설명">${esc(p.body)}</textarea></label>
+      <label style="display:flex;gap:8px;align-items:center"><input type="checkbox" id="p_done" ${p.done?'checked':''} style="width:16px;height:16px;accent-color:var(--ink)" /> 완료</label>`,
+    onSave:()=>{
+      const v=$('#p_title').value.trim(); if(!v){ toast('주제를 입력하세요'); return false; }
+      p.title=v; p.week=$('#p_week').value; p.axis=$('#p_axis').value.trim();
+      p.refs=$('#p_refs').value.trim(); p.body=$('#p_body').value; p.done=$('#p_done').checked;
+      p.ym=UI.ym; p.dirty=true; if(isNew) DB.plans.push(p);
+    },
+    onDelete:isNew?null:()=>{ DB.plans=DB.plans.filter(x=>x.id!==id); }
+  });
+}
+function costModal(id){
+  const isNew=!id;
+  const c=isNew? {id:uid(),brandId:UI.brand,ym:UI.ym,kind:'원가',name:'',amount:''}
+               : DB.costs.find(x=>x.id===id);
+  modal({
+    title:isNew?'비용 추가':'비용 편집',
+    body:`<div class="row2">
+        <label class="f"><span>구분</span><select id="c_kind">${opt(COST_KINDS,c.kind)}</select></label>
+        <label class="f"><span>금액 (원)</span><input type="number" id="c_amt" value="${c.amount||''}" step="10000" /></label>
+      </div>
+      <label class="f"><span>항목</span><input type="text" id="c_name" value="${esc(c.name)}" placeholder="8월 상품 사입" /></label>`,
+    onSave:()=>{
+      const v=$('#c_name').value.trim(); if(!v){ toast('항목을 입력하세요'); return false; }
+      c.name=v; c.kind=$('#c_kind').value; c.amount=Number($('#c_amt').value||0); c.ym=UI.ym;
+      c.dirty=true; if(isNew) DB.costs.push(c);
+    },
+    onDelete:isNew?null:()=>{ DB.costs=DB.costs.filter(x=>x.id!==id); }
+  });
+}
+
+/* ---------- 매출 · 손익 ---------- */
 function salesView(){
   const b=brandOf(UI.brand), ym=UI.ym;
   const rows=b.channels.map(ch=>{
@@ -535,6 +769,7 @@ function salesView(){
     return r;
   });
   const goal=rows.reduce((a,r)=>a+Number(r.goal||0),0), actual=rows.reduce((a,r)=>a+Number(r.actual||0),0);
+  const cs=costsOf(b.id,ym), cost=costTotal(b.id,ym), profit=actual-cost;
   const months=[-5,-4,-3,-2,-1,0].map(n=>ymShift(ym,n));
   const trend=months.map(m=>({m, ...totals(b.id,m)}));
   const max=Math.max(1,...trend.map(t=>Math.max(t.goal,t.actual)));
@@ -573,6 +808,37 @@ function salesView(){
             <i style="width:${t.actual/max*100}%;background:${hueBg(b.hue,58)}"></i>
           </div></div>`).join('')}
         <div class="legend"><span><i class="key" style="background:#E8E8E1"></i>목표</span><span><i class="key" style="background:${hueBg(b.hue,58)}"></i>실적</span></div>
+      </div>
+    </section>
+  </div>
+
+  <div class="grid g2" style="margin-top:14px">
+    <section class="card">
+      <div class="card__hd"><h3>비용</h3>
+        <button class="btn btn--sm" data-act="cost-new" style="margin-left:auto">비용 추가</button></div>
+      ${cs.length?`<table>
+        <thead><tr><th>구분</th><th>항목</th><th style="text-align:right">금액</th><th></th></tr></thead>
+        <tbody>${cs.map(c=>`<tr>
+          <td><span class="tag">${esc(c.kind||'기타')}</span></td>
+          <td>${esc(c.name)}</td>
+          <td class="num">${won(c.amount)}</td>
+          <td style="text-align:right"><button class="btn btn--ghost btn--sm" data-edit-cost="${c.id}">편집</button></td>
+        </tr>`).join('')}</tbody>
+        <tfoot><tr><th>합계</th><th></th><th class="num" style="font-size:12px;color:var(--ink)">${won(cost)}</th><th></th></tr></tfoot>
+      </table>`:`<div class="empty"><b>이 달 비용이 없습니다</b>원가·광고비·수수료를 넣으면 아래 손익이 계산됩니다.</div>`}
+    </section>
+    <section class="card">
+      <div class="card__hd"><h3>손익</h3><span class="eyebrow" style="margin-left:auto">${ymLabel(ym)}</span></div>
+      <div class="card__bd">
+        <div class="mono" style="font-size:26px;font-weight:600;letter-spacing:-.02em;color:${profit>=0?'var(--ok)':'var(--alert)'}">
+          ${profit<0?'-':''}${man(Math.abs(profit))}<span style="font-size:13px;color:var(--mut)">만원</span></div>
+        <div class="mono" style="font-size:12px;color:var(--mut);margin-bottom:14px">
+          이익률 ${actual? Math.round(profit/actual*100):0}%</div>
+        <table><tbody>
+          <tr><td>매출 실적</td><td class="num">${won(actual)}</td></tr>
+          <tr><td>비용 합계</td><td class="num">${won(cost)}</td></tr>
+          <tr><td style="font-weight:700">영업이익</td><td class="num" style="font-weight:700">${won(profit)}</td></tr>
+        </tbody></table>
       </div>
     </section>
   </div>`;
@@ -669,11 +935,14 @@ function settingsView(){
         <input type="text" id="setWorker" value="${esc(s.workerUrl)}" placeholder="https://ddl-brand.vercel.app/api/notion" /></label>
       <div class="row2">
         <label class="f"><span>콘텐츠 캘린더 DB ID</span><input type="text" id="db_contents" value="${esc(s.db.contents)}" /></label>
-        <label class="f"><span>업무 DB ID</span><input type="text" id="db_tasks" value="${esc(s.db.tasks)}" /></label>
+        <label class="f"><span>업무 DB ID (주간 플랜)</span><input type="text" id="db_tasks" value="${esc(s.db.tasks)}" /></label>
         <label class="f"><span>매출 DB ID</span><input type="text" id="db_sales" value="${esc(s.db.sales)}" /></label>
         <label class="f"><span>제품 DB ID</span><input type="text" id="db_products" value="${esc(s.db.products)}" /></label>
+        <label class="f"><span>콘텐츠 기획안 DB ID</span><input type="text" id="db_plans" value="${esc(s.db.plans||'')}" /></label>
+        <label class="f"><span>비용 DB ID</span><input type="text" id="db_costs" value="${esc(s.db.costs||'')}" /></label>
+        <label class="f"><span>액션플랜 DB ID</span><input type="text" id="db_actions" value="${esc(s.db.actions||'')}" /></label>
       </div>
-      <p class="eyebrow" style="margin:0 0 12px">DB 4개는 노션에 이미 만들어 뒀습니다 · <a href="${NOTION_HUB}" target="_blank" rel="noopener" style="color:var(--accent)">노션에서 열기 →</a></p>
+      <p class="eyebrow" style="margin:0 0 12px">DB는 노션에 이미 만들어 뒀습니다 · <a href="${NOTION_HUB}" target="_blank" rel="noopener" style="color:var(--accent)">노션에서 열기 →</a></p>
       <label style="display:flex;gap:8px;align-items:center;margin:2px 0 12px">
         <input type="checkbox" id="autoSync" ${s.auto===false?'':'checked'} style="width:16px;height:16px;accent-color:var(--ink)" />
         자동 동기화 — 입력하면 노션에 바로 올리고, 화면을 열 때 자동으로 내려받습니다
@@ -719,21 +988,41 @@ function modal({title, body, onSave, onDelete, saveLabel='저장'}){
 }
 const opt=(arr,v)=>arr.map(a=>`<option ${a===v?'selected':''}>${esc(a)}</option>`).join('');
 
-function contentModal(id,date){
+function addOnDate(date){
+  modal({ title:`${date} 추가`, saveLabel:'닫기',
+    body:`<p style="margin:0 0 12px;color:var(--mut);font-size:13px">이 날짜에 무엇을 넣을까요?</p>
+      <div style="display:flex;gap:8px">
+        <button class="btn" id="addOps" style="flex:1;padding:16px 8px">운영</button>
+        <button class="btn" id="addContent" style="flex:1;padding:16px 8px">콘텐츠</button>
+        <button class="btn" id="addTask" style="flex:1;padding:16px 8px">업무</button>
+      </div>`,
+    onSave:()=>{} });
+  $('#addOps').onclick=()=>{ $('#layer').innerHTML=''; contentModal(null,date,'운영'); };
+  $('#addContent').onclick=()=>{ $('#layer').innerHTML=''; contentModal(null,date,'콘텐츠'); };
+  $('#addTask').onclick=()=>{ $('#layer').innerHTML=''; taskModal(null,date); };
+}
+
+function contentModal(id,date,cat){
   const isNew=!id;
-  const c = isNew? {id:uid(),brandId:UI.brand,date:date||TODAY,type:'릴스',title:'',memo:'',done:false}
+  const c = isNew? {id:uid(),brandId:UI.brand,date:date||TODAY,end:'',type:(cat==='콘텐츠'?'EGC':'제품 업로드'),title:'',memo:'',done:false}
                  : DB.contents.find(x=>x.id===id);
+  const kind = cat || catOf(c.type);
+  const typeOptions = kind==='콘텐츠' ? CONTENT_TYPES : OPS_TYPES;
   modal({
-    title: isNew?'항목 추가':'항목 편집',
+    title: (isNew?'추가':'편집')+' — '+kind,
     body:`<div class="row2">
-        <label class="f"><span>날짜</span><input type="date" id="c_date" value="${c.date}" /></label>
-        <label class="f"><span>유형</span><select id="c_type">${opt(TYPES,c.type)}</select></label>
+        <label class="f"><span>시작일</span><input type="date" id="c_date" value="${c.date}" /></label>
+        <label class="f"><span>마감일 (하루면 비워두세요)</span><input type="date" id="c_end" value="${c.end||''}" /></label>
       </div>
+      <label class="f"><span>유형</span><select id="c_type">${opt(typeOptions,c.type)}</select></label>
       <label class="f"><span>제목</span><input type="text" id="c_title" value="${esc(c.title)}" placeholder="예: 실버 반지 릴스 3편 · 아쿠아마린 기획전 오픈" /></label>
       <label class="f"><span>메모</span><textarea id="c_memo" rows="3" placeholder="레퍼런스 링크, 담당, 준비물">${esc(c.memo)}</textarea></label>
       <label style="display:flex;gap:8px;align-items:center"><input type="checkbox" id="c_done" ${c.done?'checked':''} style="width:16px;height:16px;accent-color:var(--ink)" /> 완료</label>`,
     onSave:()=>{
-      c.date=$('#c_date').value||TODAY; c.type=$('#c_type').value;
+      c.date=$('#c_date').value||TODAY;
+      const ce=$('#c_end').value; c.end=(ce&&ce>=c.date)?ce:'';
+      if(ce&&ce<c.date){ toast('마감일이 시작일보다 빠릅니다'); return false; }
+      c.type=$('#c_type').value;
       c.title=$('#c_title').value.trim(); c.memo=$('#c_memo').value.trim(); c.done=$('#c_done').checked;
       c.dirty=true; if(isNew) DB.contents.push(c);
     },
@@ -741,25 +1030,33 @@ function contentModal(id,date){
   });
 }
 
-function taskModal(id){
+function taskModal(id,due,actionId){
   const isNew=!id;
-  const t=isNew? {id:uid(),brandId:UI.brand,area:'콘텐츠',title:'',priority:'보통',due:'',owner:'',done:false}
+  const t=isNew? {id:uid(),brandId:UI.brand,area:(areasIn(UI.brand)[0]||''),title:'',priority:'보통',start:'',due:due||'',owner:'',done:false}
                : DB.tasks.find(x=>x.id===id);
   modal({
     title:isNew?'업무 추가':'업무 편집',
     body:`<label class="f"><span>업무</span><input type="text" id="t_title" value="${esc(t.title)}" placeholder="예: 29CM 상품등록 · 시그니처 1차 작업지시" /></label>
       <div class="row2">
-        <label class="f"><span>영역</span><select id="t_area">${opt(AREAS,t.area)}</select></label>
+        <label class="f"><span>영역 (자유 입력 · 노션 태그와 동일)</span>
+          <input type="text" id="t_area" value="${esc(t.area||'')}" list="areaSuggest" placeholder="콘텐츠" autocomplete="off" />
+          <datalist id="areaSuggest">${allAreas().map(a=>`<option value="${esc(a)}"></option>`).join('')}</datalist></label>
         <label class="f"><span>우선순위</span><select id="t_prio">${opt(PRIOS,t.priority)}</select></label>
+        <label class="f"><span>시작일 (선택)</span><input type="date" id="t_start" value="${t.start||''}" /></label>
         <label class="f"><span>마감일</span><input type="date" id="t_due" value="${t.due||''}" /></label>
         <label class="f"><span>담당</span><select id="t_owner"><option value="">미지정</option>${opt(OWNERS,t.owner)}</select></label>
       </div>
+      <label class="f"><span>상세</span><textarea id="t_memo" rows="2">${esc(t.memo||'')}</textarea></label>
       <label style="display:flex;gap:8px;align-items:center"><input type="checkbox" id="t_done" ${t.done?'checked':''} style="width:16px;height:16px;accent-color:var(--ink)" /> 완료</label>`,
     onSave:()=>{
       const v=$('#t_title').value.trim(); if(!v){ toast('업무 내용을 입력하세요'); return false; }
-      t.title=v; t.area=$('#t_area').value; t.priority=$('#t_prio').value;
-      t.due=$('#t_due').value; t.owner=$('#t_owner').value; t.done=$('#t_done').checked;
-      t.dirty=true; if(isNew) DB.tasks.push(t);
+      t.title=v; t.area=$('#t_area').value.trim(); t.priority=$('#t_prio').value;
+      t.due=$('#t_due').value; const ts=$('#t_start').value;
+      if(ts&&t.due&&ts>t.due){ toast('시작일이 마감일보다 늦습니다'); return false; }
+      t.start=ts; t.owner=$('#t_owner').value; t.memo=$('#t_memo').value.trim(); t.done=$('#t_done').checked;
+      t.dirty=true;
+      if(isNew){ DB.tasks.push(t);
+        if(actionId){ const ac=DB.actions.find(x=>x.id===actionId); if(ac){ ac.taskIds=[...(ac.taskIds||[]), t.id]; ac.dirty=true; } } }
     },
     onDelete:isNew?null:()=>{ DB.tasks=DB.tasks.filter(x=>x.id!==id); }
   });
@@ -824,20 +1121,35 @@ function brandModal(id){
 const KIND={
   contents:{ db:'contents', title:'title',
     props:c=>({ '제목':{title:[{text:{content:c.title||c.type}}]}, '브랜드':{select:{name:brandOf(c.brandId)?.name||''}},
-      '유형':{select:{name:c.type}}, '날짜':{date:{start:c.date}}, '완료':{checkbox:!!c.done},
+      '유형':{select:{name:c.type}}, '날짜':{date:{start:c.date, ...(c.end&&c.end!==c.date?{end:c.end}:{})}}, '완료':{checkbox:!!c.done},
       '메모':{rich_text:[{text:{content:c.memo||''}}]}, '로컬ID':{rich_text:[{text:{content:c.id}}]} }) },
   tasks:{ db:'tasks',
-    props:t=>({ '업무':{title:[{text:{content:t.title}}]}, '브랜드':{select:{name:brandOf(t.brandId)?.name||''}},
-      '영역':{select:{name:t.area}}, '우선순위':{select:{name:t.priority}},
-      ...(t.due?{'마감일':{date:{start:t.due}}}:{}),
-      '상태':{select:{name:t.done?'Done':'To do'}},
+    props:t=>({ 'Task':{title:[{text:{content:t.title}}]}, 'Brand':{select:{name:brandOf(t.brandId)?.name||''}},
+      ...(t.area?{'Week':{select:{name:t.area}}}:{}),
+      ...(t.due?{'Due':{date:{start:t.start||t.due, ...(t.start&&t.start!==t.due?{end:t.due}:{})}}}:{}),
+      'Status':{select:{name:t.done?'Done':'To do'}},
       ...(t.owner?{'담당자':{multi_select:[{name:t.owner}]}}:{}),
-      '로컬ID':{rich_text:[{text:{content:t.id}}]} }) },
-  sales:{ db:'sales',
-    props:s=>({ '항목':{title:[{text:{content:`${brandOf(s.brandId)?.name||''} ${s.ym} ${s.channel}`}}]},
-      '브랜드':{select:{name:brandOf(s.brandId)?.name||''}}, '월':{rich_text:[{text:{content:s.ym}}]},
-      '채널':{select:{name:s.channel}}, '목표':{number:Number(s.goal||0)}, '실적':{number:Number(s.actual||0)},
-      '로컬ID':{rich_text:[{text:{content:s.id}}]} }) },
+      ...(t.memo?{'상세':{rich_text:[{text:{content:t.memo.slice(0,1900)}}]}}:{}) }) },
+  plans:{ db:'plans',
+    props:p=>({ '주제':{title:[{text:{content:p.title||''}}]}, '브랜드':{select:{name:brandOf(p.brandId)?.name||''}},
+      '월':{rich_text:[{text:{content:p.ym||''}}]}, '주차':{select:{name:p.week||'1주차'}},
+      ...(p.axis?{'축':{rich_text:[{text:{content:p.axis}}]}}:{}),
+      ...(p.refs?{'레퍼런스':{rich_text:[{text:{content:p.refs.slice(0,1900)}}]}}:{}),
+      ...(p.body?{'내용':{rich_text:[{text:{content:p.body.slice(0,1900)}}]}}:{}),
+      '완료':{checkbox:!!p.done}, '로컬ID':{rich_text:[{text:{content:p.id}}]} }) },
+  actions:{ db:'actions',
+    props:a=>({ '액션플랜':{title:[{text:{content:a.title||''}}]}, '브랜드':{select:{name:brandOf(a.brandId)?.name||''}},
+      '월':{rich_text:[{text:{content:a.ym||''}}]},
+      ...(a.goal!==''&&a.goal!=null?{'목표치':{number:Number(a.goal)}}:{}),
+      ...(a.cur!==''&&a.cur!=null?{'현재치':{number:Number(a.cur)}}:{}),
+      ...(a.unit?{'단위':{rich_text:[{text:{content:a.unit}}]}}:{}),
+      ...(a.memo?{'메모':{rich_text:[{text:{content:a.memo.slice(0,1900)}}]}}:{}),
+      '연결업무':{rich_text:[{text:{content:(a.taskIds||[]).join(',').slice(0,1900)}}]},
+      '로컬ID':{rich_text:[{text:{content:a.id}}]} }) },
+  costs:{ db:'costs',
+    props:c=>({ '항목':{title:[{text:{content:c.name||''}}]}, '브랜드':{select:{name:brandOf(c.brandId)?.name||''}},
+      '월':{rich_text:[{text:{content:c.ym||''}}]}, '구분':{select:{name:c.kind||'기타'}},
+      '금액':{number:Number(c.amount||0)}, '로컬ID':{rich_text:[{text:{content:c.id}}]} }) },
   products:{ db:'products',
     props:p=>({ '제품명':{title:[{text:{content:p.name}}]}, '브랜드':{select:{name:brandOf(p.brandId)?.name||''}},
       '상태':{select:{name:p.status}}, 'SKU':{rich_text:[{text:{content:p.sku||''}}]},
@@ -906,12 +1218,29 @@ async function pullAll(quiet){
       if(!rec){ rec={id:lid}; DB[kind].push(rec); }
       rec.notionId=pg.id;
       if(kind==='contents'){ Object.assign(rec,{brandId:brandByName(sel(P['브랜드'])),type:sel(P['유형'])||'피드',
-        date:P['날짜']?.date?.start||TODAY, title:ttl(P['제목']), memo:txt(P['메모']), done:!!P['완료']?.checkbox}); }
-      if(kind==='tasks'){ Object.assign(rec,{brandId:brandByName(sel(P['브랜드'])),area:sel(P['영역'])||'기타',
-        priority:sel(P['우선순위'])||'보통', due:P['마감일']?.date?.start||'', title:ttl(P['업무']),
-        owner:P['담당자']?.multi_select?.[0]?.name||'', done:sel(P['상태'])==='Done'}); }
+        date:P['날짜']?.date?.start||TODAY, end:P['날짜']?.date?.end||'',
+        title:ttl(P['제목']), memo:txt(P['메모']), done:!!P['완료']?.checkbox}); }
+      if(kind==='tasks'){
+        const bn=sel(P['Brand']); const bid=DB.brands.find(b=>b.name===bn)?.id;
+        if(!bid){ DB[kind]=DB[kind].filter(r=>r!==rec); continue; }
+        const dd=P['Due']?.date;
+        Object.assign(rec,{brandId:bid, area:sel(P['Week'])||'',
+          priority:rec.priority||'보통',
+          due: dd?.end||dd?.start||'', start: dd?.end?(dd?.start||''):'',
+          title:ttl(P['Task']), owner:P['담당자']?.multi_select?.[0]?.name||'',
+          memo:txt(P['상세']), done:sel(P['Status'])==='Done'});
+      }
       if(kind==='sales'){ Object.assign(rec,{brandId:brandByName(sel(P['브랜드'])), ym:txt(P['월']),
         channel:sel(P['채널']), goal:P['목표']?.number||0, actual:P['실적']?.number||0}); }
+      if(kind==='plans'){ Object.assign(rec,{brandId:brandByName(sel(P['브랜드'])), ym:txt(P['월']),
+        week:sel(P['주차'])||'1주차', axis:txt(P['축']), title:ttl(P['주제']),
+        refs:txt(P['레퍼런스']), body:txt(P['내용']), done:!!P['완료']?.checkbox}); }
+      if(kind==='actions'){ Object.assign(rec,{brandId:brandByName(sel(P['브랜드'])), ym:txt(P['월']),
+        title:ttl(P['액션플랜']), goal:P['목표치']?.number??'', cur:P['현재치']?.number??'',
+        unit:txt(P['단위']), memo:txt(P['메모']),
+        taskIds:txt(P['연결업무']).split(',').map(x=>x.trim()).filter(Boolean)}); }
+      if(kind==='costs'){ Object.assign(rec,{brandId:brandByName(sel(P['브랜드'])), ym:txt(P['월']),
+        kind:sel(P['구분'])||'기타', name:ttl(P['항목']), amount:P['금액']?.number||0}); }
       if(kind==='products'){ Object.assign(rec,{brandId:brandByName(sel(P['브랜드'])), name:ttl(P['제품명']),
         sku:txt(P['SKU']), status:sel(P['상태'])||'기획', price:P['판매가']?.number||'', stock:P['재고']?.number??'',
         eta:P['입고예정']?.date?.start||''}); }
@@ -928,17 +1257,22 @@ async function pullAll(quiet){
    ========================================================= */
 function bind(){
   document.querySelectorAll('[data-brand]').forEach(el=>el.onclick=()=>{
-    UI.brand=el.dataset.brand; if(!['__all','__set'].includes(UI.brand)&&!['summary','calendar','tasks','sales','products'].includes(UI.tab)) UI.tab='summary';
+    UI.brand=el.dataset.brand; if(!['__set'].includes(UI.brand)&&!['summary','calendar','kpi','tasks','plans','sales','products'].includes(UI.tab)) UI.tab='summary';
     saveUI(); render();
   });
   document.querySelectorAll('[data-tab]').forEach(el=>el.onclick=()=>{ UI.tab=el.dataset.tab; saveUI(); render(); });
   document.querySelectorAll('[data-mo]').forEach(el=>el.onclick=()=>{
     const n=Number(el.dataset.mo); UI.ym = n===0? ymOf(today) : ymShift(UI.ym,n); saveUI(); render();
   });
-  document.querySelectorAll('[data-newdate]').forEach(el=>el.onclick=()=>contentModal(null,el.dataset.newdate));
+  document.querySelectorAll('[data-newdate]').forEach(el=>el.onclick=()=>addOnDate(el.dataset.newdate));
   document.querySelectorAll('[data-content]').forEach(el=>el.onclick=()=>contentModal(el.dataset.content));
   document.querySelectorAll('[data-edit-task]').forEach(el=>el.onclick=()=>taskModal(el.dataset.editTask));
   document.querySelectorAll('[data-edit-prod]').forEach(el=>el.onclick=()=>prodModal(el.dataset.editProd));
+  document.querySelectorAll('[data-edit-plan]').forEach(el=>el.onclick=()=>planModal(el.dataset.editPlan));
+  document.querySelectorAll('[data-edit-cost]').forEach(el=>el.onclick=()=>costModal(el.dataset.editCost));
+  document.querySelectorAll('[data-edit-action]').forEach(el=>el.onclick=()=>actionModal(el.dataset.editAction));
+  document.querySelectorAll('[data-link-action]').forEach(el=>el.onclick=()=>linkTaskModal(el.dataset.linkAction));
+  document.querySelectorAll('[data-newtask-action]').forEach(el=>el.onclick=()=>taskModal(null,'',el.dataset.newtaskAction));
   document.querySelectorAll('[data-edit-brand]').forEach(el=>el.onclick=()=>brandModal(el.dataset.editBrand));
   document.querySelectorAll('[data-toggle-task]').forEach(el=>el.onchange=()=>{
     const t=DB.tasks.find(x=>x.id===el.dataset.toggleTask); t.done=el.checked; t.dirty=true; save(); render();
@@ -956,11 +1290,16 @@ function act(a){
   if(a==='home'){ UI={brand:(DB.brands[0]?.id||'__all'), tab:'summary', ym:ymOf(today)}; saveUI(); render(); return; }
   if(a==='task-new') return taskModal(null);
   if(a==='prod-new') return prodModal(null);
+  if(a==='plan-new') return planModal(null);
+  if(a==='cost-new') return costModal(null);
+  if(a==='action-new') return actionModal(null);
   if(a==='brand-new') return brandModal(null);
   if(a==='save-sync'){
     DB.settings.workerUrl=$('#setWorker').value.trim().replace(/\/$/,'');
     DB.settings.db={contents:$('#db_contents').value.trim(),tasks:$('#db_tasks').value.trim(),
-                    sales:$('#db_sales').value.trim(),products:$('#db_products').value.trim()};
+                    sales:$('#db_sales').value.trim(),products:$('#db_products').value.trim(),
+                    plans:$('#db_plans').value.trim(),costs:$('#db_costs').value.trim(),
+                    actions:$('#db_actions').value.trim()};
     DB.settings.auto=$('#autoSync').checked;
     save(); toast('설정을 저장했습니다'); render(); return;
   }
