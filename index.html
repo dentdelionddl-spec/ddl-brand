@@ -125,6 +125,7 @@ tr:last-child td{border-bottom:0}
 .cell--out{background:#FAFAF8}
 .cell--today{background:#F4F6FF}
 .cell--sel{background:#E8EDFC!important;box-shadow:inset 0 0 0 1px #A9BCEE}
+.cal{user-select:none;-webkit-user-select:none}
 .ev[draggable]{user-select:none}
 .cell__d{font-family:var(--mono);font-size:11px;color:var(--mut)}
 .cell--today .cell__d{color:var(--accent);font-weight:600}
@@ -1045,7 +1046,7 @@ function bindCalendar(){
   document.querySelectorAll('.cell[data-date]').forEach(cell=>{
     cell.addEventListener('dragover',e=>{ e.preventDefault(); e.dataTransfer.dropEffect='move'; });
     cell.addEventListener('drop',e=>{ e.preventDefault(); const p=e.dataTransfer.getData('text/plain'); if(p) moveItem(p, cell.dataset.date); });
-    cell.addEventListener('mousedown',e=>{ if(e.target.closest('.ev, .cell__add')) return; selA=selB=cell.dataset.date; paintSel(); });
+    cell.addEventListener('mousedown',e=>{ if(e.target.closest('.ev, .cell__add')) return; e.preventDefault(); selA=selB=cell.dataset.date; paintSel(); });
     cell.addEventListener('mouseenter',()=>{ if(selA){ selB=cell.dataset.date; paintSel(); } });
   });
   document.addEventListener('mouseup',()=>{
