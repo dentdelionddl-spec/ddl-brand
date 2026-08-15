@@ -142,6 +142,8 @@ tr:last-child td{border-bottom:0}
 @media(max-width:800px){.tasks2{grid-template-columns:1fr}}
 .tk{display:flex;gap:9px;align-items:flex-start;padding:8px 10px;border:1px solid var(--line);border-radius:8px;background:#fff;margin-bottom:6px}
 .tk--done{opacity:.5}
+.tk--click{cursor:pointer;transition:background .12s,border-color .12s}
+.tk--click:hover{background:#F1F4FD;border-color:#C7D2F0}
 .tk input[type=checkbox]{margin-top:3px;width:15px;height:15px;accent-color:var(--ink);flex:0 0 auto}
 .tk__t{flex:1;min-width:0}
 .tk__title{font-size:13px;font-weight:600;letter-spacing:-.01em;word-break:break-word}
@@ -257,6 +259,7 @@ DB.brands.sort((a,b)=>{ const oa=SEED_BRANDS.findIndex(x=>x.id===a.id), ob=SEED_
   return (oa<0?99:oa)-(ob<0?99:ob); });
 for(const k of ['plans','costs','actions']) if(!Array.isArray(DB[k])) DB[k]=[];
 for(const c of DB.contents){ if(['피드','릴스','스레드'].includes(c.type)){ c.type='EGC'; c.dirty=true; } }
+for(const t of DB.tasks){ if(/\d+\s*월\s*\d+\s*주/.test(t.area||'')){ t.week=t.area; t.area=''; } }
 
 const save=()=>{ store.set(KEY,JSON.stringify(DB)); if(typeof autoSync==='function') autoSync(); };
 
@@ -531,48 +534,60 @@ function taskRow(t,compact){
   const d = t.due? daysBetween(TODAY,t.due) : null;
   const dd = d===null? '' : (d<0? `<span class="dday dday--over">D+${-d}</span>` : d===0? `<span class="dday dday--over">D-DAY</span>` : `<span class="dday ${d<=3?'dday--soon':''}">D-${d}</span>`);
   const pcls = t.priority==='긴급'?'tag--urgent':t.priority==='높음'?'tag--high':'';
-  return `<div class="tk ${t.done?'tk--done':''}">
-    <input type="checkbox" data-toggle-task="${t.id}" ${t.done?'checked':''} aria-label="완료 표시" />
+  return `<div class="tk tk--click ${t.done?'tk--done':''}" data-edit-task="${t.id}">
+    <input type="checkbox" data-toggle-task="${t.id}" ${t.done?'checked':''} onclick="event.stopPropagation()" aria-label="완료 표시" />
     <div class="tk__t">
       <div class="tk__title">${esc(t.title)}</div>
       <div class="tk__meta">
         ${dd}
         <span class="tag ${pcls}">${esc(t.priority||'보통')}</span>
-        ${compact&&t.area?`<span class="tag">${esc(t.area)}</span>`:''}
+        ${t.week?`<span class="tag">${esc(t.week)}</span>`:''}
         ${t.owner?`<span class="tag">${esc(t.owner)}</span>`:''}
         ${t.due?`<span class="eyebrow">${t.due.slice(5)}</span>`:''}
       </div>
     </div>
-    <button class="btn btn--ghost btn--sm" data-edit-task="${t.id}">편집</button>
   </div>`;
+}
+
+function weekKey(w){
+  const m=/(\d+)\s*월\s*(\d+)\s*주/.exec(w||''); 
+  return m? (Number(m[1])*10+Number(m[2])) : 999;
 }
 function tasksView(){
   const b=brandOf(UI.brand);
   const all=tasksOf(b.id);
-  const open=all.filter(t=>!t.done), done=all.filter(t=>t.done);
+  const owners=[...new Set(all.map(t=>(t.owner||'').trim()).filter(Boolean))].sort((x,y)=>x.localeCompare(y,'ko'));
+  const who=UI.taskOwner||'';
+  const scoped = who? all.filter(t=>(t.owner||'')===who) : all;
+  const open=scoped.filter(t=>!t.done), done=scoped.filter(t=>t.done);
   const showDone = UI.taskDone===true;
   const list = showDone? done : open;
   const sorter=(x,y)=>(x.due||'9999').localeCompare(y.due||'9999')||PRIOS.indexOf(x.priority)-PRIOS.indexOf(y.priority);
-  const areas=[...new Set(list.map(t=>(t.area||'').trim()||'미분류'))]
-    .sort((x,y)=>list.filter(t=>((t.area||'').trim()||'미분류')===y).length - list.filter(t=>((t.area||'').trim()||'미분류')===x).length);
-  const pct = all.length? Math.round(done.length/all.length*100):0;
-  return `<div style="display:flex;align-items:center;gap:12px;margin-bottom:12px;flex-wrap:wrap">
+  const weeks=[...new Set(list.map(t=>(t.week||'').trim()||'미지정'))]
+    .sort((x,y)=>weekKey(x)-weekKey(y)||x.localeCompare(y,'ko'));
+  const pct = scoped.length? Math.round(done.length/scoped.length*100):0;
+  const chip=(label,val,on)=>`<button class="btn btn--sm" data-taskowner="${esc(val)}" style="border-radius:999px;${on?'background:var(--ink);border-color:var(--ink);color:#fff':''}">${esc(label)}</button>`;
+  return `<div style="display:flex;align-items:center;gap:12px;margin-bottom:10px;flex-wrap:wrap">
       <div class="tabs" style="margin:0;border:1px solid var(--line);border-radius:999px;padding:2px;background:var(--card)">
         <button class="tab" data-taskview="todo" aria-selected="${!showDone}" style="border:0;border-radius:999px;padding:6px 14px">할 일 ${open.length}</button>
         <button class="tab" data-taskview="done" aria-selected="${showDone}" style="border:0;border-radius:999px;padding:6px 14px">완료 ${done.length}</button>
       </div>
       <div class="mono" style="font-size:12.5px;color:var(--mut)">진행률 ${pct}%</div>
-      <div class="track" style="flex:1;max-width:260px"><i style="width:${pct}%;background:${hueBg(b.hue,58)}"></i></div>
+      <div class="track" style="flex:1;max-width:220px"><i style="width:${pct}%;background:${hueBg(b.hue,58)}"></i></div>
       <div class="spacer" style="flex:1"></div>
       <button class="btn btn--primary btn--sm" data-act="task-new">업무 추가</button>
     </div>
-    ${!list.length? `<div class="card"><div class="empty"><b>${showDone?'완료한 업무가 없습니다':'할 일이 없습니다'}</b>${showDone?'체크한 업무가 여기로 모입니다.':'업무를 추가하거나 노션 주간 플랜에서 내려받으세요.'}</div></div>`
-    : areas.map(a=>{
-      const rows=list.filter(t=>((t.area||'').trim()||'미분류')===a).sort(sorter);
-      return `<div class="areahd"><h3>${esc(a)}</h3><span class="line"></span><span class="eyebrow">${rows.length}건</span></div>
+    <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:14px">
+      ${chip('담당 전체','',!who)}${owners.map(o=>chip(o+' '+all.filter(t=>(t.owner||'')===o&&!t.done).length,o,who===o)).join('')}
+    </div>
+    ${!list.length? `<div class="card"><div class="empty"><b>${showDone?'완료한 업무가 없습니다':'할 일이 없습니다'}</b>${who?`담당 ${esc(who)} 기준입니다.`:'업무를 추가하거나 노션 주간 플랜에서 내려받으세요.'}</div></div>`
+    : weeks.map(w=>{
+      const rows=list.filter(t=>((t.week||'').trim()||'미지정')===w).sort(sorter);
+      return `<div class="areahd"><h3>${esc(w)}</h3><span class="line"></span><span class="eyebrow">${rows.length}건</span></div>
         ${rows.map(t=>taskRow(t,true)).join('')}`;
     }).join('')}`;
 }
+
 
 /* ---------- KPI ---------- */
 function kpiView(){
@@ -1027,15 +1042,15 @@ function contentModal(id,date,cat){
 
 function taskModal(id,due,actionId){
   const isNew=!id;
-  const t=isNew? {id:uid(),brandId:UI.brand,area:(areasIn(UI.brand)[0]||''),title:'',priority:'보통',start:'',due:due||'',owner:'',done:false}
+  const t=isNew? {id:uid(),brandId:UI.brand,area:'',week:'',title:'',priority:'보통',start:'',due:due||'',owner:'',done:false}
                : DB.tasks.find(x=>x.id===id);
   modal({
     title:isNew?'업무 추가':'업무 편집',
     body:`<label class="f"><span>업무</span><input type="text" id="t_title" value="${esc(t.title)}" placeholder="예: 29CM 상품등록 · 시그니처 1차 작업지시" /></label>
       <div class="row2">
-        <label class="f"><span>영역 (자유 입력 · 노션 태그와 동일)</span>
-          <input type="text" id="t_area" value="${esc(t.area||'')}" list="areaSuggest" placeholder="콘텐츠" autocomplete="off" />
-          <datalist id="areaSuggest">${allAreas().map(a=>`<option value="${esc(a)}"></option>`).join('')}</datalist></label>
+        <label class="f"><span>주차</span>
+          <input type="text" id="t_week" value="${esc(t.week||'')}" list="weekSuggest" placeholder="8월 3주차" autocomplete="off" />
+          <datalist id="weekSuggest">${[...new Set(DB.tasks.map(x=>x.week).filter(Boolean))].sort((a,b)=>weekKey(a)-weekKey(b)).map(a=>`<option value="${esc(a)}"></option>`).join('')}</datalist></label>
         <label class="f"><span>우선순위</span><select id="t_prio">${opt(PRIOS,t.priority)}</select></label>
         <label class="f"><span>시작일 (선택)</span><input type="date" id="t_start" value="${t.start||''}" /></label>
         <label class="f"><span>마감일</span><input type="date" id="t_due" value="${t.due||''}" /></label>
@@ -1045,7 +1060,7 @@ function taskModal(id,due,actionId){
       <label style="display:flex;gap:8px;align-items:center"><input type="checkbox" id="t_done" ${t.done?'checked':''} style="width:16px;height:16px;accent-color:var(--ink)" /> 완료</label>`,
     onSave:()=>{
       const v=$('#t_title').value.trim(); if(!v){ toast('업무 내용을 입력하세요'); return false; }
-      t.title=v; t.area=$('#t_area').value.trim(); t.priority=$('#t_prio').value;
+      t.title=v; t.week=$('#t_week').value.trim(); t.area=''; t.priority=$('#t_prio').value;
       t.due=$('#t_due').value; const ts=$('#t_start').value;
       if(ts&&t.due&&ts>t.due){ toast('시작일이 마감일보다 늦습니다'); return false; }
       t.start=ts; t.owner=$('#t_owner').value; t.memo=$('#t_memo').value.trim(); t.done=$('#t_done').checked;
@@ -1120,7 +1135,7 @@ const KIND={
       '메모':{rich_text:[{text:{content:c.memo||''}}]}, '로컬ID':{rich_text:[{text:{content:c.id}}]} }) },
   tasks:{ db:'tasks',
     props:t=>({ 'Task':{title:[{text:{content:t.title}}]}, 'Brand':{select:{name:brandOf(t.brandId)?.name||''}},
-      ...(t.area?{'Week':{select:{name:t.area}}}:{}),
+      ...(t.week?{'Week':{select:{name:t.week}}}:{}),
       ...(t.due?{'Due':{date:{start:t.start||t.due, ...(t.start&&t.start!==t.due?{end:t.due}:{})}}}:{}),
       'Status':{status:{name:t.done?'Done':'To do'}},
       ...(t.owner?{'담당자':{multi_select:[{name:t.owner}]}}:{}),
@@ -1224,7 +1239,7 @@ async function pullAll(quiet){
         const bn=sel(P['Brand']); const bid=DB.brands.find(b=>b.name===bn)?.id;
         if(!bid){ DB[kind]=DB[kind].filter(r=>r!==rec); continue; }
         const dd=P['Due']?.date;
-        Object.assign(rec,{brandId:bid, area:sel(P['Week'])||'',
+        Object.assign(rec,{brandId:bid, area:'', week:sel(P['Week'])||'',
           priority:rec.priority||'보통',
           due: dd?.end||dd?.start||'', start: dd?.end?(dd?.start||''):'',
           title:ttl(P['Task']), owner:P['담당자']?.multi_select?.[0]?.name||'',
@@ -1262,6 +1277,7 @@ function bind(){
   });
   document.querySelectorAll('[data-tab]').forEach(el=>el.onclick=()=>{ UI.tab=el.dataset.tab; saveUI(); render(); });
   document.querySelectorAll('[data-taskview]').forEach(el=>el.onclick=()=>{ UI.taskDone=(el.dataset.taskview==='done'); saveUI(); render(); });
+  document.querySelectorAll('[data-taskowner]').forEach(el=>el.onclick=()=>{ UI.taskOwner=el.dataset.taskowner||''; saveUI(); render(); });
   document.querySelectorAll('[data-mo]').forEach(el=>el.onclick=()=>{
     const n=Number(el.dataset.mo); UI.ym = n===0? ymOf(today) : ymShift(UI.ym,n); saveUI(); render();
   });
