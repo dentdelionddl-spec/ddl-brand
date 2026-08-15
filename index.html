@@ -124,6 +124,8 @@ tr:last-child td{border-bottom:0}
 .cell{min-height:104px;border-right:1px solid var(--line2);border-bottom:1px solid var(--line2);padding:5px 5px 22px;position:relative;background:#fff}
 .cell--out{background:#FAFAF8}
 .cell--today{background:#F4F6FF}
+.cell--sel{background:#E8EDFC!important;box-shadow:inset 0 0 0 1px #A9BCEE}
+.ev[draggable]{user-select:none}
 .cell__d{font-family:var(--mono);font-size:11px;color:var(--mut)}
 .cell--today .cell__d{color:var(--accent);font-weight:600}
 .cell__sun{color:var(--alert)}
@@ -352,7 +354,7 @@ function brandBar(){
       const meta = goal? Math.round(actual/goal*100)+'%' : '—';
       return tab(br.id, br.name, meta, hueBg(br.hue,58), UI.brand===br.id);
     }).join('')}
-    <button class="btab btab--me" data-act="me" title="내 이름 설정"><span class="btab__n">${DB.settings.me?esc(DB.settings.me):'나는?'}</span></button>
+    <button class="btab btab--me" data-act="me" title="내 이름 설정"><span class="btab__n">${DB.settings.me?esc(DB.settings.me):'담당자 선택'}</span></button>
     ${tab('__set','설정',DB.settings.workerUrl?(DB.settings.auto===false?'수동':'자동'):'로컬','#9AA0A9',UI.brand==='__set')}
   </nav>`;
 }
@@ -382,7 +384,6 @@ const monthNav=()=>`<div class="monthnav">
     <button data-mo="-1" aria-label="이전 달">‹</button>
     <span class="cur">${ymLabel(UI.ym)}</span>
     <button data-mo="1" aria-label="다음 달">›</button>
-    <button data-mo="0" class="mono" style="font-size:11px">오늘</button>
   </div>`;
 
 function viewHtml(){
@@ -512,10 +513,10 @@ function calendarView(){
     const evs=cs.filter(c=>spans(c,ds));
     const dow=new Date(y,m-1,d).getDay();
     const tks=dayTasks.filter(t=>spans({date:t.start||t.due,end:t.due},ds));
-    cells.push(`<div class="cell ${ds===TODAY?'cell--today':''}">
+    cells.push(`<div class="cell ${ds===TODAY?'cell--today':''}" data-date="${ds}">
       <div class="cell__d ${dow===0?'cell__sun':''}">${d}</div>
-      ${evs.map(e=>`<button class="ev ${e.done?'ev--done':''}" data-content="${e.id}" style="border-left-color:${hueBg(TYPE_HUE[e.type]||0,55)}">${e.end&&e.end!==e.date?(ds===e.date?'▶ ':(ds===e.end?'■ ':'· ')):''}${esc(e.type)} · ${esc(e.title||'')}</button>`).join('')}
-      ${tks.map(t=>`<span class="ev ev--task ${t.done?'ev--done':''}"><b data-toggle-task-btn="${t.id}" title="완료 표시" style="cursor:pointer;padding:0 3px 0 0">${t.done?'✓':'□'}</b><span data-edit-task="${t.id}" style="cursor:pointer">${t.start&&t.start!==t.due?(ds===t.start?'▶ ':(ds===t.due?'■ ':'· ')):''}${esc(t.title)}</span></span>`).join('')}
+      ${evs.map(e=>`<button class="ev ${e.done?'ev--done':''}" draggable="true" data-drag="c:${e.id}" data-content="${e.id}" style="border-left-color:${hueBg(TYPE_HUE[e.type]||0,55)}">${e.end&&e.end!==e.date?(ds===e.date?'▶ ':(ds===e.end?'■ ':'· ')):''}${esc(e.type)} · ${esc(e.title||'')}</button>`).join('')}
+      ${tks.map(t=>`<span class="ev ev--task ${t.done?'ev--done':''}" draggable="true" data-drag="t:${t.id}"><b data-toggle-task-btn="${t.id}" title="완료 표시" style="cursor:pointer;padding:0 3px 0 0">${t.done?'✓':'□'}</b><span data-edit-task="${t.id}" style="cursor:pointer">${t.start&&t.start!==t.due?(ds===t.start?'▶ ':(ds===t.due?'■ ':'· ')):''}${esc(t.title)}</span></span>`).join('')}
       <button class="cell__add" data-newdate="${ds}" aria-label="${d}일 추가">+</button>
     </div>`);
   }
@@ -523,7 +524,6 @@ function calendarView(){
 
   return `<section class="card">
     <div class="card__hd"><h3>${ymLabel(ym)} 운영 캘린더</h3>
-      <span class="eyebrow">운영 · 콘텐츠 · 업무가 함께 표시됩니다</span>
       <button class="btn btn--sm btn--primary" data-newdate="${ym}-${pad(Math.min(today.getDate(),dim))}" style="margin-left:auto">항목 추가</button></div>
     <div class="cal">
       ${['일','월','화','수','목','금','토'].map(d=>`<div class="cal__dow">${d}</div>`).join('')}
@@ -1014,23 +1014,64 @@ function modal({title, body, onSave, onDelete, saveLabel='저장'}){
 }
 const opt=(arr,v)=>arr.map(a=>`<option ${a===v?'selected':''}>${esc(a)}</option>`).join('');
 
-function addOnDate(date){
-  modal({ title:`${date} 추가`, saveLabel:'닫기',
-    body:`<p style="margin:0 0 12px;color:var(--mut);font-size:13px">이 날짜에 무엇을 넣을까요?</p>
+function shiftDays(iso,n){ const d=new Date(iso+'T00:00:00'); d.setDate(d.getDate()+n); return dateStr(d); }
+function moveItem(payload,target){
+  const [kind,id]=payload.split(':');
+  if(kind==='c'){
+    const c=DB.contents.find(x=>x.id===id); if(!c) return;
+    const delta=daysBetween(c.date,target);
+    if(c.end) c.end=shiftDays(c.end,delta);
+    c.date=target; c.dirty=true;
+  } else {
+    const t=DB.tasks.find(x=>x.id===id); if(!t) return;
+    if(t.start&&t.due){ const delta=daysBetween(t.due,target); t.start=shiftDays(t.start,delta); t.due=target; }
+    else t.due=target;
+    t.dirty=true;
+  }
+  save(); render();
+}
+let selA=null, selB=null;
+function paintSel(){
+  document.querySelectorAll('.cell[data-date]').forEach(el=>{
+    const d=el.dataset.date;
+    const lo=selA<selB?selA:selB, hi=selA<selB?selB:selA;
+    el.classList.toggle('cell--sel', !!selA && d>=lo && d<=hi);
+  });
+}
+function bindCalendar(){
+  document.querySelectorAll('[data-drag]').forEach(el=>{
+    el.addEventListener('dragstart',e=>{ e.dataTransfer.setData('text/plain', el.dataset.drag); e.dataTransfer.effectAllowed='move'; });
+  });
+  document.querySelectorAll('.cell[data-date]').forEach(cell=>{
+    cell.addEventListener('dragover',e=>{ e.preventDefault(); e.dataTransfer.dropEffect='move'; });
+    cell.addEventListener('drop',e=>{ e.preventDefault(); const p=e.dataTransfer.getData('text/plain'); if(p) moveItem(p, cell.dataset.date); });
+    cell.addEventListener('mousedown',e=>{ if(e.target.closest('.ev, .cell__add')) return; selA=selB=cell.dataset.date; paintSel(); });
+    cell.addEventListener('mouseenter',()=>{ if(selA){ selB=cell.dataset.date; paintSel(); } });
+  });
+  document.addEventListener('mouseup',()=>{
+    if(!selA) return;
+    const a=selA<selB?selA:selB, b=selA<selB?selB:selA;
+    selA=selB=null; paintSel();
+    if(a!==b) addOnDate(a,b);
+  },{once:true});
+}
+function addOnDate(date,end){
+  modal({ title:`${end&&end!==date?date+' ~ '+end:date} 추가`, saveLabel:'닫기',
+    body:`<p style="margin:0 0 12px;color:var(--mut);font-size:13px">${end&&end!==date?`${date} ~ ${end}`:'이 날짜'}에 무엇을 넣을까요?</p>
       <div style="display:flex;gap:8px">
         <button class="btn" id="addOps" style="flex:1;padding:16px 8px">운영</button>
         <button class="btn" id="addContent" style="flex:1;padding:16px 8px">콘텐츠</button>
         <button class="btn" id="addTask" style="flex:1;padding:16px 8px">업무</button>
       </div>`,
     onSave:()=>{} });
-  $('#addOps').onclick=()=>{ $('#layer').innerHTML=''; contentModal(null,date,'운영'); };
-  $('#addContent').onclick=()=>{ $('#layer').innerHTML=''; contentModal(null,date,'콘텐츠'); };
-  $('#addTask').onclick=()=>{ $('#layer').innerHTML=''; taskModal(null,date); };
+  $('#addOps').onclick=()=>{ $('#layer').innerHTML=''; contentModal(null,date,'운영',end); };
+  $('#addContent').onclick=()=>{ $('#layer').innerHTML=''; contentModal(null,date,'콘텐츠',end); };
+  $('#addTask').onclick=()=>{ $('#layer').innerHTML=''; taskModal(null,(end||date),null,(end&&end!==date)?date:''); };
 }
 
-function contentModal(id,date,cat){
+function contentModal(id,date,cat,end){
   const isNew=!id;
-  const c = isNew? {id:uid(),brandId:UI.brand,date:date||TODAY,end:'',type:(cat==='콘텐츠'?'EGC':'제품 업로드'),title:'',memo:'',done:false}
+  const c = isNew? {id:uid(),brandId:UI.brand,date:date||TODAY,end:(end&&end!==date?end:''),type:(cat==='콘텐츠'?'EGC':'제품 업로드'),title:'',memo:'',done:false}
                  : DB.contents.find(x=>x.id===id);
   const kind = cat || catOf(c.type);
   const typeOptions = kind==='콘텐츠' ? CONTENT_TYPES : OPS_TYPES;
@@ -1056,9 +1097,9 @@ function contentModal(id,date,cat){
   });
 }
 
-function taskModal(id,due,actionId){
+function taskModal(id,due,actionId,startAt){
   const isNew=!id;
-  const t=isNew? {id:uid(),brandId:UI.brand,area:'',week:'',title:'',priority:'보통',start:'',due:due||'',owner:(DB.settings.me||''),done:false}
+  const t=isNew? {id:uid(),brandId:UI.brand,area:'',week:'',title:'',priority:'보통',start:(startAt||''),due:due||'',owner:(DB.settings.me||''),done:false}
                : DB.tasks.find(x=>x.id===id);
   modal({
     title:isNew?'업무 추가':'업무 편집',
@@ -1250,6 +1291,7 @@ async function pullAll(quiet){
       rec.notionId=pg.id;
       if(kind==='contents'){ Object.assign(rec,{brandId:brandByName(sel(P['브랜드'])),type:sel(P['유형'])||'피드',
         date:P['날짜']?.date?.start||TODAY, end:P['날짜']?.date?.end||'',
+        type:(['피드','릴스','스레드'].includes(sel(P['유형']))?'EGC':(sel(P['유형'])||'EGC')),
         title:ttl(P['제목']), memo:txt(P['메모']), done:!!P['완료']?.checkbox}); }
       if(kind==='tasks'){
         const bn=sel(P['Brand']); const bid=DB.brands.find(b=>b.name===bn)?.id;
@@ -1322,6 +1364,7 @@ function bind(){
     r[f]=Number(el.value||0); r.dirty=true; save(); render();
   });
   document.querySelectorAll('[data-act]').forEach(el=>el.onclick=()=>act(el.dataset.act));
+  if(UI.tab==='calendar') bindCalendar();
 }
 
 function act(a){
