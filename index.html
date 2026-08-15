@@ -138,6 +138,17 @@ tr:last-child td{border-bottom:0}
 .ev{display:block;width:100%;text-align:left;border:0;border-left:3px solid;border-radius:4px;background:#F6F6F2;padding:3px 5px;margin-top:3px;font-size:11px;line-height:1.3;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .ev:hover{background:#EDEDE7}
 .ev--task{background:#EEF1FA;border-left-color:var(--accent)}
+.thrlist{display:flex;flex-direction:column}
+.thr{display:flex;gap:12px;align-items:flex-start;padding:10px 14px;border-bottom:1px solid var(--line2)}
+.thr:last-child{border-bottom:0}
+.thr--empty{background:repeating-linear-gradient(135deg,transparent,transparent 6px,#FAFAF7 6px,#FAFAF7 12px)}
+.thr--today{box-shadow:inset 3px 0 0 var(--ink)}
+.thr__d{flex:0 0 44px;text-align:center;font-family:var(--mono)}
+.thr__d b{display:block;font-size:15px;font-weight:700}
+.thr__d span{font-size:10px;color:var(--mut)}
+.thr__b{flex:1;min-width:0}
+.thr__t{font-size:13px;line-height:1.65;white-space:pre-wrap;word-break:break-word}
+.thr__a{flex:0 0 auto;display:flex;gap:6px;align-items:center}
 .refgrid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin-bottom:14px}
 .refcell{border:1px solid var(--line);border-radius:10px;overflow:hidden;background:#fff}
 .refcell iframe{width:100%;height:420px;display:block;border:0;background:#fff}
@@ -751,6 +762,7 @@ function plansView(){
   const list=kind? all.filter(x=>(x.kind||'영상')===kind) : all;
   const byWeek=WEEKS.map(w=>[w, list.filter(p=>p.week===w)]);
   const has=list.length;
+  if(kind==='텍스트') return threadsView(b,ym,all);
   return `<div style="display:flex;align-items:center;gap:10px;margin-bottom:12px">
       <div class="eyebrow">${ymLabel(ym)} 기획안 ${has}건</div>
       <div style="display:flex;gap:6px;flex-wrap:wrap">
@@ -791,6 +803,42 @@ function toggleEmbed(planId, idx, url){
   box.innerHTML=`<iframe src="${e.src}" width="${e.w}" height="${e.h}" frameborder="0" scrolling="no" allow="autoplay; encrypted-media; picture-in-picture; clipboard-write" allowfullscreen
     style="max-width:100%;border:1px solid var(--line);border-radius:10px;background:#fff"></iframe>`;
 }
+function threadsView(b,ym,all){
+  const list=all.filter(x=>(x.kind||'영상')==='텍스트')
+    .sort((x,y)=>(x.date||'9999-99-99').localeCompare(y.date||'9999-99-99'));
+  const [y,m]=ym.split('-').map(Number);
+  const dim=new Date(y,m,0).getDate();
+  const byDate={}; list.forEach(x=>{ if(x.date) byDate[x.date]=x; });
+  const filled=Object.keys(byDate).length;
+  const days=[];
+  for(let d=1; d<=dim; d++){
+    const ds=`${ym}-${pad(d)}`;
+    const dow=['일','월','화','수','목','금','토'][new Date(y,m-1,d).getDay()];
+    const it=byDate[ds];
+    days.push(`<div class="thr ${it?'':'thr--empty'} ${ds===TODAY?'thr--today':''}">
+      <div class="thr__d"><b>${d}</b><span>${dow}</span></div>
+      <div class="thr__b">${it? `<div class="thr__t">${esc((it.body||it.title||'').slice(0,300))}</div>` : '<div class="eyebrow">비어 있음</div>'}</div>
+      <div class="thr__a">
+        ${it? `${it.done?'<span class="tag tag--ok">발행</span>':''}<button class="btn btn--ghost btn--sm" data-edit-plan="${it.id}">편집</button>`
+             : `<button class="btn btn--sm" data-newthread="${ds}">작성</button>`}
+      </div>
+    </div>`);
+  }
+  const noDate=list.filter(x=>!x.date);
+  return `<div style="display:flex;align-items:center;gap:10px;margin-bottom:12px;flex-wrap:wrap">
+      <div class="eyebrow">${ymLabel(ym)} 스레드 ${filled}/${dim}일 작성</div>
+      <div class="track" style="flex:1;max-width:240px"><i style="width:${Math.round(filled/dim*100)}%;background:${hueBg(b.hue,58)}"></i></div>
+      <div style="display:flex;gap:6px;flex-wrap:wrap">
+        ${[['','전체'],...PLAN_KINDS.map(k=>[k,k])].map(([v,l])=>`<button class="btn btn--sm" data-plankind="${v}" style="border-radius:999px;${v==='텍스트'?'background:var(--ink);border-color:var(--ink);color:#fff':''}">${l} ${v? all.filter(x=>(x.kind||'영상')===v).length : all.length}</button>`).join('')}
+      </div>
+      <div class="spacer" style="flex:1"></div>
+      <button class="btn btn--primary btn--sm" data-newthread="${ym}-${pad(Math.min(today.getDate(),dim))}">글 추가</button>
+    </div>
+    <section class="card"><div class="thrlist">${days.join('')}</div></section>
+    ${noDate.length? `<div class="areahd" style="margin-top:16px"><h3>날짜 미지정</h3><span class="line"></span><span class="eyebrow">${noDate.length}건</span></div>
+      ${noDate.map(x=>`<div class="thr"><div class="thr__d"><b>–</b></div><div class="thr__b"><div class="thr__t">${esc((x.body||x.title||'').slice(0,300))}</div></div>
+        <div class="thr__a"><button class="btn btn--ghost btn--sm" data-edit-plan="${x.id}">편집</button></div></div>`).join('')}`:''}`;
+}
 function planCard(p,b){
   const refs=(p.refs||'').split('\n').map(r=>r.trim()).filter(Boolean);
   return `<section class="card" style="margin-bottom:12px">
@@ -830,34 +878,60 @@ function parsePlanText(text){
 }
 function planModal(id){
   const isNew=!id;
-  const p=isNew? {id:uid(),brandId:UI.brand,ym:UI.ym,kind:(UI.planKind||'영상'),week:'1주차',axis:'',title:'',refs:'',body:'',done:false}
+  const p0=isNew? {id:uid(),brandId:UI.brand,ym:UI.ym,kind:(UI.planKind||'영상'),week:'1주차',axis:'',title:'',refs:'',body:'',done:false}
                : DB.plans.find(x=>x.id===id);
+  return planModalWith(p0,isNew);
+}
+function planModalWith(p,isNew){
+  const id=isNew?null:p.id;
   modal({
-    title:isNew?'기획안 추가':'기획안 편집',
+    title:(isNew?'추가':'편집')+' — '+(p.kind||'영상'),
     body:`<label class="f"><span>붙여넣기 (슬랙·노션 글을 그대로 붙이고 아래 버튼)</span>
         <textarea id="p_paste" rows="4" placeholder="오브서울 8월 기획안&#10;8월2주차&#10;트래픽&#10;주제: 중국 공장/시장 방문+대표의 셀렉&제작 과정&#10;레퍼런스&#10;instagram.com/reel/..."></textarea></label>
       <button class="btn btn--sm" id="p_fill" style="margin:-4px 0 12px">정리해서 채우기</button>
       <div class="row2">
         <label class="f"><span>형식</span><select id="p_kind">${opt(PLAN_KINDS,p.kind||'영상')}</select></label>
-        <label class="f"><span>주차</span><select id="p_week">${opt(WEEKS,p.week)}</select></label>
+        ${(p.kind||'영상')==='텍스트'
+          ? `<label class="f"><span>발행일</span><input type="date" id="p_date" value="${p.date||''}" /></label>`
+          : `<label class="f"><span>주차</span><select id="p_week">${opt(WEEKS,p.week)}</select></label>`}
       </div>
-      <label class="f"><span>축 (트래픽 · 브릿지 등)</span><input type="text" id="p_axis" value="${esc(p.axis)}" placeholder="트래픽" /></label>
-      <label class="f"><span>주제</span><input type="text" id="p_title" value="${esc(p.title)}" placeholder="중국 공장·시장 방문 + 대표의 셀렉/제작 과정" /></label>
-      <label class="f"><span>레퍼런스 (한 줄에 하나)</span><textarea id="p_refs" rows="3" placeholder="instagram.com/reel/...">${esc(p.refs)}</textarea></label>
-      <label class="f"><span>기획 내용</span><textarea id="p_body" rows="10" placeholder="초반 2-3초 중국 현장, 공장 등 전문적인 느낌으로 후킹&#10;- 여러 니트/우븐 제품을 직접 만져보고 비교하는 모습&#10;- 왜 이건 안되고 이건 괜찮은지 대표 기준 설명">${esc(p.body)}</textarea></label>
-      <label style="display:flex;gap:8px;align-items:center"><input type="checkbox" id="p_done" ${p.done?'checked':''} style="width:16px;height:16px;accent-color:var(--ink)" /> 완료</label>`,
+      ${(p.kind||'영상')==='텍스트' ? '' : `<label class="f"><span>축 (트래픽 · 브릿지 등)</span><input type="text" id="p_axis" value="${esc(p.axis)}" placeholder="트래픽" /></label>`}
+      <label class="f"><span>${(p.kind||'영상')==='텍스트'?'제목 (선택 · 목록 정리용)':'주제'}</span><input type="text" id="p_title" value="${esc(p.title)}" placeholder="${(p.kind||'영상')==='텍스트'?'8/16 스레드':'중국 공장·시장 방문 + 대표의 셀렉/제작 과정'}" /></label>
+      ${(p.kind||'영상')==='텍스트' ? '' : `<label class="f"><span>레퍼런스 (한 줄에 하나)</span><textarea id="p_refs" rows="3" placeholder="instagram.com/reel/...">${esc(p.refs)}</textarea></label>`}
+      <label class="f"><span>${(p.kind||'영상')==='텍스트'?'업로드할 글':'기획 내용'}</span><textarea id="p_body" rows="10" placeholder="초반 2-3초 중국 현장, 공장 등 전문적인 느낌으로 후킹&#10;- 여러 니트/우븐 제품을 직접 만져보고 비교하는 모습&#10;- 왜 이건 안되고 이건 괜찮은지 대표 기준 설명">${esc(p.body)}</textarea></label>
+      <label style="display:flex;gap:8px;align-items:center"><input type="checkbox" id="p_done" ${p.done?'checked':''} style="width:16px;height:16px;accent-color:var(--ink)" /> ${(p.kind||'영상')==='텍스트'?'발행 완료':'완료'}</label>`,
     onSave:()=>{
-      if(!$('#p_title').value.trim() && $('#p_paste').value.trim()){ fillPlanFromPaste(); }
-      const v=$('#p_title').value.trim(); if(!v){ toast('주제를 입력하세요'); return false; }
-      p.title=v; p.kind=$('#p_kind').value; p.week=$('#p_week').value; p.axis=$('#p_axis').value.trim();
-      p.refs=$('#p_refs').value.trim(); p.body=$('#p_body').value; p.done=$('#p_done').checked;
+      const kd=$('#p_kind').value;
+      if(kd!=='텍스트' && !$('#p_title').value.trim() && $('#p_paste')?.value.trim()){ fillPlanFromPaste(); }
+      const v=$('#p_title').value.trim(), bodyV=$('#p_body').value;
+      if(kd==='텍스트'){
+        if(!bodyV.trim()){ toast('업로드할 글을 입력하세요'); return false; }
+        p.title=v||(bodyV.trim().split('\n')[0].slice(0,40));
+        p.date=$('#p_date')?.value||'';
+        p.week=autoWeek(p.date)? autoWeek(p.date).replace(/^\d+월\s*/,'') : (p.week||'1주차');
+        p.axis=''; p.refs='';
+      } else {
+        if(!v){ toast('주제를 입력하세요'); return false; }
+        p.title=v; p.week=$('#p_week').value; p.axis=$('#p_axis').value.trim(); p.refs=$('#p_refs').value.trim(); p.date='';
+      }
+      p.kind=kd; p.body=bodyV; p.done=$('#p_done').checked;
       p.ym=UI.ym; p.dirty=true; if(isNew) DB.plans.push(p);
     },
     onDelete:isNew?null:()=>{ notionDrop(DB.plans.find(x=>x.id===id)); DB.plans=DB.plans.filter(x=>x.id!==id); }
   });
   const fill=()=>fillPlanFromPaste();
-  $('#p_fill').onclick=fill;
-  $('#p_paste').addEventListener('paste',()=>setTimeout(fill,50));
+  if($('#p_fill')) $('#p_fill').onclick=fill;
+  if($('#p_paste')) $('#p_paste').addEventListener('paste',()=>setTimeout(fill,50));
+  $('#p_kind').onchange=()=>{
+    p.kind=$('#p_kind').value;
+    p.title=$('#p_title').value; p.body=$('#p_body').value;
+    if($('#p_axis')) p.axis=$('#p_axis').value;
+    if($('#p_refs')) p.refs=$('#p_refs').value;
+    if($('#p_date')) p.date=$('#p_date').value;
+    if($('#p_week')) p.week=$('#p_week').value;
+    $('#layer').innerHTML='';
+    if(isNew){ DB.plans=DB.plans.filter(x=>x.id!==p.id); planModalWith(p,true); } else planModalWith(p,false);
+  };
 }
 function fillPlanFromPaste(){
   const raw=$('#p_paste').value;
@@ -1322,6 +1396,7 @@ const KIND={
       ...(p.refs?{'레퍼런스':{rich_text:[{text:{content:p.refs.slice(0,1900)}}]}}:{}),
       ...(p.body?{'내용':{rich_text:[{text:{content:p.body.slice(0,1900)}}]}}:{}),
       '형식':{select:{name:p.kind||'영상'}},
+      ...(p.date?{'발행일':{date:{start:p.date}}}:{}),
       '완료':{checkbox:!!p.done}, '로컬ID':{rich_text:[{text:{content:p.id}}]} }) },
   actions:{ db:'actions',
     props:a=>({ '액션플랜':{title:[{text:{content:a.title||''}}]}, '브랜드':{select:{name:brandOf(a.brandId)?.name||''}},
@@ -1432,7 +1507,7 @@ async function pullAll(quiet){
       if(kind==='sales'){ Object.assign(rec,{brandId:brandByName(sel(P['브랜드'])), ym:txt(P['월']),
         channel:sel(P['채널']), goal:P['목표']?.number||0, actual:P['실적']?.number||0}); }
       if(kind==='plans'){ Object.assign(rec,{brandId:brandByName(sel(P['브랜드'])), ym:txt(P['월']),
-        week:sel(P['주차'])||'1주차', kind:sel(P['형식'])||'영상', axis:txt(P['축']), title:ttl(P['주제']),
+        week:sel(P['주차'])||'1주차', kind:sel(P['형식'])||'영상', date:P['발행일']?.date?.start||'', axis:txt(P['축']), title:ttl(P['주제']),
         refs:txt(P['레퍼런스']), body:txt(P['내용']), done:!!P['완료']?.checkbox}); }
       if(kind==='actions'){ Object.assign(rec,{brandId:brandByName(sel(P['브랜드'])), ym:txt(P['월']),
         title:ttl(P['액션플랜']), goal:P['목표치']?.number??'', cur:P['현재치']?.number??'',
@@ -1471,6 +1546,9 @@ function bind(){
   document.querySelectorAll('[data-edit-prod]').forEach(el=>el.onclick=()=>prodModal(el.dataset.editProd));
   document.querySelectorAll('[data-edit-plan]').forEach(el=>el.onclick=()=>planModal(el.dataset.editPlan));
   document.querySelectorAll('[data-plankind]').forEach(el=>el.onclick=()=>{ UI.planKind=el.dataset.plankind||''; saveUI(); render(); });
+  document.querySelectorAll('[data-newthread]').forEach(el=>el.onclick=()=>{
+    planModalWith({id:uid(),brandId:UI.brand,ym:UI.ym,kind:'텍스트',date:el.dataset.newthread,week:'1주차',axis:'',title:'',refs:'',body:'',done:false}, true);
+  });
   document.querySelectorAll('[data-play]').forEach(el=>el.onclick=()=>{
     const [pid,idx]=el.dataset.play.split('|');
     const pl=DB.plans.find(x=>x.id===pid); if(!pl) return;
