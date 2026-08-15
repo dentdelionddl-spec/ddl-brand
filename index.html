@@ -702,7 +702,7 @@ function actionModal(id){
       a.unit=$('#a_unit').value.trim(); a.memo=$('#a_memo').value; a.ym=UI.ym;
       a.dirty=true; if(isNew) DB.actions.push(a);
     },
-    onDelete:isNew?null:()=>{ DB.actions=DB.actions.filter(x=>x.id!==id); }
+    onDelete:isNew?null:()=>{ notionDrop(DB.actions.find(x=>x.id===id)); DB.actions=DB.actions.filter(x=>x.id!==id); }
   });
 }
 function linkTaskModal(actionId){
@@ -785,7 +785,7 @@ function planModal(id){
       p.refs=$('#p_refs').value.trim(); p.body=$('#p_body').value; p.done=$('#p_done').checked;
       p.ym=UI.ym; p.dirty=true; if(isNew) DB.plans.push(p);
     },
-    onDelete:isNew?null:()=>{ DB.plans=DB.plans.filter(x=>x.id!==id); }
+    onDelete:isNew?null:()=>{ notionDrop(DB.plans.find(x=>x.id===id)); DB.plans=DB.plans.filter(x=>x.id!==id); }
   });
 }
 function costModal(id){
@@ -804,7 +804,7 @@ function costModal(id){
       c.name=v; c.kind=$('#c_kind').value; c.amount=Number($('#c_amt').value||0); c.ym=UI.ym;
       c.dirty=true; if(isNew) DB.costs.push(c);
     },
-    onDelete:isNew?null:()=>{ DB.costs=DB.costs.filter(x=>x.id!==id); }
+    onDelete:isNew?null:()=>{ notionDrop(DB.costs.find(x=>x.id===id)); DB.costs=DB.costs.filter(x=>x.id!==id); }
   });
 }
 
@@ -1116,7 +1116,7 @@ function contentModal(id,date,cat,end){
       c.title=$('#c_title').value.trim(); c.memo=$('#c_memo').value.trim(); c.done=$('#c_done').checked;
       c.dirty=true; if(isNew) DB.contents.push(c);
     },
-    onDelete: isNew?null:()=>{ DB.contents=DB.contents.filter(x=>x.id!==id); }
+    onDelete: isNew?null:()=>{ notionDrop(DB.contents.find(x=>x.id===id)); DB.contents=DB.contents.filter(x=>x.id!==id); }
   });
 }
 
@@ -1152,7 +1152,7 @@ function taskModal(id,due,actionId,startAt){
       if(isNew){ DB.tasks.push(t);
         if(actionId){ const ac=DB.actions.find(x=>x.id===actionId); if(ac){ ac.taskIds=[...(ac.taskIds||[]), t.id]; ac.dirty=true; } } }
     },
-    onDelete:isNew?null:()=>{ DB.tasks=DB.tasks.filter(x=>x.id!==id); }
+    onDelete:isNew?null:()=>{ notionDrop(DB.tasks.find(x=>x.id===id)); DB.tasks=DB.tasks.filter(x=>x.id!==id); }
   });
 }
 
@@ -1177,7 +1177,7 @@ function prodModal(id){
       p.price=$('#p_price').value; p.stock=$('#p_stock').value; p.eta=$('#p_eta').value; p.memo=$('#p_memo').value.trim();
       p.dirty=true; if(isNew) DB.products.push(p);
     },
-    onDelete:isNew?null:()=>{ DB.products=DB.products.filter(x=>x.id!==id); }
+    onDelete:isNew?null:()=>{ notionDrop(DB.products.find(x=>x.id===id)); DB.products=DB.products.filter(x=>x.id!==id); }
   });
 }
 
@@ -1203,7 +1203,10 @@ function brandModal(id){
     },
     onDelete:isNew?null:()=>{
       DB.brands=DB.brands.filter(x=>x.id!==id);
-      ['contents','tasks','sales','products'].forEach(k=>DB[k]=DB[k].filter(r=>r.brandId!==id));
+      ['contents','tasks','sales','products','plans','costs','actions'].forEach(k=>{
+        notionDrop(...DB[k].filter(r=>r.brandId===id));
+        DB[k]=DB[k].filter(r=>r.brandId!==id);
+      });
       if(UI.brand===id){ UI.brand=DB.brands[0]?.id||'__set'; saveUI(); }
     }
   });
@@ -1258,6 +1261,14 @@ const KIND={
       '로컬ID':{rich_text:[{text:{content:p.id}}]} }) }
 };
 
+async function notionDrop(...recs){
+  const ids=recs.filter(Boolean).map(r=>r.notionId).filter(Boolean);
+  if(!ids.length || !DB.settings.workerUrl) return;
+  let fail=0;
+  for(const id of ids){ try{ await api({action:'delete', page_id:id}); }catch(e){ fail++; } }
+  if(fail) toast(`노션에서 ${fail}건을 지우지 못했습니다`,3000);
+  else toast(`노션에서도 삭제했습니다`,2000);
+}
 async function api(payload){
   const url=DB.settings.workerUrl;
   if(!url) throw new Error('Worker URL이 없습니다');
