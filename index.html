@@ -765,13 +765,36 @@ function planCard(p,b){
     </div>
   </section>`;
 }
+function parsePlanText(text){
+  const lines=String(text||'').replace(/\r/g,'').split('\n');
+  const isUrl=l=>/(https?:\/\/|www\.|[a-z0-9-]+\.[a-z]{2,}\/)/i.test(l);
+  let week='',axis='',title='',header='',refs=[],body=[],mode='body',seenFirst=false;
+  for(const raw of lines){
+    const l=raw.trim();
+    if(!l){ if(mode!=='ref') body.push(''); continue; }
+    let m;
+    if(!seenFirst){ seenFirst=true;
+      if(/기획안|주간\s*플랜|플랜/.test(l) && !/^주제/.test(l)){ header=l; continue; } }
+    if((m=/^(\d{1,2})\s*월\s*(\d)\s*주차?$/.exec(l))){ week=`${+m[1]}월 ${+m[2]}주차`; mode='body'; continue; }
+    if((m=/^주제\s*[:：]\s*(.+)$/.exec(l))){ title=m[1].trim(); mode='body'; continue; }
+    if(/^레퍼런스\s*[:：]?$/.test(l)){ mode='ref'; continue; }
+    if(mode==='ref'){ if(isUrl(l)){ refs.push(l); continue; } mode='body'; }
+    if(isUrl(l) && l.length<300){ refs.push(l); continue; }
+    if(!axis && !/\s/.test(l) && l.length<=8 && !/[:：]/.test(l) && !/^\d/.test(l)){ axis=l; continue; }
+    body.push(raw);
+  }
+  return { week, axis, title: title||header, refs: refs.join('\n'), body: body.join('\n').replace(/\n{3,}/g,'\n\n').trim() };
+}
 function planModal(id){
   const isNew=!id;
   const p=isNew? {id:uid(),brandId:UI.brand,ym:UI.ym,week:'1주차',axis:'',title:'',refs:'',body:'',done:false}
                : DB.plans.find(x=>x.id===id);
   modal({
     title:isNew?'기획안 추가':'기획안 편집',
-    body:`<div class="row2">
+    body:`<label class="f"><span>붙여넣기 (슬랙·노션 글을 그대로 붙이고 아래 버튼)</span>
+        <textarea id="p_paste" rows="4" placeholder="오브서울 8월 기획안&#10;8월2주차&#10;트래픽&#10;주제: 중국 공장/시장 방문+대표의 셀렉&제작 과정&#10;레퍼런스&#10;instagram.com/reel/..."></textarea></label>
+      <button class="btn btn--sm" id="p_fill" style="margin:-4px 0 12px">정리해서 채우기</button>
+      <div class="row2">
         <label class="f"><span>주차</span><select id="p_week">${opt(WEEKS,p.week)}</select></label>
         <label class="f"><span>축 (트래픽 · 브릿지 등)</span><input type="text" id="p_axis" value="${esc(p.axis)}" placeholder="트래픽" /></label>
       </div>
@@ -780,6 +803,7 @@ function planModal(id){
       <label class="f"><span>기획 내용</span><textarea id="p_body" rows="10" placeholder="초반 2-3초 중국 현장, 공장 등 전문적인 느낌으로 후킹&#10;- 여러 니트/우븐 제품을 직접 만져보고 비교하는 모습&#10;- 왜 이건 안되고 이건 괜찮은지 대표 기준 설명">${esc(p.body)}</textarea></label>
       <label style="display:flex;gap:8px;align-items:center"><input type="checkbox" id="p_done" ${p.done?'checked':''} style="width:16px;height:16px;accent-color:var(--ink)" /> 완료</label>`,
     onSave:()=>{
+      if(!$('#p_title').value.trim() && $('#p_paste').value.trim()){ fillPlanFromPaste(); }
       const v=$('#p_title').value.trim(); if(!v){ toast('주제를 입력하세요'); return false; }
       p.title=v; p.week=$('#p_week').value; p.axis=$('#p_axis').value.trim();
       p.refs=$('#p_refs').value.trim(); p.body=$('#p_body').value; p.done=$('#p_done').checked;
@@ -787,6 +811,20 @@ function planModal(id){
     },
     onDelete:isNew?null:()=>{ notionDrop(DB.plans.find(x=>x.id===id)); DB.plans=DB.plans.filter(x=>x.id!==id); }
   });
+  const fill=()=>fillPlanFromPaste();
+  $('#p_fill').onclick=fill;
+  $('#p_paste').addEventListener('paste',()=>setTimeout(fill,50));
+}
+function fillPlanFromPaste(){
+  const raw=$('#p_paste').value;
+  if(!raw.trim()){ toast('먼저 내용을 붙여넣으세요'); return; }
+  const r=parsePlanText(raw);
+  if(r.week && [...$('#p_week').options].some(o=>o.value===r.week.replace(/^\d+월\s*/,''))) $('#p_week').value=r.week.replace(/^\d+월\s*/,'');
+  if(r.axis) $('#p_axis').value=r.axis;
+  if(r.title) $('#p_title').value=r.title;
+  if(r.refs) $('#p_refs').value=r.refs;
+  if(r.body) $('#p_body').value=r.body;
+  toast(`정리했습니다 · 레퍼런스 ${r.refs? r.refs.split('\n').length:0}개`,2200);
 }
 function costModal(id){
   const isNew=!id;
