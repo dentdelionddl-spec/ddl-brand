@@ -762,12 +762,11 @@ function embedOf(url){
 }
 function refRow(planId, idx, r){
   const e=embedOf(r);
-  return `<div style="margin-bottom:6px">
-    <div style="display:flex;gap:8px;align-items:flex-start">
-      <div style="flex:1;min-width:0">${linkify(r)}</div>
-      ${e?`<button class="btn btn--sm" data-play="${planId}|${idx}" style="flex:0 0 auto">▶ 재생</button>`:''}
-    </div>
-    <div id="emb_${planId}_${idx}" style="margin-top:8px"></div>
+  return `<div style="margin-bottom:14px">
+    <div style="margin-bottom:6px;word-break:break-all">${linkify(r)}</div>
+    ${e?`<iframe src="${e.src}" width="${e.w}" height="${e.h}" loading="lazy" frameborder="0" scrolling="no"
+      allow="autoplay; encrypted-media; picture-in-picture; clipboard-write" allowfullscreen
+      style="max-width:100%;border:1px solid var(--line);border-radius:10px;background:#fff;display:block"></iframe>`:''}
   </div>`;
 }
 function toggleEmbed(planId, idx, url){
