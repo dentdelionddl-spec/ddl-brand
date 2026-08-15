@@ -42,7 +42,9 @@ button{cursor:pointer}
 .btab__n{font-size:13px;font-weight:700;letter-spacing:-.01em}
 .btab__p{font-family:var(--mono);font-size:10px;color:#767C86}
 .btab[aria-current="true"] .btab__p{color:#B9BDC4}
-.btab--util{margin-left:auto}
+.btab--util{margin-left:0}
+.btab--me{margin-left:auto;color:#C9CBD0}
+.btab--me .btab__n{font-weight:600}
 
 .main{min-width:0;display:flex;flex-direction:column}
 .topbar{position:sticky;top:44px;z-index:20;background:rgba(245,245,242,.94);backdrop-filter:blur(8px);border-bottom:1px solid var(--line);padding:12px 22px 0}
@@ -350,6 +352,7 @@ function brandBar(){
       const meta = goal? Math.round(actual/goal*100)+'%' : '—';
       return tab(br.id, br.name, meta, hueBg(br.hue,58), UI.brand===br.id);
     }).join('')}
+    <button class="btab btab--me" data-act="me" title="내 이름 설정"><span class="btab__n">${DB.settings.me?esc(DB.settings.me):'나는?'}</span></button>
     ${tab('__set','설정',DB.settings.workerUrl?(DB.settings.auto===false?'수동':'자동'):'로컬','#9AA0A9',UI.brand==='__set')}
   </nav>`;
 }
@@ -557,7 +560,8 @@ function tasksView(){
   const b=brandOf(UI.brand);
   const all=tasksOf(b.id);
   const owners=[...new Set(all.map(t=>(t.owner||'').trim()).filter(Boolean))].sort((x,y)=>x.localeCompare(y,'ko'));
-  const who=UI.taskOwner||'';
+  const me=DB.settings.me||'';
+  const who=(UI.taskOwner===undefined? me : UI.taskOwner)||'';
   const scoped = who? all.filter(t=>(t.owner||'')===who) : all;
   const open=scoped.filter(t=>!t.done), done=scoped.filter(t=>t.done);
   const showDone = UI.taskDone===true;
@@ -578,7 +582,7 @@ function tasksView(){
       <button class="btn btn--primary btn--sm" data-act="task-new">업무 추가</button>
     </div>
     <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:14px">
-      ${chip('담당 전체','',!who)}${owners.map(o=>chip(o+' '+all.filter(t=>(t.owner||'')===o&&!t.done).length,o,who===o)).join('')}
+      ${chip('담당 전체','',!who)}${owners.map(o=>chip((o===me?'나 · ':'')+o+' '+all.filter(t=>(t.owner||'')===o&&!t.done).length,o,who===o)).join('')}
     </div>
     ${!list.length? `<div class="card"><div class="empty"><b>${showDone?'완료한 업무가 없습니다':'할 일이 없습니다'}</b>${who?`담당 ${esc(who)} 기준입니다.`:'업무를 추가하거나 노션 주간 플랜에서 내려받으세요.'}</div></div>`
     : weeks.map(w=>{
@@ -645,6 +649,18 @@ function actionCard(a,b){
       </div>
     </div>
   </section>`;
+}
+function meModal(){
+  const cur=DB.settings.me||'';
+  const names=[...new Set([...OWNERS, ...DB.tasks.map(t=>t.owner).filter(Boolean)])];
+  modal({
+    title:'내 이름',
+    body:`<p style="margin:0 0 12px;color:var(--mut);font-size:13px">이 브라우저에서 나로 기억할 이름입니다. 업무 탭이 처음부터 내 것만 보이도록 맞춰집니다.</p>
+      <label class="f"><span>이름</span><select id="me_name">
+        <option value="">선택 안 함</option>${names.map(n=>`<option ${n===cur?'selected':''}>${esc(n)}</option>`).join('')}
+      </select></label>`,
+    onSave:()=>{ DB.settings.me=$('#me_name').value; UI.taskOwner=DB.settings.me; saveUI(); }
+  });
 }
 function actionModal(id){
   const isNew=!id;
@@ -1042,7 +1058,7 @@ function contentModal(id,date,cat){
 
 function taskModal(id,due,actionId){
   const isNew=!id;
-  const t=isNew? {id:uid(),brandId:UI.brand,area:'',week:'',title:'',priority:'보통',start:'',due:due||'',owner:'',done:false}
+  const t=isNew? {id:uid(),brandId:UI.brand,area:'',week:'',title:'',priority:'보통',start:'',due:due||'',owner:(DB.settings.me||''),done:false}
                : DB.tasks.find(x=>x.id===id);
   modal({
     title:isNew?'업무 추가':'업무 편집',
@@ -1309,6 +1325,7 @@ function bind(){
 }
 
 function act(a){
+  if(a==='me') return meModal();
   if(a==='go-summary'){ UI.tab='summary'; saveUI(); render(); return; }
   if(a==='home'){ UI={brand:(DB.brands[0]?.id||'__all'), tab:'summary', ym:ymOf(today)}; saveUI(); render(); return; }
   if(a==='task-new') return taskModal(null);
