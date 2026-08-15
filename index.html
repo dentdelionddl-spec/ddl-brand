@@ -453,7 +453,9 @@ function summaryView(){
   const pacePct=Math.round(paceRatio(ym)*100);
   const cs=contentsOf(b.id,ym);
   const counts=TYPES.map(t=>[t,cs.filter(c=>c.type===t).length]);
-  const openTasks=tasksOf(b.id).filter(t=>!t.done);
+  const sumWho=(UI.taskOwner===undefined? (DB.settings.me||'') : UI.taskOwner)||'';
+  const sumOwners=[...new Set([...OWNERS, ...tasksOf(b.id).map(t=>(t.owner||'').trim()).filter(Boolean)])];
+  const openTasks=tasksOf(b.id).filter(t=>!t.done && (!sumWho || (t.owner||'')===sumWho));
   const todayTasks=openTasks.filter(t=>t.due===TODAY || (t.start&&t.due&&t.start<=TODAY&&TODAY<=t.due))
     .sort((x,y)=>PRIOS.indexOf(x.priority)-PRIOS.indexOf(y.priority));
   const overdue=openTasks.filter(t=>t.due&&t.due<TODAY).sort((x,y)=>x.due.localeCompare(y.due));
@@ -491,7 +493,11 @@ function summaryView(){
     </div>
   </section>
 
-  <div class="grid g2" style="margin-top:14px">
+  <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin:16px 0 8px">
+    <span class="eyebrow">업무 담당</span>
+    ${[['','전체'],...sumOwners.map(o=>[o,o])].map(([v,l])=>`<button class="btn btn--sm" data-taskowner="${esc(v)}" style="border-radius:999px;${sumWho===v?'background:var(--ink);border-color:var(--ink);color:#fff':''}">${esc(l)}</button>`).join('')}
+  </div>
+  <div class="grid g2">
     <section class="card">
       <div class="card__hd"><h3>오늘 해야 할 업무</h3>
         <span class="eyebrow">${todayTasks.length}건</span>
