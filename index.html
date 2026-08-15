@@ -584,8 +584,11 @@ function tasksView(){
   const showDone = UI.taskDone===true;
   const list = showDone? done : open;
   const sorter=(x,y)=>(x.due||'9999').localeCompare(y.due||'9999')||PRIOS.indexOf(x.priority)-PRIOS.indexOf(y.priority);
-  const weeks=[...new Set(list.map(t=>(t.week||'').trim()||'미지정'))]
-    .sort((x,y)=>weekKey(x)-weekKey(y)||x.localeCompare(y,'ko'));
+  const areaOf=t=>(t.area||'').trim()||'미분류';
+  const areas=[...new Set(list.map(areaOf))].sort((x,y)=>{
+    const first=a=>list.filter(t=>areaOf(t)===a).map(t=>t.due||'9999-99-99').sort()[0]||'9999-99-99';
+    return first(x).localeCompare(first(y)) || x.localeCompare(y,'ko');
+  });
   const pct = scoped.length? Math.round(done.length/scoped.length*100):0;
   const chip=(label,val,on)=>`<button class="btn btn--sm" data-taskowner="${esc(val)}" style="border-radius:999px;${on?'background:var(--ink);border-color:var(--ink);color:#fff':''}">${esc(label)}</button>`;
   return `<div style="display:flex;align-items:center;gap:12px;margin-bottom:10px;flex-wrap:wrap">
@@ -602,9 +605,9 @@ function tasksView(){
       ${chip('담당 전체','',!who)}${owners.map(o=>chip((o===me?'나 · ':'')+o+' '+all.filter(t=>(t.owner||'')===o&&!t.done).length,o,who===o)).join('')}
     </div>
     ${!list.length? `<div class="card"><div class="empty"><b>${showDone?'완료한 업무가 없습니다':'할 일이 없습니다'}</b>${who?`담당 ${esc(who)} 기준입니다.`:'업무를 추가하거나 노션 주간 플랜에서 내려받으세요.'}</div></div>`
-    : weeks.map(w=>{
-      const rows=list.filter(t=>((t.week||'').trim()||'미지정')===w).sort(sorter);
-      return `<div class="areahd"><h3>${esc(w)}</h3><span class="line"></span><span class="eyebrow">${rows.length}건</span></div>
+    : areas.map(a=>{
+      const rows=list.filter(t=>areaOf(t)===a).sort((x,y)=>(x.due||'9999-99-99').localeCompare(y.due||'9999-99-99')||PRIOS.indexOf(x.priority)-PRIOS.indexOf(y.priority));
+      return `<div class="areahd"><h3>${esc(a)}</h3><span class="line"></span><span class="eyebrow">${rows.length}건</span></div>
         ${rows.map(t=>taskRow(t,true)).join('')}`;
     }).join('')}`;
 }
