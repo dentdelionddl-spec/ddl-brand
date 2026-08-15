@@ -749,6 +749,34 @@ function plansView(){
       ${ps.map(p=>planCard(p,b)).join('')}
     `).join('')}`;
 }
+function embedOf(url){
+  const u=String(url||'').trim();
+  let m;
+  if((m=/instagram\.com\/(reel|reels|p|tv)\/([A-Za-z0-9_-]+)/i.exec(u)))
+    return {kind:'instagram', src:`https://www.instagram.com/${m[1]==='reels'?'reel':m[1]}/${m[2]}/embed/`, h:640, w:400};
+  if((m=/(?:youtube\.com\/(?:watch\?v=|shorts\/)|youtu\.be\/)([A-Za-z0-9_-]{6,})/i.exec(u)))
+    return {kind:'youtube', src:`https://www.youtube.com/embed/${m[1]}`, h:315, w:560};
+  if((m=/tiktok\.com\/@[^/]+\/video\/(\d+)/i.exec(u)))
+    return {kind:'tiktok', src:`https://www.tiktok.com/embed/v2/${m[1]}`, h:740, w:340};
+  return null;
+}
+function refRow(planId, idx, r){
+  const e=embedOf(r);
+  return `<div style="margin-bottom:6px">
+    <div style="display:flex;gap:8px;align-items:flex-start">
+      <div style="flex:1;min-width:0">${linkify(r)}</div>
+      ${e?`<button class="btn btn--sm" data-play="${planId}|${idx}" style="flex:0 0 auto">▶ 재생</button>`:''}
+    </div>
+    <div id="emb_${planId}_${idx}" style="margin-top:8px"></div>
+  </div>`;
+}
+function toggleEmbed(planId, idx, url){
+  const box=document.getElementById(`emb_${planId}_${idx}`); if(!box) return;
+  if(box.innerHTML){ box.innerHTML=''; return; }
+  const e=embedOf(url); if(!e) return;
+  box.innerHTML=`<iframe src="${e.src}" width="${e.w}" height="${e.h}" frameborder="0" scrolling="no" allow="autoplay; encrypted-media; picture-in-picture; clipboard-write" allowfullscreen
+    style="max-width:100%;border:1px solid var(--line);border-radius:10px;background:#fff"></iframe>`;
+}
 function planCard(p,b){
   const refs=(p.refs||'').split('\n').map(r=>r.trim()).filter(Boolean);
   return `<section class="card" style="margin-bottom:12px">
@@ -759,8 +787,8 @@ function planCard(p,b){
       <button class="btn btn--ghost btn--sm" data-edit-plan="${p.id}" style="margin-left:auto">편집</button>
     </div>
     <div class="card__bd">
-      ${refs.length?`<div class="eyebrow" style="margin-bottom:5px">레퍼런스</div>
-        <div style="margin-bottom:12px;font-size:12.5px;line-height:1.8">${refs.map(r=>linkify(r)).join('<br>')}</div>`:''}
+      ${refs.length?`<div class="eyebrow" style="margin-bottom:5px">레퍼런스 ${refs.length}</div>
+        <div style="margin-bottom:12px;font-size:12.5px;line-height:1.7">${refs.map((r,i)=>refRow(p.id,i,r)).join('')}</div>`:''}
       ${p.body?`<div style="white-space:pre-wrap;font-size:13px;line-height:1.75">${linkify(p.body)}</div>`:'<div class="eyebrow">내용 없음</div>'}
     </div>
   </section>`;
@@ -1423,6 +1451,13 @@ function bind(){
   document.querySelectorAll('[data-edit-task]').forEach(el=>el.onclick=()=>taskModal(el.dataset.editTask));
   document.querySelectorAll('[data-edit-prod]').forEach(el=>el.onclick=()=>prodModal(el.dataset.editProd));
   document.querySelectorAll('[data-edit-plan]').forEach(el=>el.onclick=()=>planModal(el.dataset.editPlan));
+  document.querySelectorAll('[data-play]').forEach(el=>el.onclick=()=>{
+    const [pid,idx]=el.dataset.play.split('|');
+    const pl=DB.plans.find(x=>x.id===pid); if(!pl) return;
+    const url=(pl.refs||'').split('\n').map(r=>r.trim()).filter(Boolean)[Number(idx)];
+    toggleEmbed(pid, idx, url);
+    el.textContent = document.getElementById(`emb_${pid}_${idx}`).innerHTML? '✕ 닫기' : '▶ 재생';
+  });
   document.querySelectorAll('[data-edit-cost]').forEach(el=>el.onclick=()=>costModal(el.dataset.editCost));
   document.querySelectorAll('[data-edit-action]').forEach(el=>el.onclick=()=>actionModal(el.dataset.editAction));
   document.querySelectorAll('[data-link-action]').forEach(el=>el.onclick=()=>linkTaskModal(el.dataset.linkAction));
