@@ -3,18 +3,15 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-<title>DDL 브랜드커머스 관리</title>
+<title>DDL 브랜드 관리</title>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable.min.css" />
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
 <style>
 :root{
   --ink:#15181D; --ink2:#2A2F38; --paper:#F5F5F2; --card:#FFFFFF;
   --line:#E3E3DC; --line2:#F0F0EA; --mut:#787E88;
   --accent:#2647F0; --ok:#1E6E58; --warn:#8A6A12; --alert:#A82B3B;
   --r:10px;
-  --mono:'IBM Plex Mono',ui-monospace,SFMono-Regular,Menlo,monospace;
+  --mono:'Pretendard Variable',Pretendard,-apple-system,BlinkMacSystemFont,system-ui,sans-serif;
   --sans:'Pretendard Variable',Pretendard,-apple-system,BlinkMacSystemFont,system-ui,'Apple SD Gothic Neo','Malgun Gothic',sans-serif;
 }
 *{box-sizing:border-box}
@@ -24,7 +21,7 @@ button,input,select,textarea{font-family:inherit;font-size:inherit;color:inherit
 button{cursor:pointer}
 :focus-visible{outline:2px solid var(--accent);outline-offset:2px}
 @media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
-.mono{font-family:var(--mono);font-variant-numeric:tabular-nums}
+.mono{font-family:var(--mono);font-variant-numeric:tabular-nums;letter-spacing:0}
 .eyebrow{font-family:var(--mono);font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--mut)}
 
 /* ---------- shell ---------- */
@@ -34,9 +31,11 @@ button{cursor:pointer}
 /* 상단 브랜드 탭 */
 .brandbar{background:var(--ink);display:flex;align-items:stretch;position:sticky;top:0;z-index:30;overflow-x:auto;scrollbar-width:none;padding:0 6px}
 .brandbar::-webkit-scrollbar{display:none}
-.blogo{display:flex;align-items:center;gap:7px;padding:0 14px 0 10px;flex:0 0 auto}
-.blogo b{color:#EDEDEA;font-size:14px;letter-spacing:-.01em}
-.blogo span{font-family:var(--mono);font-size:8.5px;letter-spacing:.14em;color:#7E848E}
+.blogo{display:flex;align-items:center;gap:9px;padding:0 16px 0 10px;flex:0 0 auto;background:transparent;border:0;cursor:pointer;border-right:1px solid #262B34;margin-right:6px}
+.blogo:hover{opacity:.75}
+.blogo img{height:19px;width:auto;display:block}
+.blogo span{font-size:9px;letter-spacing:.14em;color:#7E848E;font-weight:600}
+@media(max-width:860px){.blogo span{display:none}}
 .btab{flex:0 0 auto;border:0;background:transparent;color:#9AA0A9;padding:12px 13px 9px;border-bottom:3px solid transparent;display:flex;align-items:center;gap:7px;white-space:nowrap}
 .btab:hover{color:#fff;background:#1D2128}
 .btab[aria-current="true"]{color:#fff;background:#20242B}
@@ -167,7 +166,6 @@ tr:last-child td{border-bottom:0}
 .syncdot--on{background:var(--ok)}
 
 @media(max-width:860px){
-  .blogo{display:none}
   .btab--util{margin-left:0}
   .btab{padding:11px 11px 8px}
   .view{padding:16px 14px 72px}
@@ -181,7 +179,7 @@ tr:last-child td{border-bottom:0}
 
 <script>
 /* =========================================================
-   DDL 브랜드커머스 관리 — 단일 파일 앱
+   DDL 브랜드 관리 — 단일 파일 앱
    저장: 로컬(localStorage) → 노션(Cloudflare Worker 경유) 선택 동기화
    ========================================================= */
 
@@ -206,7 +204,7 @@ const store={
   set(k,v){ try{ localStorage.setItem(k,v); }catch(e){ mem[k]=v; } }
 };
 
-/* 노션 DB (프로젝트 DDL > 🛍 브랜드커머스 관리 아래에 생성됨) */
+/* 노션 DB (프로젝트 DDL > 🗂 브랜드 관리 아래에 생성됨) */
 const NOTION_DB={
   contents:'22c3381ad8e44f239be74fdd3243eba3',
   tasks:'047f49d200d74848b78adbb90f93906a',
@@ -214,10 +212,11 @@ const NOTION_DB={
   products:'ddd18f71b6c9475abc59f74881cff410'
 };
 const NOTION_HUB='https://app.notion.com/p/3bd4f7cd6b86816cbc56ef161bf47379';
+const PROXY_URL='https://ddl-brand.vercel.app/api/notion';
 
 const blank = () => ({
   v:1,
-  settings:{ workerUrl:'', db:{...NOTION_DB}, lastSync:null },
+  settings:{ workerUrl:PROXY_URL, db:{...NOTION_DB}, lastSync:null },
   brands: JSON.parse(JSON.stringify(SEED_BRANDS)),
   contents:[], tasks:[], sales:[], products:[]
 });
@@ -228,9 +227,10 @@ for(const k of ['contents','tasks','sales','products']) if(!Array.isArray(DB[k])
 if(!DB.settings) DB.settings=blank().settings;
 if(!DB.settings.db) DB.settings.db={...NOTION_DB};
 for(const k in NOTION_DB) if(!DB.settings.db[k]) DB.settings.db[k]=NOTION_DB[k];
+if(!DB.settings.workerUrl) DB.settings.workerUrl=PROXY_URL;
 if(!DB.brands||!DB.brands.length) DB.brands=JSON.parse(JSON.stringify(SEED_BRANDS));
 
-const save=()=>store.set(KEY,JSON.stringify(DB));
+const save=()=>{ store.set(KEY,JSON.stringify(DB)); if(typeof autoSync==='function') autoSync(); };
 
 /* ---------- utils ---------- */
 const uid=()=>Math.random().toString(36).slice(2,9)+Date.now().toString(36).slice(-3);
@@ -297,14 +297,14 @@ function brandBar(){
       style="border-bottom-color:${on?color:'transparent'}">
       <span class="btab__n">${esc(label)}</span>${meta?`<span class="btab__p">${esc(meta)}</span>`:''}</button>`;
   return `<nav class="brandbar" aria-label="브랜드">
-    <div class="blogo"><b>DDL</b><span>BRAND COMMERCE</span></div>
+    <button class="blogo" data-act="home" title="홈으로"><img src="data:image/png;base64,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" alt="DDL" /><span>BRAND OPS</span></button>
     ${DB.brands.map(br=>{
       const {goal,actual}=totals(br.id,UI.ym);
       const meta = goal? Math.round(actual/goal*100)+'%' : '—';
       return tab(br.id, br.name, meta, hueBg(br.hue,58), UI.brand===br.id);
     }).join('')}
     ${tab('__all','전체','','#9AA0A9',UI.brand==='__all')}
-    ${tab('__set','설정',DB.settings.workerUrl?'연결':'로컬','#9AA0A9',UI.brand==='__set')}
+    ${tab('__set','설정',DB.settings.workerUrl?(DB.settings.auto===false?'수동':'자동'):'로컬','#9AA0A9',UI.brand==='__set')}
   </nav>`;
 }
 
@@ -665,8 +665,8 @@ function settingsView(){
     <div class="card__hd"><h3>노션 동기화</h3>
       <span class="eyebrow" style="margin-left:auto">${s.lastSync?'마지막 동기화 '+s.lastSync:'아직 동기화한 적 없음'}</span></div>
     <div class="card__bd">
-      <label class="f"><span>Cloudflare Worker URL</span>
-        <input type="text" id="setWorker" value="${esc(s.workerUrl)}" placeholder="https://ddl-notion-proxy.xxxx.workers.dev" /></label>
+      <label class="f"><span>노션 프록시 주소 (Vercel)</span>
+        <input type="text" id="setWorker" value="${esc(s.workerUrl)}" placeholder="https://ddl-brand.vercel.app/api/notion" /></label>
       <div class="row2">
         <label class="f"><span>콘텐츠 캘린더 DB ID</span><input type="text" id="db_contents" value="${esc(s.db.contents)}" /></label>
         <label class="f"><span>업무 DB ID</span><input type="text" id="db_tasks" value="${esc(s.db.tasks)}" /></label>
@@ -674,6 +674,10 @@ function settingsView(){
         <label class="f"><span>제품 DB ID</span><input type="text" id="db_products" value="${esc(s.db.products)}" /></label>
       </div>
       <p class="eyebrow" style="margin:0 0 12px">DB 4개는 노션에 이미 만들어 뒀습니다 · <a href="${NOTION_HUB}" target="_blank" rel="noopener" style="color:var(--accent)">노션에서 열기 →</a></p>
+      <label style="display:flex;gap:8px;align-items:center;margin:2px 0 12px">
+        <input type="checkbox" id="autoSync" ${s.auto===false?'':'checked'} style="width:16px;height:16px;accent-color:var(--ink)" />
+        자동 동기화 — 입력하면 노션에 바로 올리고, 화면을 열 때 자동으로 내려받습니다
+      </label>
       <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:4px">
         <button class="btn btn--primary" data-act="save-sync">설정 저장</button>
         <button class="btn" data-act="test">연결 테스트</button>
@@ -681,7 +685,7 @@ function settingsView(){
         <button class="btn" data-act="pull">노션에서 내려받기</button>
       </div>
       <p class="eyebrow" style="margin:12px 0 0;line-height:1.7">
-        토큰은 Worker 환경변수(NOTION_TOKEN)에만 두고 이 화면에는 넣지 않습니다.<br>
+        토큰은 Vercel 환경변수(NOTION_TOKEN)에만 두고 이 화면에는 넣지 않습니다.<br>
         각 노션 DB에 필요한 속성은 저장소의 README.md에 정리돼 있습니다.
       </p>
     </div>
@@ -854,11 +858,12 @@ async function testConn(){
   try{ await api({action:'ping'}); toast('연결됐습니다'); }
   catch(e){ toast('연결 실패: '+e.message,3200); }
 }
-async function pushAll(){
+async function pushAll(onlyDirty){
   const s=DB.settings; let n=0,fail=0;
   for(const kind of Object.keys(KIND)){
     const dbId=s.db[KIND[kind].db]; if(!dbId) continue;
     for(const rec of DB[kind]){
+      if(onlyDirty && !rec.dirty && rec.notionId) continue;
       try{
         if(rec.notionId){ await api({action:'update', page_id:rec.notionId, properties:KIND[kind].props(rec)}); }
         else{ const r=await api({action:'create', database_id:dbId, properties:KIND[kind].props(rec)}); rec.notionId=r.id; }
@@ -867,9 +872,26 @@ async function pushAll(){
     }
   }
   DB.settings.lastSync=new Date().toLocaleString('ko-KR'); save();
-  toast(`노션에 ${n}건 반영${fail?` · 실패 ${fail}건`:''}`,3000); render();
+  if(!onlyDirty || n || fail) toast(`노션에 ${n}건 반영${fail?` · 실패 ${fail}건`:''}`,2200);
+  syncing=false; render();
 }
-async function pullAll(){
+
+/* ---------- 자동 동기화 ---------- */
+let syncTimer=null, syncing=false;
+function autoSync(){
+  if(!DB.settings.workerUrl || DB.settings.auto===false) return;
+  clearTimeout(syncTimer);
+  syncTimer=setTimeout(async()=>{
+    if(syncing) { autoSync(); return; }
+    syncing=true;
+    try{ await pushAll(true); }catch(e){ syncing=false; toast('노션 반영 실패 — 설정에서 연결을 확인하세요',3000); }
+  },1500);
+}
+async function bootSync(){
+  if(!DB.settings.workerUrl || DB.settings.auto===false) return;
+  try{ await pullAll(true); }catch(e){}
+}
+async function pullAll(quiet){
   const s=DB.settings; let n=0;
   const txt=p=>p?.rich_text?.[0]?.plain_text||'';
   const sel=p=>p?.select?.name||'';
@@ -897,7 +919,8 @@ async function pullAll(){
     }
   }
   DB.settings.lastSync=new Date().toLocaleString('ko-KR'); save();
-  toast(`노션에서 ${n}건 내려받았습니다`,3000); render();
+  if(!quiet) toast(`노션에서 ${n}건 내려받았습니다`,3000);
+  render();
 }
 
 /* =========================================================
@@ -930,6 +953,7 @@ function bind(){
 }
 
 function act(a){
+  if(a==='home'){ UI={brand:(DB.brands[0]?.id||'__all'), tab:'summary', ym:ymOf(today)}; saveUI(); render(); return; }
   if(a==='task-new') return taskModal(null);
   if(a==='prod-new') return prodModal(null);
   if(a==='brand-new') return brandModal(null);
@@ -937,6 +961,7 @@ function act(a){
     DB.settings.workerUrl=$('#setWorker').value.trim().replace(/\/$/,'');
     DB.settings.db={contents:$('#db_contents').value.trim(),tasks:$('#db_tasks').value.trim(),
                     sales:$('#db_sales').value.trim(),products:$('#db_products').value.trim()};
+    DB.settings.auto=$('#autoSync').checked;
     save(); toast('설정을 저장했습니다'); render(); return;
   }
   if(a==='test') return testConn();
@@ -962,6 +987,7 @@ function act(a){
 }
 
 render();
+bootSync();
 </script>
 </body>
 </html>
