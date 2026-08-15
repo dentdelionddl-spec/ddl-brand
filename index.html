@@ -1329,12 +1329,17 @@ function bindCalendar(){
     cell.addEventListener('mousedown',e=>{ if(e.target.closest('.ev, .cell__add')) return; e.preventDefault(); selA=selB=cell.dataset.date; paintSel(); });
     cell.addEventListener('mouseenter',()=>{ if(selA){ selB=cell.dataset.date; paintSel(); } });
   });
-  document.addEventListener('mouseup',()=>{
-    if(!selA) return;
-    const a=selA<selB?selA:selB, b=selA<selB?selB:selA;
-    selA=selB=null; paintSel();
-    if(a!==b) addOnDate(a,b);
-  },{once:true});
+  if(!window.__calUp){
+    window.__calUp=1;
+    document.addEventListener('mouseup',()=>{
+      if(!selA) return;
+      const a=selA<selB?selA:selB, b=selA<selB?selB:selA;
+      selA=selB=null; paintSel();
+      if(a!==b) addOnDate(a,b);
+    });
+    document.addEventListener('keydown',e=>{ if(e.key==='Escape'&&selA){ selA=selB=null; paintSel(); } });
+    window.addEventListener('blur',()=>{ if(selA){ selA=selB=null; paintSel(); } });
+  }
 }
 function addOnDate(date,end){
   modal({ title:`${end&&end!==date?date+' ~ '+end:date} 추가`, saveLabel:'닫기',
