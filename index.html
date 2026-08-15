@@ -1,0 +1,971 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>DDL 브랜드커머스 관리</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable.min.css" />
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --ink:#15181D; --ink2:#2A2F38; --paper:#F5F5F2; --card:#FFFFFF;
+  --line:#E3E3DC; --line2:#F0F0EA; --mut:#787E88;
+  --accent:#2647F0; --ok:#1E6E58; --warn:#8A6A12; --alert:#A82B3B;
+  --r:10px;
+  --mono:'IBM Plex Mono',ui-monospace,SFMono-Regular,Menlo,monospace;
+  --sans:'Pretendard Variable',Pretendard,-apple-system,BlinkMacSystemFont,system-ui,'Apple SD Gothic Neo','Malgun Gothic',sans-serif;
+}
+*{box-sizing:border-box}
+html,body{margin:0;padding:0}
+body{font-family:var(--sans);background:var(--paper);color:var(--ink);font-size:14px;line-height:1.5;-webkit-font-smoothing:antialiased}
+button,input,select,textarea{font-family:inherit;font-size:inherit;color:inherit}
+button{cursor:pointer}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+@media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+.mono{font-family:var(--mono);font-variant-numeric:tabular-nums}
+.eyebrow{font-family:var(--mono);font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--mut)}
+
+/* ---------- shell ---------- */
+.app{min-height:100vh;display:flex;flex-direction:column}
+.dot{width:7px;height:7px;border-radius:2px;flex:0 0 auto}
+
+/* 상단 브랜드 탭 */
+.brandbar{background:var(--ink);display:flex;align-items:stretch;position:sticky;top:0;z-index:30;overflow-x:auto;scrollbar-width:none;padding:0 6px}
+.brandbar::-webkit-scrollbar{display:none}
+.blogo{display:flex;align-items:center;gap:7px;padding:0 14px 0 10px;flex:0 0 auto}
+.blogo b{color:#EDEDEA;font-size:14px;letter-spacing:-.01em}
+.blogo span{font-family:var(--mono);font-size:8.5px;letter-spacing:.14em;color:#7E848E}
+.btab{flex:0 0 auto;border:0;background:transparent;color:#9AA0A9;padding:12px 13px 9px;border-bottom:3px solid transparent;display:flex;align-items:center;gap:7px;white-space:nowrap}
+.btab:hover{color:#fff;background:#1D2128}
+.btab[aria-current="true"]{color:#fff;background:#20242B}
+.btab__n{font-size:13px;font-weight:700;letter-spacing:-.01em}
+.btab__p{font-family:var(--mono);font-size:10px;color:#767C86}
+.btab[aria-current="true"] .btab__p{color:#B9BDC4}
+.btab--util{margin-left:auto}
+
+.main{min-width:0;display:flex;flex-direction:column}
+.topbar{position:sticky;top:44px;z-index:20;background:rgba(245,245,242,.94);backdrop-filter:blur(8px);border-bottom:1px solid var(--line);padding:12px 22px 0}
+.tophead{display:flex;align-items:flex-end;gap:14px;flex-wrap:wrap}
+.brandtitle{font-size:22px;font-weight:700;letter-spacing:-.02em;margin:0;display:flex;align-items:center;gap:9px}
+.brandtitle .dot{width:10px;height:10px;border-radius:3px}
+.brandsub{font-family:var(--mono);font-size:10px;letter-spacing:.1em;color:var(--mut);text-transform:uppercase}
+.spacer{flex:1}
+.monthnav{display:flex;align-items:center;gap:2px;background:var(--card);border:1px solid var(--line);border-radius:999px;padding:3px}
+.monthnav button{border:0;background:transparent;padding:4px 9px;border-radius:999px;color:var(--mut)}
+.monthnav button:hover{background:var(--line2);color:var(--ink)}
+.monthnav .cur{font-family:var(--mono);font-size:12px;font-weight:600;color:var(--ink);padding:4px 4px;min-width:96px;text-align:center}
+.tabs{display:flex;gap:2px;margin-top:12px;overflow-x:auto;scrollbar-width:none}
+.tabs::-webkit-scrollbar{display:none}
+.tab{border:0;background:transparent;padding:9px 12px;border-bottom:2px solid transparent;color:var(--mut);font-weight:600;font-size:13px;white-space:nowrap}
+.tab:hover{color:var(--ink)}
+.tab[aria-selected="true"]{color:var(--ink);border-bottom-color:var(--ink)}
+.view{padding:20px 22px 72px;max-width:1240px;width:100%}
+
+/* ---------- primitives ---------- */
+.card{background:var(--card);border:1px solid var(--line);border-radius:var(--r)}
+.card__hd{display:flex;align-items:center;gap:10px;padding:12px 14px;border-bottom:1px solid var(--line2)}
+.card__hd h3{margin:0;font-size:13px;font-weight:700;letter-spacing:-.01em}
+.card__bd{padding:14px}
+.grid{display:grid;gap:14px}
+.g2{grid-template-columns:1.55fr 1fr}
+@media(max-width:1000px){.g2{grid-template-columns:1fr}}
+.btn{border:1px solid var(--line);background:var(--card);border-radius:8px;padding:7px 11px;font-weight:600;font-size:12.5px}
+.btn:hover{border-color:#C9C9C0;background:#FCFCFA}
+.btn--primary{background:var(--ink);border-color:var(--ink);color:#fff}
+.btn--primary:hover{background:#000;border-color:#000}
+.btn--ghost{border-color:transparent;background:transparent;color:var(--mut)}
+.btn--ghost:hover{background:var(--line2);color:var(--ink)}
+.btn--sm{padding:4px 8px;font-size:11.5px;border-radius:6px}
+input[type=text],input[type=number],input[type=date],select,textarea{width:100%;border:1px solid var(--line);border-radius:8px;padding:7px 9px;background:#fff}
+input:focus,select:focus,textarea:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 3px rgba(38,71,240,.1)}
+label.f{display:block;margin-bottom:10px}
+label.f>span{display:block;font-family:var(--mono);font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--mut);margin-bottom:4px}
+table{width:100%;border-collapse:collapse}
+th{font-family:var(--mono);font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--mut);font-weight:500;text-align:left;padding:7px 8px;border-bottom:1px solid var(--line)}
+td{padding:7px 8px;border-bottom:1px solid var(--line2);vertical-align:middle}
+tr:last-child td{border-bottom:0}
+.num{text-align:right;font-family:var(--mono);font-variant-numeric:tabular-nums}
+.tag{display:inline-block;font-family:var(--mono);font-size:10px;letter-spacing:.06em;padding:2px 6px;border-radius:5px;border:1px solid var(--line);color:var(--mut);white-space:nowrap}
+.tag--urgent{border-color:#E8C6CC;background:#FBEFF1;color:var(--alert)}
+.tag--high{border-color:#E7DCC0;background:#FBF6E9;color:var(--warn)}
+.tag--ok{border-color:#C8DED6;background:#EEF6F3;color:var(--ok)}
+.empty{padding:26px 14px;text-align:center;color:var(--mut);font-size:12.5px}
+.empty b{display:block;color:var(--ink);font-size:13px;margin-bottom:3px}
+
+/* ---------- signature: pace gauge ---------- */
+.gauge{margin-bottom:13px}
+.gauge__hd{display:flex;align-items:baseline;gap:8px;margin-bottom:5px}
+.gauge__name{font-weight:600;font-size:12.5px}
+.gauge__val{margin-left:auto;font-family:var(--mono);font-size:11.5px;color:var(--mut)}
+.gauge__val b{color:var(--ink);font-weight:600}
+.track{position:relative;height:14px;border-radius:4px;background:#EFEFEA;overflow:hidden}
+.track i{position:absolute;left:0;top:0;bottom:0;border-radius:4px}
+.pace{position:absolute;top:-4px;bottom:-4px;width:2px;background:var(--ink);z-index:3}
+.pace::after{content:'';position:absolute;top:-3px;left:-2px;border-left:3px solid transparent;border-right:3px solid transparent;border-top:4px solid var(--ink)}
+.legend{display:flex;gap:14px;flex-wrap:wrap;font-family:var(--mono);font-size:10px;color:var(--mut);margin-top:10px;padding-top:10px;border-top:1px dashed var(--line)}
+.legend span{display:flex;align-items:center;gap:5px}
+.key{width:9px;height:9px;border-radius:2px;display:inline-block}
+
+/* ---------- type strip ---------- */
+.types{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
+@media(max-width:620px){.types{grid-template-columns:repeat(2,1fr)}}
+.type{border:1px solid var(--line);border-radius:8px;padding:9px 10px;background:#fff}
+.type--zero{border-style:dashed;border-color:#E0C9CE;background:#FDF7F8}
+.type__n{font-family:var(--mono);font-size:20px;font-weight:600;line-height:1}
+.type--zero .type__n{color:var(--alert)}
+.type__l{font-size:11.5px;color:var(--mut);margin-top:3px}
+
+/* ---------- calendar ---------- */
+.cal{display:grid;grid-template-columns:repeat(7,1fr);border-left:1px solid var(--line2);border-top:1px solid var(--line2)}
+.cal__dow{font-family:var(--mono);font-size:10px;color:var(--mut);text-align:center;padding:6px 0;border-right:1px solid var(--line2);border-bottom:1px solid var(--line2);background:#FAFAF7}
+.cell{min-height:104px;border-right:1px solid var(--line2);border-bottom:1px solid var(--line2);padding:5px 5px 22px;position:relative;background:#fff}
+.cell--out{background:#FAFAF8}
+.cell--today{background:#F4F6FF}
+.cell__d{font-family:var(--mono);font-size:11px;color:var(--mut)}
+.cell--today .cell__d{color:var(--accent);font-weight:600}
+.cell__sun{color:var(--alert)}
+.cell__add{position:absolute;right:4px;bottom:4px;border:0;background:transparent;color:#C3C3BC;font-size:15px;line-height:1;padding:2px 5px;border-radius:6px}
+.cell:hover .cell__add{color:var(--ink);background:var(--line2)}
+.ev{display:block;width:100%;text-align:left;border:0;border-left:3px solid;border-radius:4px;background:#F6F6F2;padding:3px 5px;margin-top:3px;font-size:11px;line-height:1.3;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ev:hover{background:#EDEDE7}
+.ev--done{opacity:.45;text-decoration:line-through}
+@media(max-width:700px){.cell{min-height:82px}.ev{font-size:10px}}
+
+/* ---------- tasks ---------- */
+.areahd{display:flex;align-items:center;gap:8px;margin:18px 0 8px}
+.areahd h3{margin:0;font-size:13px;font-weight:700}
+.areahd .line{flex:1;height:1px;background:var(--line)}
+.tasks2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+@media(max-width:800px){.tasks2{grid-template-columns:1fr}}
+.tk{display:flex;gap:9px;align-items:flex-start;padding:8px 10px;border:1px solid var(--line);border-radius:8px;background:#fff;margin-bottom:6px}
+.tk--done{opacity:.5}
+.tk input[type=checkbox]{margin-top:3px;width:15px;height:15px;accent-color:var(--ink);flex:0 0 auto}
+.tk__t{flex:1;min-width:0}
+.tk__title{font-size:13px;font-weight:600;letter-spacing:-.01em;word-break:break-word}
+.tk--done .tk__title{text-decoration:line-through}
+.tk__meta{display:flex;gap:6px;align-items:center;margin-top:4px;flex-wrap:wrap}
+.dday{font-family:var(--mono);font-size:11px;font-weight:600}
+.dday--over{color:var(--alert)}
+.dday--soon{color:var(--warn)}
+
+/* ---------- modal ---------- */
+.ov{position:fixed;inset:0;background:rgba(20,23,28,.42);display:flex;align-items:flex-end;justify-content:center;z-index:60;padding:0}
+@media(min-width:700px){.ov{align-items:center;padding:24px}}
+.modal{background:var(--card);border-radius:14px 14px 0 0;width:100%;max-width:520px;max-height:92vh;overflow:auto;border:1px solid var(--line)}
+@media(min-width:700px){.modal{border-radius:12px}}
+.modal__hd{display:flex;align-items:center;padding:14px 16px;border-bottom:1px solid var(--line2);position:sticky;top:0;background:var(--card)}
+.modal__hd h3{margin:0;font-size:14px;font-weight:700}
+.modal__bd{padding:16px}
+.modal__ft{display:flex;gap:8px;padding:12px 16px;border-top:1px solid var(--line2);position:sticky;bottom:0;background:var(--card)}
+.row2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+
+/* ---------- toast / sync ---------- */
+.toast{position:fixed;left:50%;transform:translateX(-50%);bottom:22px;background:var(--ink);color:#fff;padding:9px 15px;border-radius:999px;font-size:12.5px;z-index:90;box-shadow:0 6px 20px rgba(0,0,0,.18)}
+.syncdot{width:6px;height:6px;border-radius:50%;background:#C3C3BC;display:inline-block;margin-right:6px}
+.syncdot--on{background:var(--ok)}
+
+@media(max-width:860px){
+  .blogo{display:none}
+  .btab--util{margin-left:0}
+  .btab{padding:11px 11px 8px}
+  .view{padding:16px 14px 72px}
+  .topbar{padding:10px 14px 0}
+}
+</style>
+</head>
+<body>
+<div id="app"></div>
+<div id="layer"></div>
+
+<script>
+/* =========================================================
+   DDL 브랜드커머스 관리 — 단일 파일 앱
+   저장: 로컬(localStorage) → 노션(Cloudflare Worker 경유) 선택 동기화
+   ========================================================= */
+
+const TYPES = ['피드','릴스','스레드','제품 업로드','제품 입고','공구','기획전','오프라인'];
+const TYPE_HUE = {'피드':214,'릴스':330,'스레드':262,'제품 업로드':160,'제품 입고':38,'공구':18,'기획전':288,'오프라인':122};
+const AREAS = ['콘텐츠','채널운영','제품개발','기타'];
+const PRIOS = ['긴급','높음','보통','낮음'];
+const OWNERS = ['승호','산들','효정','재욱'];
+const PSTATUS = ['기획','발주','생산중','입고','업로드','판매중','드랍'];
+
+const SEED_BRANDS = [
+  {id:'vivicate', name:'VIVICATE', ko:'비비케이트', hue:262, client:'이케이아이엔티', channels:['자사몰','ZVZO','29CM','플랫폼','기타']},
+  {id:'arikiv',   name:'ARIKIV',   ko:'아카이브',   hue:24,  client:'', channels:['자사몰','무신사','29CM','플랫폼','기타']},
+  {id:'aube',     name:'AUBE SEOUL', ko:'오브서울', hue:340, client:'', channels:['자사몰','무신사','29CM','플랫폼','기타']},
+  {id:'ruhel',    name:'RUHEL',    ko:'루엘',      hue:200, client:'', channels:['자사몰','해외','플랫폼','기타']},
+  {id:'usuel',    name:'USUEL',    ko:'유주엘',    hue:150, client:'', channels:['자사몰','무신사','29CM','플랫폼','기타']},
+  {id:'fludk',    name:'FLUD K',   ko:'플러드케이', hue:96,  client:'', channels:['자사몰','무신사','29CM','플랫폼','기타']},
+  {id:'ootn',     name:'OOTN',     ko:'오오티엔',  hue:40,  client:'', channels:['자사몰','무신사','플랫폼','기타']}
+];
+
+/* ---------- storage (localStorage, 실패 시 메모리) ---------- */
+const KEY='ddl-brand-commerce-v1';
+const mem={};
+const store={
+  get(k){ try{ return localStorage.getItem(k); }catch(e){ return mem[k]??null; } },
+  set(k,v){ try{ localStorage.setItem(k,v); }catch(e){ mem[k]=v; } }
+};
+
+/* 노션 DB (프로젝트 DDL > 🛍 브랜드커머스 관리 아래에 생성됨) */
+const NOTION_DB={
+  contents:'22c3381ad8e44f239be74fdd3243eba3',
+  tasks:'047f49d200d74848b78adbb90f93906a',
+  sales:'5ca27a6560214303bc77b2da9e48ce02',
+  products:'ddd18f71b6c9475abc59f74881cff410'
+};
+const NOTION_HUB='https://app.notion.com/p/3bd4f7cd6b86816cbc56ef161bf47379';
+
+const blank = () => ({
+  v:1,
+  settings:{ workerUrl:'', db:{...NOTION_DB}, lastSync:null },
+  brands: JSON.parse(JSON.stringify(SEED_BRANDS)),
+  contents:[], tasks:[], sales:[], products:[]
+});
+
+let DB;
+try{ DB = JSON.parse(store.get(KEY)) || blank(); }catch(e){ DB = blank(); }
+for(const k of ['contents','tasks','sales','products']) if(!Array.isArray(DB[k])) DB[k]=[];
+if(!DB.settings) DB.settings=blank().settings;
+if(!DB.settings.db) DB.settings.db={...NOTION_DB};
+for(const k in NOTION_DB) if(!DB.settings.db[k]) DB.settings.db[k]=NOTION_DB[k];
+if(!DB.brands||!DB.brands.length) DB.brands=JSON.parse(JSON.stringify(SEED_BRANDS));
+
+const save=()=>store.set(KEY,JSON.stringify(DB));
+
+/* ---------- utils ---------- */
+const uid=()=>Math.random().toString(36).slice(2,9)+Date.now().toString(36).slice(-3);
+const $=(s,r=document)=>r.querySelector(s);
+const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const won=n=>Number(n||0).toLocaleString('ko-KR');
+const man=n=>Math.round(Number(n||0)/10000).toLocaleString('ko-KR');
+const pad=n=>String(n).padStart(2,'0');
+const ymOf=d=>`${d.getFullYear()}-${pad(d.getMonth()+1)}`;
+const dateStr=d=>`${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
+const today=new Date(); const TODAY=dateStr(today);
+const daysBetween=(a,b)=>Math.round((new Date(b+'T00:00:00')-new Date(a+'T00:00:00'))/864e5);
+const brandOf=id=>DB.brands.find(b=>b.id===id);
+const hueBg=(h,l=45)=>`hsl(${h} 42% ${l}%)`;
+
+let UI={ brand: DB.brands[0].id, tab:'summary', ym: ymOf(today) };
+const savedUI=store.get(KEY+':ui'); if(savedUI){ try{ UI=Object.assign(UI,JSON.parse(savedUI)); }catch(e){} }
+const saveUI=()=>store.set(KEY+':ui',JSON.stringify(UI));
+
+function toast(msg,ms=2200){
+  const t=document.createElement('div'); t.className='toast'; t.textContent=msg;
+  document.body.appendChild(t); setTimeout(()=>t.remove(),ms);
+}
+
+/* ---------- selectors ---------- */
+const inMonth=(d,ym)=>String(d||'').slice(0,7)===ym;
+const contentsOf=(bid,ym)=>DB.contents.filter(c=>c.brandId===bid&&inMonth(c.date,ym));
+const salesOf=(bid,ym)=>DB.sales.filter(s=>s.brandId===bid&&s.ym===ym);
+const tasksOf=bid=>DB.tasks.filter(t=>t.brandId===bid);
+const productsOf=bid=>DB.products.filter(p=>p.brandId===bid);
+function totals(bid,ym){
+  const rows=salesOf(bid,ym);
+  return { goal:rows.reduce((a,r)=>a+Number(r.goal||0),0), actual:rows.reduce((a,r)=>a+Number(r.actual||0),0) };
+}
+function paceRatio(ym){
+  const [y,m]=ym.split('-').map(Number);
+  const dim=new Date(y,m,0).getDate();
+  if(ym===ymOf(today)) return today.getDate()/dim;
+  return (new Date(y,m-1,1) < new Date(today.getFullYear(),today.getMonth(),1)) ? 1 : 0;
+}
+function ymShift(ym,n){ const [y,m]=ym.split('-').map(Number); const d=new Date(y,m-1+n,1); return ymOf(d); }
+function ymLabel(ym){ const [y,m]=ym.split('-'); return `${y}년 ${Number(m)}월`; }
+
+/* =========================================================
+   RENDER
+   ========================================================= */
+function render(){
+  const special = UI.brand==='__all'||UI.brand==='__set';
+  if(!special){ const b=brandOf(UI.brand)||DB.brands[0]; UI.brand=b?.id||'__set'; }
+  $('#app').innerHTML=`
+  <div class="app">
+    ${brandBar()}
+    <div class="main">
+      ${topbar()}
+      <div class="view" id="view"></div>
+    </div>
+  </div>`;
+  $('#view').innerHTML = viewHtml();
+  bind();
+}
+
+function brandBar(){
+  const tab=(id,label,meta,color,on)=>`<button class="btab ${id==='__all'?'btab--util':''}" data-brand="${id}" aria-current="${on}"
+      style="border-bottom-color:${on?color:'transparent'}">
+      <span class="btab__n">${esc(label)}</span>${meta?`<span class="btab__p">${esc(meta)}</span>`:''}</button>`;
+  return `<nav class="brandbar" aria-label="브랜드">
+    <div class="blogo"><b>DDL</b><span>BRAND COMMERCE</span></div>
+    ${DB.brands.map(br=>{
+      const {goal,actual}=totals(br.id,UI.ym);
+      const meta = goal? Math.round(actual/goal*100)+'%' : '—';
+      return tab(br.id, br.name, meta, hueBg(br.hue,58), UI.brand===br.id);
+    }).join('')}
+    ${tab('__all','전체','','#9AA0A9',UI.brand==='__all')}
+    ${tab('__set','설정',DB.settings.workerUrl?'연결':'로컬','#9AA0A9',UI.brand==='__set')}
+  </nav>`;
+}
+
+function topbar(){
+  if(UI.brand==='__set') return `<header class="topbar"><div class="tophead">
+      <h1 class="brandtitle">설정 · 동기화</h1><div class="spacer"></div>
+    </div><div class="tabs"></div></header>`;
+  if(UI.brand==='__all') return `<header class="topbar"><div class="tophead">
+      <h1 class="brandtitle">모든 브랜드 비교</h1>
+      <div class="spacer"></div>${monthNav()}
+    </div><div class="tabs"></div></header>`;
+  const b=brandOf(UI.brand);
+  const tabs=[['summary','요약'],['calendar','콘텐츠 캘린더'],['tasks','업무'],['sales','매출'],['products','제품']];
+  return `<header class="topbar">
+    <div class="tophead">
+      <div>
+        <h1 class="brandtitle"><span class="dot" style="background:${hueBg(b.hue,50)}"></span>${esc(b.name)}</h1>
+        <div class="brandsub">${esc(b.ko||'')}${b.client?' · '+esc(b.client):''}</div>
+      </div>
+      <div class="spacer"></div>
+      ${monthNav()}
+    </div>
+    <div class="tabs" role="tablist">
+      ${tabs.map(([k,l])=>`<button class="tab" role="tab" data-tab="${k}" aria-selected="${UI.tab===k}">${l}</button>`).join('')}
+    </div>
+  </header>`;
+}
+const monthNav=()=>`<div class="monthnav">
+    <button data-mo="-1" aria-label="이전 달">‹</button>
+    <span class="cur">${ymLabel(UI.ym)}</span>
+    <button data-mo="1" aria-label="다음 달">›</button>
+    <button data-mo="0" class="mono" style="font-size:11px">오늘</button>
+  </div>`;
+
+function viewHtml(){
+  if(UI.brand==='__set') return settingsView();
+  if(UI.brand==='__all') return allView();
+  switch(UI.tab){
+    case 'calendar': return calendarView();
+    case 'tasks': return tasksView();
+    case 'sales': return salesView();
+    case 'products': return productsView();
+    default: return summaryView();
+  }
+}
+
+/* ---------- 요약 ---------- */
+function summaryView(){
+  const b=brandOf(UI.brand), ym=UI.ym;
+  const saved=salesOf(b.id,ym), {goal,actual}=totals(b.id,ym);
+  const rows=(goal||actual)? b.channels.map(ch=>saved.find(s=>s.channel===ch)||{channel:ch,goal:0,actual:0})
+                             .concat(saved.filter(s=>!b.channels.includes(s.channel))) : [];
+  const pace=paceRatio(ym), pacePct=Math.round(pace*100);
+  const cs=contentsOf(b.id,ym);
+  const counts=TYPES.map(t=>[t,cs.filter(c=>c.type===t).length]);
+  const zero=counts.filter(([,n])=>n===0).length;
+  const ts=tasksOf(b.id).filter(t=>!t.done&&t.due).sort((x,y)=>x.due.localeCompare(y.due)).slice(0,7);
+  const ps=productsOf(b.id);
+
+  const gauges = rows.length? rows.map(r=>{
+    const pct=r.goal? (r.actual/r.goal*100):0;
+    const behind = pct < pacePct-5;
+    return `<div class="gauge">
+      <div class="gauge__hd"><span class="gauge__name">${esc(r.channel)}</span>
+        <span class="gauge__val"><b>${man(r.actual)}</b> / ${man(r.goal)}만 · ${Math.round(pct)}%</span></div>
+      <div class="track">
+        <i style="width:${Math.min(100,pct)}%;background:${behind?'#C9A0A8':hueBg(b.hue,58)}"></i>
+        <span class="pace" style="left:${Math.min(100,pacePct)}%"></span>
+      </div>
+    </div>`;
+  }).join('') : `<div class="empty"><b>이 달 채널 목표가 없습니다</b>매출 탭에서 채널별 목표를 넣으면 여기에 진행률이 뜹니다.</div>`;
+
+  return `
+  <div class="grid g2">
+    <section class="card">
+      <div class="card__hd"><h3>채널별 목표 대비 실적</h3>
+        <span class="eyebrow" style="margin-left:auto">${ymLabel(ym)}</span></div>
+      <div class="card__bd">
+        <div style="display:flex;align-items:baseline;gap:10px;margin-bottom:14px">
+          <div class="mono" style="font-size:26px;font-weight:600;letter-spacing:-.02em">${man(actual)}<span style="font-size:13px;color:var(--mut)">만원</span></div>
+          <div class="mono" style="font-size:12px;color:var(--mut)">목표 ${man(goal)}만 · 달성 ${goal?Math.round(actual/goal*100):0}%</div>
+          <div class="spacer"></div>
+          <span class="tag ${goal&&actual/goal*100>=pacePct?'tag--ok':'tag--high'}">진도 ${pacePct}%</span>
+        </div>
+        ${gauges}
+        <div class="legend">
+          <span><i class="key" style="background:${hueBg(b.hue,58)}"></i>정상 페이스</span>
+          <span><i class="key" style="background:#C9A0A8"></i>페이스 미달</span>
+          <span><i class="key" style="background:var(--ink);width:2px;height:11px"></i>오늘 기준 진도선</span>
+        </div>
+      </div>
+    </section>
+
+    <section class="card">
+      <div class="card__hd"><h3>임박 업무</h3>
+        <button class="btn btn--sm" data-act="task-new" style="margin-left:auto">업무 추가</button></div>
+      <div class="card__bd">
+        ${ts.length? ts.map(t=>taskRow(t,true)).join('') : `<div class="empty"><b>마감이 걸린 업무가 없습니다</b>업무 탭에서 마감일을 넣으면 여기에 임박 순으로 모입니다.</div>`}
+      </div>
+    </section>
+  </div>
+
+  <div class="grid" style="margin-top:14px">
+    <section class="card">
+      <div class="card__hd"><h3>콘텐츠 · 운영 유형별 발행</h3>
+        <span class="eyebrow" style="margin-left:auto">${zero?`${zero}개 유형이 이달 비어 있음`:'전 유형 진행 중'}</span></div>
+      <div class="card__bd">
+        <div class="types">
+          ${counts.map(([t,n])=>`<div class="type ${n===0?'type--zero':''}">
+            <div class="type__n">${n}</div><div class="type__l">${t}</div></div>`).join('')}
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <div class="grid g2" style="margin-top:14px">
+    <section class="card">
+      <div class="card__hd"><h3>제품 파이프라인</h3>
+        <button class="btn btn--sm" data-act="prod-new" style="margin-left:auto">제품 추가</button></div>
+      <div class="card__bd">
+        <div class="types" style="grid-template-columns:repeat(4,1fr)">
+          ${PSTATUS.filter(s=>s!=='드랍').map(s=>`<div class="type"><div class="type__n">${ps.filter(p=>p.status===s).length}</div><div class="type__l">${s}</div></div>`).join('')}
+        </div>
+      </div>
+    </section>
+    <section class="card">
+      <div class="card__hd"><h3>이달 등록 현황</h3></div>
+      <div class="card__bd">
+        <table><tbody>
+          <tr><td>콘텐츠·운영 항목</td><td class="num">${cs.length}건</td></tr>
+          <tr><td>완료 처리</td><td class="num">${cs.filter(c=>c.done).length}건</td></tr>
+          <tr><td>열린 업무</td><td class="num">${tasksOf(b.id).filter(t=>!t.done).length}건</td></tr>
+          <tr><td>등록 제품</td><td class="num">${ps.length}건</td></tr>
+        </tbody></table>
+      </div>
+    </section>
+  </div>`;
+}
+
+/* ---------- 캘린더 ---------- */
+function calendarView(){
+  const b=brandOf(UI.brand), ym=UI.ym;
+  const [y,m]=ym.split('-').map(Number);
+  const first=new Date(y,m-1,1), dim=new Date(y,m,0).getDate(), lead=first.getDay();
+  const cs=contentsOf(b.id,ym);
+  const cells=[];
+  for(let i=0;i<lead;i++) cells.push(`<div class="cell cell--out"></div>`);
+  for(let d=1;d<=dim;d++){
+    const ds=`${y}-${pad(m)}-${pad(d)}`;
+    const evs=cs.filter(c=>c.date===ds);
+    const dow=new Date(y,m-1,d).getDay();
+    cells.push(`<div class="cell ${ds===TODAY?'cell--today':''}">
+      <div class="cell__d ${dow===0?'cell__sun':''}">${d}</div>
+      ${evs.map(e=>`<button class="ev ${e.done?'ev--done':''}" data-content="${e.id}" style="border-left-color:${hueBg(TYPE_HUE[e.type]||0,55)}">${esc(e.type)} · ${esc(e.title||'')}</button>`).join('')}
+      <button class="cell__add" data-newdate="${ds}" aria-label="${d}일 항목 추가">+</button>
+    </div>`);
+  }
+  while(cells.length%7) cells.push(`<div class="cell cell--out"></div>`);
+
+  return `<section class="card">
+    <div class="card__hd"><h3>${ymLabel(ym)} 운영 캘린더</h3>
+      <span class="eyebrow">피드 · 릴스 · 스레드 · 업로드 · 입고 · 공구 · 기획전 · 오프라인</span>
+      <button class="btn btn--sm btn--primary" data-newdate="${ym}-${pad(Math.min(today.getDate(),dim))}" style="margin-left:auto">항목 추가</button></div>
+    <div class="cal">
+      ${['일','월','화','수','목','금','토'].map(d=>`<div class="cal__dow">${d}</div>`).join('')}
+      ${cells.join('')}
+    </div>
+  </section>`;
+}
+
+/* ---------- 업무 ---------- */
+function taskRow(t,compact){
+  const d = t.due? daysBetween(TODAY,t.due) : null;
+  const dd = d===null? '' : (d<0? `<span class="dday dday--over">D+${-d}</span>` : d===0? `<span class="dday dday--over">D-DAY</span>` : `<span class="dday ${d<=3?'dday--soon':''}">D-${d}</span>`);
+  const pcls = t.priority==='긴급'?'tag--urgent':t.priority==='높음'?'tag--high':'';
+  return `<div class="tk ${t.done?'tk--done':''}">
+    <input type="checkbox" data-toggle-task="${t.id}" ${t.done?'checked':''} aria-label="완료 표시" />
+    <div class="tk__t">
+      <div class="tk__title">${esc(t.title)}</div>
+      <div class="tk__meta">
+        ${dd}
+        <span class="tag ${pcls}">${esc(t.priority||'보통')}</span>
+        ${compact?`<span class="tag">${esc(t.area||'기타')}</span>`:''}
+        ${t.owner?`<span class="tag">${esc(t.owner)}</span>`:''}
+        ${t.due?`<span class="eyebrow">${t.due.slice(5)}</span>`:''}
+      </div>
+    </div>
+    <button class="btn btn--ghost btn--sm" data-edit-task="${t.id}">편집</button>
+  </div>`;
+}
+function tasksView(){
+  const b=brandOf(UI.brand);
+  const all=tasksOf(b.id);
+  const open=all.filter(t=>!t.done), done=all.filter(t=>t.done);
+  const sorter=(x,y)=>(x.due||'9999').localeCompare(y.due||'9999')||PRIOS.indexOf(x.priority)-PRIOS.indexOf(y.priority);
+  const soonEnd=dateStr(new Date(today.getFullYear(),today.getMonth(),today.getDate()+7));
+
+  const sections=AREAS.map(a=>{
+    const list=open.filter(t=>t.area===a).sort(sorter);
+    const week=list.filter(t=>t.due&&t.due<=soonEnd);
+    const later=list.filter(t=>!week.includes(t));
+    if(!list.length) return `<div class="areahd"><h3>${a}</h3><span class="line"></span><span class="eyebrow">0건</span></div>
+      <div class="empty" style="border:1px dashed var(--line);border-radius:8px">열린 업무 없음</div>`;
+    return `<div class="areahd"><h3>${a}</h3><span class="line"></span><span class="eyebrow">${list.length}건</span></div>
+      <div class="tasks2">
+        <div><div class="eyebrow" style="margin-bottom:6px">7일 이내 · ${week.length}</div>${week.map(t=>taskRow(t)).join('')||'<div class="empty" style="border:1px dashed var(--line);border-radius:8px">없음</div>'}</div>
+        <div><div class="eyebrow" style="margin-bottom:6px">이후 · ${later.length}</div>${later.map(t=>taskRow(t)).join('')||'<div class="empty" style="border:1px dashed var(--line);border-radius:8px">없음</div>'}</div>
+      </div>`;
+  }).join('');
+
+  const pct = all.length? Math.round(done.length/all.length*100):0;
+  return `<div style="display:flex;align-items:center;gap:12px;margin-bottom:6px">
+      <div class="mono" style="font-size:13px">진행률 <b>${pct}%</b> <span style="color:var(--mut)">(${done.length}/${all.length})</span></div>
+      <div class="track" style="flex:1;max-width:320px"><i style="width:${pct}%;background:${hueBg(b.hue,58)}"></i></div>
+      <div class="spacer"></div>
+      <button class="btn btn--primary btn--sm" data-act="task-new">업무 추가</button>
+    </div>
+    ${sections}
+    ${done.length?`<div class="areahd"><h3>완료</h3><span class="line"></span><span class="eyebrow">${done.length}건</span></div>
+      <div class="tasks2"><div>${done.slice(0,20).map(t=>taskRow(t,true)).join('')}</div><div></div></div>`:''}`;
+}
+
+/* ---------- 매출 ---------- */
+function salesView(){
+  const b=brandOf(UI.brand), ym=UI.ym;
+  const rows=b.channels.map(ch=>{
+    const r=salesOf(b.id,ym).find(s=>s.channel===ch)||{channel:ch,goal:0,actual:0};
+    return r;
+  });
+  const goal=rows.reduce((a,r)=>a+Number(r.goal||0),0), actual=rows.reduce((a,r)=>a+Number(r.actual||0),0);
+  const months=[-5,-4,-3,-2,-1,0].map(n=>ymShift(ym,n));
+  const trend=months.map(m=>({m, ...totals(b.id,m)}));
+  const max=Math.max(1,...trend.map(t=>Math.max(t.goal,t.actual)));
+
+  return `<div class="grid g2">
+    <section class="card">
+      <div class="card__hd"><h3>${ymLabel(ym)} 채널별 목표 · 실적</h3>
+        <span class="eyebrow" style="margin-left:auto">단위 원 · 저장은 자동</span></div>
+      <div class="card__bd">
+        <table>
+          <thead><tr><th>채널</th><th style="text-align:right">목표</th><th style="text-align:right">실적</th><th style="text-align:right">달성률</th></tr></thead>
+          <tbody>
+          ${rows.map(r=>`<tr>
+            <td>${esc(r.channel)}</td>
+            <td><input class="num" type="number" step="10000" value="${r.goal||''}" data-sale="${esc(r.channel)}" data-f="goal" placeholder="0" /></td>
+            <td><input class="num" type="number" step="10000" value="${r.actual||''}" data-sale="${esc(r.channel)}" data-f="actual" placeholder="0" /></td>
+            <td class="num">${r.goal?Math.round((r.actual||0)/r.goal*100)+'%':'—'}</td></tr>`).join('')}
+          </tbody>
+          <tfoot><tr>
+            <th>합계</th><th class="num" style="font-size:12px;color:var(--ink)">${won(goal)}</th>
+            <th class="num" style="font-size:12px;color:var(--ink)">${won(actual)}</th>
+            <th class="num" style="font-size:12px;color:var(--ink)">${goal?Math.round(actual/goal*100)+'%':'—'}</th>
+          </tr></tfoot>
+        </table>
+        <div class="eyebrow" style="margin-top:10px">채널 구성은 설정 · 동기화 화면에서 브랜드별로 바꿉니다</div>
+      </div>
+    </section>
+    <section class="card">
+      <div class="card__hd"><h3>최근 6개월 추이</h3></div>
+      <div class="card__bd">
+        ${trend.map(t=>`<div class="gauge">
+          <div class="gauge__hd"><span class="gauge__name mono" style="font-size:11.5px">${t.m}</span>
+            <span class="gauge__val"><b>${man(t.actual)}</b> / ${man(t.goal)}만</span></div>
+          <div class="track" style="height:11px">
+            <i style="width:${t.goal/max*100}%;background:#E8E8E1"></i>
+            <i style="width:${t.actual/max*100}%;background:${hueBg(b.hue,58)}"></i>
+          </div></div>`).join('')}
+        <div class="legend"><span><i class="key" style="background:#E8E8E1"></i>목표</span><span><i class="key" style="background:${hueBg(b.hue,58)}"></i>실적</span></div>
+      </div>
+    </section>
+  </div>`;
+}
+
+/* ---------- 제품 ---------- */
+function productsView(){
+  const b=brandOf(UI.brand); const ps=productsOf(b.id);
+  return `<section class="card">
+    <div class="card__hd"><h3>제품</h3><span class="eyebrow">${ps.length}건</span>
+      <button class="btn btn--primary btn--sm" data-act="prod-new" style="margin-left:auto">제품 추가</button></div>
+    ${ps.length?`<div style="overflow-x:auto"><table>
+      <thead><tr><th>제품명</th><th>SKU</th><th>상태</th><th style="text-align:right">판매가</th><th style="text-align:right">재고</th><th>입고/출시</th><th></th></tr></thead>
+      <tbody>${ps.map(p=>`<tr>
+        <td style="font-weight:600">${esc(p.name)}</td>
+        <td class="mono" style="font-size:11.5px;color:var(--mut)">${esc(p.sku||'')}</td>
+        <td><span class="tag ${p.status==='판매중'?'tag--ok':p.status==='드랍'?'tag--urgent':''}">${esc(p.status||'기획')}</span></td>
+        <td class="num">${p.price?won(p.price):'—'}</td>
+        <td class="num">${p.stock!==''&&p.stock!=null?won(p.stock):'—'}</td>
+        <td class="mono" style="font-size:11.5px">${esc(p.eta||'')}</td>
+        <td style="text-align:right"><button class="btn btn--ghost btn--sm" data-edit-prod="${p.id}">편집</button></td>
+      </tr>`).join('')}</tbody></table></div>`
+    :`<div class="empty"><b>등록된 제품이 없습니다</b>기획 → 발주 → 입고 → 업로드 → 판매중 순서로 상태를 옮기면 요약 화면 파이프라인에 반영됩니다.</div>`}
+  </section>`;
+}
+
+/* ---------- 전체 비교 ---------- */
+function allView(){
+  const ym=UI.ym, pacePct=Math.round(paceRatio(ym)*100);
+  const rows=DB.brands.map(b=>{
+    const {goal,actual}=totals(b.id,ym);
+    const cs=contentsOf(b.id,ym);
+    const openT=tasksOf(b.id).filter(t=>!t.done);
+    const overdue=openT.filter(t=>t.due&&t.due<TODAY).length;
+    const empty=TYPES.filter(t=>!cs.some(c=>c.type===t)).length;
+    return {b,goal,actual,cs:cs.length,openT:openT.length,overdue,empty};
+  });
+  const sumG=rows.reduce((a,r)=>a+r.goal,0), sumA=rows.reduce((a,r)=>a+r.actual,0);
+  return `<section class="card">
+    <div class="card__hd"><h3>${ymLabel(ym)} 브랜드 현황</h3>
+      <span class="eyebrow" style="margin-left:auto">합계 ${man(sumA)} / ${man(sumG)}만원 · 진도 ${pacePct}%</span></div>
+    <div class="card__bd">
+      ${rows.map(r=>{
+        const pct=r.goal? r.actual/r.goal*100:0;
+        return `<div class="gauge">
+          <div class="gauge__hd">
+            <span class="dot" style="background:${hueBg(r.b.hue,52)};width:8px;height:8px;border-radius:2px"></span>
+            <span class="gauge__name">${esc(r.b.name)}</span>
+            <span class="gauge__val"><b>${man(r.actual)}</b>/${man(r.goal)}만 · 콘텐츠 ${r.cs} · 업무 ${r.openT}${r.overdue?` <span style="color:var(--alert)">지연 ${r.overdue}</span>`:''}${r.empty?` · 빈 유형 ${r.empty}`:''}</span>
+          </div>
+          <div class="track"><i style="width:${Math.min(100,pct)}%;background:${pct<pacePct-5?'#C9A0A8':hueBg(r.b.hue,58)}"></i>
+            <span class="pace" style="left:${pacePct}%"></span></div>
+        </div>`;
+      }).join('')}
+    </div>
+  </section>`;
+}
+
+/* ---------- 설정 ---------- */
+function settingsView(){
+  const s=DB.settings;
+  return `<div class="grid g2">
+    <section class="card">
+      <div class="card__hd"><h3>브랜드</h3>
+        <button class="btn btn--sm" data-act="brand-new" style="margin-left:auto">브랜드 추가</button></div>
+      <div class="card__bd">
+        ${DB.brands.map(b=>`<div class="tk">
+          <span class="dot" style="background:${hueBg(b.hue,52)};margin-top:5px"></span>
+          <div class="tk__t"><div class="tk__title">${esc(b.name)} <span style="font-weight:400;color:var(--mut)">${esc(b.ko||'')}</span></div>
+            <div class="tk__meta"><span class="eyebrow">${b.channels.map(esc).join(' · ')}</span></div></div>
+          <button class="btn btn--ghost btn--sm" data-edit-brand="${b.id}">편집</button>
+        </div>`).join('')}
+      </div>
+    </section>
+
+    <section class="card">
+      <div class="card__hd"><h3>데이터</h3></div>
+      <div class="card__bd">
+        <div style="display:flex;gap:8px;flex-wrap:wrap">
+          <button class="btn" data-act="export">JSON 내보내기</button>
+          <button class="btn" data-act="import">JSON 불러오기</button>
+          <button class="btn" data-act="reset" style="color:var(--alert)">전체 초기화</button>
+        </div>
+        <p class="eyebrow" style="margin:12px 0 0">브라우저에 자동 저장됩니다. 기기를 옮길 땐 내보내기 파일을 쓰거나 아래 노션 동기화를 켜세요.</p>
+      </div>
+    </section>
+  </div>
+
+  <section class="card" style="margin-top:14px">
+    <div class="card__hd"><h3>노션 동기화</h3>
+      <span class="eyebrow" style="margin-left:auto">${s.lastSync?'마지막 동기화 '+s.lastSync:'아직 동기화한 적 없음'}</span></div>
+    <div class="card__bd">
+      <label class="f"><span>Cloudflare Worker URL</span>
+        <input type="text" id="setWorker" value="${esc(s.workerUrl)}" placeholder="https://ddl-notion-proxy.xxxx.workers.dev" /></label>
+      <div class="row2">
+        <label class="f"><span>콘텐츠 캘린더 DB ID</span><input type="text" id="db_contents" value="${esc(s.db.contents)}" /></label>
+        <label class="f"><span>업무 DB ID</span><input type="text" id="db_tasks" value="${esc(s.db.tasks)}" /></label>
+        <label class="f"><span>매출 DB ID</span><input type="text" id="db_sales" value="${esc(s.db.sales)}" /></label>
+        <label class="f"><span>제품 DB ID</span><input type="text" id="db_products" value="${esc(s.db.products)}" /></label>
+      </div>
+      <p class="eyebrow" style="margin:0 0 12px">DB 4개는 노션에 이미 만들어 뒀습니다 · <a href="${NOTION_HUB}" target="_blank" rel="noopener" style="color:var(--accent)">노션에서 열기 →</a></p>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:4px">
+        <button class="btn btn--primary" data-act="save-sync">설정 저장</button>
+        <button class="btn" data-act="test">연결 테스트</button>
+        <button class="btn" data-act="push">노션으로 올리기</button>
+        <button class="btn" data-act="pull">노션에서 내려받기</button>
+      </div>
+      <p class="eyebrow" style="margin:12px 0 0;line-height:1.7">
+        토큰은 Worker 환경변수(NOTION_TOKEN)에만 두고 이 화면에는 넣지 않습니다.<br>
+        각 노션 DB에 필요한 속성은 저장소의 README.md에 정리돼 있습니다.
+      </p>
+    </div>
+  </section>`;
+}
+
+/* =========================================================
+   MODALS
+   ========================================================= */
+function modal({title, body, onSave, onDelete, saveLabel='저장'}){
+  $('#layer').innerHTML=`<div class="ov" data-ov>
+    <div class="modal" role="dialog" aria-modal="true" aria-label="${esc(title)}">
+      <div class="modal__hd"><h3>${esc(title)}</h3>
+        <button class="btn btn--ghost btn--sm" data-close style="margin-left:auto">닫기</button></div>
+      <div class="modal__bd">${body}</div>
+      <div class="modal__ft">
+        ${onDelete?`<button class="btn btn--sm" data-del style="color:var(--alert)">삭제</button>`:''}
+        <div class="spacer" style="flex:1"></div>
+        <button class="btn btn--sm" data-close>취소</button>
+        <button class="btn btn--primary btn--sm" data-save>${esc(saveLabel)}</button>
+      </div>
+    </div></div>`;
+  const close=()=>{$('#layer').innerHTML='';};
+  $('#layer').querySelectorAll('[data-close]').forEach(b=>b.onclick=close);
+  $('#layer').querySelector('[data-ov]').onclick=e=>{if(e.target.hasAttribute('data-ov'))close();};
+  $('#layer').querySelector('[data-save]').onclick=()=>{ if(onSave()!==false){ save(); close(); render(); } };
+  const d=$('#layer').querySelector('[data-del]');
+  if(d) d.onclick=()=>{ if(confirm('삭제할까요? 되돌릴 수 없습니다.')){ onDelete(); save(); close(); render(); } };
+  const first=$('#layer').querySelector('input,select,textarea'); if(first) first.focus();
+  document.onkeydown=e=>{ if(e.key==='Escape') close(); };
+}
+const opt=(arr,v)=>arr.map(a=>`<option ${a===v?'selected':''}>${esc(a)}</option>`).join('');
+
+function contentModal(id,date){
+  const isNew=!id;
+  const c = isNew? {id:uid(),brandId:UI.brand,date:date||TODAY,type:'릴스',title:'',memo:'',done:false}
+                 : DB.contents.find(x=>x.id===id);
+  modal({
+    title: isNew?'항목 추가':'항목 편집',
+    body:`<div class="row2">
+        <label class="f"><span>날짜</span><input type="date" id="c_date" value="${c.date}" /></label>
+        <label class="f"><span>유형</span><select id="c_type">${opt(TYPES,c.type)}</select></label>
+      </div>
+      <label class="f"><span>제목</span><input type="text" id="c_title" value="${esc(c.title)}" placeholder="예: 실버 반지 릴스 3편 · 아쿠아마린 기획전 오픈" /></label>
+      <label class="f"><span>메모</span><textarea id="c_memo" rows="3" placeholder="레퍼런스 링크, 담당, 준비물">${esc(c.memo)}</textarea></label>
+      <label style="display:flex;gap:8px;align-items:center"><input type="checkbox" id="c_done" ${c.done?'checked':''} style="width:16px;height:16px;accent-color:var(--ink)" /> 완료</label>`,
+    onSave:()=>{
+      c.date=$('#c_date').value||TODAY; c.type=$('#c_type').value;
+      c.title=$('#c_title').value.trim(); c.memo=$('#c_memo').value.trim(); c.done=$('#c_done').checked;
+      c.dirty=true; if(isNew) DB.contents.push(c);
+    },
+    onDelete: isNew?null:()=>{ DB.contents=DB.contents.filter(x=>x.id!==id); }
+  });
+}
+
+function taskModal(id){
+  const isNew=!id;
+  const t=isNew? {id:uid(),brandId:UI.brand,area:'콘텐츠',title:'',priority:'보통',due:'',owner:'',done:false}
+               : DB.tasks.find(x=>x.id===id);
+  modal({
+    title:isNew?'업무 추가':'업무 편집',
+    body:`<label class="f"><span>업무</span><input type="text" id="t_title" value="${esc(t.title)}" placeholder="예: 29CM 상품등록 · 시그니처 1차 작업지시" /></label>
+      <div class="row2">
+        <label class="f"><span>영역</span><select id="t_area">${opt(AREAS,t.area)}</select></label>
+        <label class="f"><span>우선순위</span><select id="t_prio">${opt(PRIOS,t.priority)}</select></label>
+        <label class="f"><span>마감일</span><input type="date" id="t_due" value="${t.due||''}" /></label>
+        <label class="f"><span>담당</span><select id="t_owner"><option value="">미지정</option>${opt(OWNERS,t.owner)}</select></label>
+      </div>
+      <label style="display:flex;gap:8px;align-items:center"><input type="checkbox" id="t_done" ${t.done?'checked':''} style="width:16px;height:16px;accent-color:var(--ink)" /> 완료</label>`,
+    onSave:()=>{
+      const v=$('#t_title').value.trim(); if(!v){ toast('업무 내용을 입력하세요'); return false; }
+      t.title=v; t.area=$('#t_area').value; t.priority=$('#t_prio').value;
+      t.due=$('#t_due').value; t.owner=$('#t_owner').value; t.done=$('#t_done').checked;
+      t.dirty=true; if(isNew) DB.tasks.push(t);
+    },
+    onDelete:isNew?null:()=>{ DB.tasks=DB.tasks.filter(x=>x.id!==id); }
+  });
+}
+
+function prodModal(id){
+  const isNew=!id;
+  const p=isNew? {id:uid(),brandId:UI.brand,name:'',sku:'',status:'기획',price:'',stock:'',eta:'',memo:''}
+               : DB.products.find(x=>x.id===id);
+  modal({
+    title:isNew?'제품 추가':'제품 편집',
+    body:`<label class="f"><span>제품명</span><input type="text" id="p_name" value="${esc(p.name)}" /></label>
+      <div class="row2">
+        <label class="f"><span>SKU · 품번</span><input type="text" id="p_sku" value="${esc(p.sku)}" /></label>
+        <label class="f"><span>상태</span><select id="p_status">${opt(PSTATUS,p.status)}</select></label>
+        <label class="f"><span>판매가</span><input type="number" id="p_price" value="${p.price||''}" step="1000" /></label>
+        <label class="f"><span>재고</span><input type="number" id="p_stock" value="${p.stock??''}" /></label>
+      </div>
+      <label class="f"><span>입고 · 출시 예정일</span><input type="date" id="p_eta" value="${p.eta||''}" /></label>
+      <label class="f"><span>메모</span><textarea id="p_memo" rows="2">${esc(p.memo)}</textarea></label>`,
+    onSave:()=>{
+      const v=$('#p_name').value.trim(); if(!v){ toast('제품명을 입력하세요'); return false; }
+      p.name=v; p.sku=$('#p_sku').value.trim(); p.status=$('#p_status').value;
+      p.price=$('#p_price').value; p.stock=$('#p_stock').value; p.eta=$('#p_eta').value; p.memo=$('#p_memo').value.trim();
+      p.dirty=true; if(isNew) DB.products.push(p);
+    },
+    onDelete:isNew?null:()=>{ DB.products=DB.products.filter(x=>x.id!==id); }
+  });
+}
+
+function brandModal(id){
+  const isNew=!id;
+  const b=isNew? {id:'b'+uid(),name:'',ko:'',hue:210,client:'',channels:['자사몰','플랫폼','기타']}
+               : brandOf(id);
+  modal({
+    title:isNew?'브랜드 추가':'브랜드 편집',
+    body:`<div class="row2">
+        <label class="f"><span>브랜드명</span><input type="text" id="b_name" value="${esc(b.name)}" /></label>
+        <label class="f"><span>한글명</span><input type="text" id="b_ko" value="${esc(b.ko)}" /></label>
+        <label class="f"><span>클라이언트</span><input type="text" id="b_client" value="${esc(b.client||'')}" /></label>
+        <label class="f"><span>색상 (0–360)</span><input type="number" id="b_hue" value="${b.hue}" min="0" max="360" /></label>
+      </div>
+      <label class="f"><span>판매 채널 (쉼표로 구분)</span><input type="text" id="b_ch" value="${esc(b.channels.join(', '))}" /></label>`,
+    onSave:()=>{
+      const v=$('#b_name').value.trim(); if(!v){ toast('브랜드명을 입력하세요'); return false; }
+      b.name=v; b.ko=$('#b_ko').value.trim(); b.client=$('#b_client').value.trim();
+      b.hue=Number($('#b_hue').value)||210;
+      b.channels=$('#b_ch').value.split(',').map(s=>s.trim()).filter(Boolean);
+      if(isNew){ DB.brands.push(b); UI.brand=b.id; saveUI(); }
+    },
+    onDelete:isNew?null:()=>{
+      DB.brands=DB.brands.filter(x=>x.id!==id);
+      ['contents','tasks','sales','products'].forEach(k=>DB[k]=DB[k].filter(r=>r.brandId!==id));
+      if(UI.brand===id){ UI.brand=DB.brands[0]?.id||'__set'; saveUI(); }
+    }
+  });
+}
+
+/* =========================================================
+   NOTION SYNC (Cloudflare Worker 경유)
+   ========================================================= */
+const KIND={
+  contents:{ db:'contents', title:'title',
+    props:c=>({ '제목':{title:[{text:{content:c.title||c.type}}]}, '브랜드':{select:{name:brandOf(c.brandId)?.name||''}},
+      '유형':{select:{name:c.type}}, '날짜':{date:{start:c.date}}, '완료':{checkbox:!!c.done},
+      '메모':{rich_text:[{text:{content:c.memo||''}}]}, '로컬ID':{rich_text:[{text:{content:c.id}}]} }) },
+  tasks:{ db:'tasks',
+    props:t=>({ '업무':{title:[{text:{content:t.title}}]}, '브랜드':{select:{name:brandOf(t.brandId)?.name||''}},
+      '영역':{select:{name:t.area}}, '우선순위':{select:{name:t.priority}},
+      ...(t.due?{'마감일':{date:{start:t.due}}}:{}),
+      '상태':{select:{name:t.done?'Done':'To do'}},
+      ...(t.owner?{'담당자':{multi_select:[{name:t.owner}]}}:{}),
+      '로컬ID':{rich_text:[{text:{content:t.id}}]} }) },
+  sales:{ db:'sales',
+    props:s=>({ '항목':{title:[{text:{content:`${brandOf(s.brandId)?.name||''} ${s.ym} ${s.channel}`}}]},
+      '브랜드':{select:{name:brandOf(s.brandId)?.name||''}}, '월':{rich_text:[{text:{content:s.ym}}]},
+      '채널':{select:{name:s.channel}}, '목표':{number:Number(s.goal||0)}, '실적':{number:Number(s.actual||0)},
+      '로컬ID':{rich_text:[{text:{content:s.id}}]} }) },
+  products:{ db:'products',
+    props:p=>({ '제품명':{title:[{text:{content:p.name}}]}, '브랜드':{select:{name:brandOf(p.brandId)?.name||''}},
+      '상태':{select:{name:p.status}}, 'SKU':{rich_text:[{text:{content:p.sku||''}}]},
+      '판매가':{number:Number(p.price||0)}, '재고':{number:Number(p.stock||0)},
+      ...(p.eta?{'입고예정':{date:{start:p.eta}}}:{}),
+      '로컬ID':{rich_text:[{text:{content:p.id}}]} }) }
+};
+
+async function api(payload){
+  const url=DB.settings.workerUrl;
+  if(!url) throw new Error('Worker URL이 없습니다');
+  const res=await fetch(url,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});
+  const json=await res.json().catch(()=>({}));
+  if(!res.ok) throw new Error(json.message||`요청 실패 (${res.status})`);
+  return json;
+}
+async function testConn(){
+  try{ await api({action:'ping'}); toast('연결됐습니다'); }
+  catch(e){ toast('연결 실패: '+e.message,3200); }
+}
+async function pushAll(){
+  const s=DB.settings; let n=0,fail=0;
+  for(const kind of Object.keys(KIND)){
+    const dbId=s.db[KIND[kind].db]; if(!dbId) continue;
+    for(const rec of DB[kind]){
+      try{
+        if(rec.notionId){ await api({action:'update', page_id:rec.notionId, properties:KIND[kind].props(rec)}); }
+        else{ const r=await api({action:'create', database_id:dbId, properties:KIND[kind].props(rec)}); rec.notionId=r.id; }
+        rec.dirty=false; n++;
+      }catch(e){ fail++; }
+    }
+  }
+  DB.settings.lastSync=new Date().toLocaleString('ko-KR'); save();
+  toast(`노션에 ${n}건 반영${fail?` · 실패 ${fail}건`:''}`,3000); render();
+}
+async function pullAll(){
+  const s=DB.settings; let n=0;
+  const txt=p=>p?.rich_text?.[0]?.plain_text||'';
+  const sel=p=>p?.select?.name||'';
+  const ttl=p=>p?.title?.[0]?.plain_text||'';
+  const brandByName=nm=>DB.brands.find(b=>b.name===nm)?.id||DB.brands[0]?.id;
+  for(const kind of Object.keys(KIND)){
+    const dbId=s.db[KIND[kind].db]; if(!dbId) continue;
+    let res; try{ res=await api({action:'query', database_id:dbId}); }catch(e){ continue; }
+    for(const pg of (res.results||[])){
+      const P=pg.properties||{}; const lid=txt(P['로컬ID'])||pg.id;
+      let rec=DB[kind].find(r=>r.id===lid);
+      if(!rec){ rec={id:lid}; DB[kind].push(rec); }
+      rec.notionId=pg.id;
+      if(kind==='contents'){ Object.assign(rec,{brandId:brandByName(sel(P['브랜드'])),type:sel(P['유형'])||'피드',
+        date:P['날짜']?.date?.start||TODAY, title:ttl(P['제목']), memo:txt(P['메모']), done:!!P['완료']?.checkbox}); }
+      if(kind==='tasks'){ Object.assign(rec,{brandId:brandByName(sel(P['브랜드'])),area:sel(P['영역'])||'기타',
+        priority:sel(P['우선순위'])||'보통', due:P['마감일']?.date?.start||'', title:ttl(P['업무']),
+        owner:P['담당자']?.multi_select?.[0]?.name||'', done:sel(P['상태'])==='Done'}); }
+      if(kind==='sales'){ Object.assign(rec,{brandId:brandByName(sel(P['브랜드'])), ym:txt(P['월']),
+        channel:sel(P['채널']), goal:P['목표']?.number||0, actual:P['실적']?.number||0}); }
+      if(kind==='products'){ Object.assign(rec,{brandId:brandByName(sel(P['브랜드'])), name:ttl(P['제품명']),
+        sku:txt(P['SKU']), status:sel(P['상태'])||'기획', price:P['판매가']?.number||'', stock:P['재고']?.number??'',
+        eta:P['입고예정']?.date?.start||''}); }
+      n++;
+    }
+  }
+  DB.settings.lastSync=new Date().toLocaleString('ko-KR'); save();
+  toast(`노션에서 ${n}건 내려받았습니다`,3000); render();
+}
+
+/* =========================================================
+   EVENTS
+   ========================================================= */
+function bind(){
+  document.querySelectorAll('[data-brand]').forEach(el=>el.onclick=()=>{
+    UI.brand=el.dataset.brand; if(!['__all','__set'].includes(UI.brand)&&!['summary','calendar','tasks','sales','products'].includes(UI.tab)) UI.tab='summary';
+    saveUI(); render();
+  });
+  document.querySelectorAll('[data-tab]').forEach(el=>el.onclick=()=>{ UI.tab=el.dataset.tab; saveUI(); render(); });
+  document.querySelectorAll('[data-mo]').forEach(el=>el.onclick=()=>{
+    const n=Number(el.dataset.mo); UI.ym = n===0? ymOf(today) : ymShift(UI.ym,n); saveUI(); render();
+  });
+  document.querySelectorAll('[data-newdate]').forEach(el=>el.onclick=()=>contentModal(null,el.dataset.newdate));
+  document.querySelectorAll('[data-content]').forEach(el=>el.onclick=()=>contentModal(el.dataset.content));
+  document.querySelectorAll('[data-edit-task]').forEach(el=>el.onclick=()=>taskModal(el.dataset.editTask));
+  document.querySelectorAll('[data-edit-prod]').forEach(el=>el.onclick=()=>prodModal(el.dataset.editProd));
+  document.querySelectorAll('[data-edit-brand]').forEach(el=>el.onclick=()=>brandModal(el.dataset.editBrand));
+  document.querySelectorAll('[data-toggle-task]').forEach(el=>el.onchange=()=>{
+    const t=DB.tasks.find(x=>x.id===el.dataset.toggleTask); t.done=el.checked; t.dirty=true; save(); render();
+  });
+  document.querySelectorAll('[data-sale]').forEach(el=>el.onchange=()=>{
+    const ch=el.dataset.sale, f=el.dataset.f;
+    let r=DB.sales.find(s=>s.brandId===UI.brand&&s.ym===UI.ym&&s.channel===ch);
+    if(!r){ r={id:uid(),brandId:UI.brand,ym:UI.ym,channel:ch,goal:0,actual:0}; DB.sales.push(r); }
+    r[f]=Number(el.value||0); r.dirty=true; save(); render();
+  });
+  document.querySelectorAll('[data-act]').forEach(el=>el.onclick=()=>act(el.dataset.act));
+}
+
+function act(a){
+  if(a==='task-new') return taskModal(null);
+  if(a==='prod-new') return prodModal(null);
+  if(a==='brand-new') return brandModal(null);
+  if(a==='save-sync'){
+    DB.settings.workerUrl=$('#setWorker').value.trim().replace(/\/$/,'');
+    DB.settings.db={contents:$('#db_contents').value.trim(),tasks:$('#db_tasks').value.trim(),
+                    sales:$('#db_sales').value.trim(),products:$('#db_products').value.trim()};
+    save(); toast('설정을 저장했습니다'); render(); return;
+  }
+  if(a==='test') return testConn();
+  if(a==='push') return pushAll();
+  if(a==='pull') return pullAll();
+  if(a==='export'){
+    const blob=new Blob([JSON.stringify(DB,null,2)],{type:'application/json'});
+    const url=URL.createObjectURL(blob); const link=document.createElement('a');
+    link.href=url; link.download=`ddl-brand-commerce-${TODAY}.json`; link.click(); URL.revokeObjectURL(url);
+    return toast('내보냈습니다');
+  }
+  if(a==='import'){
+    const inp=document.createElement('input'); inp.type='file'; inp.accept='application/json';
+    inp.onchange=()=>{ const f=inp.files[0]; if(!f)return;
+      const rd=new FileReader(); rd.onload=()=>{ try{ const d=JSON.parse(rd.result);
+          if(!d.brands) throw new Error('형식이 다릅니다'); DB=d; save(); toast('불러왔습니다'); render();
+        }catch(e){ toast('불러오기 실패: '+e.message,3000); } }; rd.readAsText(f); };
+    inp.click(); return;
+  }
+  if(a==='reset'){
+    if(confirm('모든 데이터를 지웁니다. 먼저 내보내기를 권합니다. 계속할까요?')){ DB=blank(); save(); toast('초기화했습니다'); render(); }
+  }
+}
+
+render();
+</script>
+</body>
+</html>
