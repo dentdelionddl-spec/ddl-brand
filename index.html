@@ -138,6 +138,16 @@ tr:last-child td{border-bottom:0}
 .ev{display:block;width:100%;text-align:left;border:0;border-left:3px solid;border-radius:4px;background:#F6F6F2;padding:3px 5px;margin-top:3px;font-size:11px;line-height:1.3;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .ev:hover{background:#EDEDE7}
 .ev--task{background:#EEF1FA;border-left-color:var(--accent)}
+.bgrid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
+.bcell{text-align:left;border:1px solid var(--line);border-radius:10px;padding:11px 12px;background:var(--card);cursor:pointer;transition:border-color .12s,background .12s}
+.bcell:hover{border-color:#C9C9C0;background:#FCFCFA}
+.bcell__h{display:flex;align-items:baseline;gap:8px;margin-bottom:5px}
+.bcell__h b{font-size:13px;letter-spacing:-.01em}
+.bcell__h span{margin-left:auto;font-size:11px;color:var(--mut)}
+.bcell__v{font-size:17px;font-weight:600;letter-spacing:-.02em;margin-bottom:7px}
+.bcell__v span{font-size:11px;color:var(--mut);font-weight:400}
+@media(max-width:900px){.bgrid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:560px){.bgrid{grid-template-columns:1fr}}
 .thrlist{display:flex;flex-direction:column}
 .thr{display:flex;gap:12px;align-items:flex-start;padding:10px 14px;border-bottom:1px solid var(--line2)}
 .thr:last-child{border-bottom:0}
@@ -375,7 +385,7 @@ function ymLabel(ym){ const [y,m]=ym.split('-'); return `${y}년 ${Number(m)}월
    ========================================================= */
 function render(){
   if(UI.brand==='__all') UI.brand=DB.brands[0]?.id||'__set';
-  const special = UI.brand==='__set';
+  const special = UI.brand==='__set' || UI.brand==='__home';
   if(!special){ const b=brandOf(UI.brand)||DB.brands[0]; UI.brand=b?.id||'__set'; }
   $('#app').innerHTML=`
   <div class="app">
@@ -413,6 +423,10 @@ function topbar(){
   if(UI.brand==='__set') return `<header class="topbar"><div class="tophead">
       <h1 class="brandtitle">설정 · 동기화</h1><div class="spacer"></div>
     </div><div class="tabs"></div></header>`;
+  if(UI.brand==='__home') return `<header class="topbar">
+      <div class="tophead"><div><h1 class="brandtitle">전체 브랜드</h1><div class="brandsub">홈</div></div></div>
+      <div class="tabrow"><div class="tabs"></div>${monthNav()}</div>
+    </header>`;
 
   const b=brandOf(UI.brand);
   const tabs=[['summary','요약'],['calendar','캘린더'],['kpi','KPI'],['tasks','업무'],['plans','콘텐츠'],['sales','매출·손익'],['products','제품']];
@@ -438,6 +452,7 @@ const monthNav=()=>`<div class="monthnav">
   </div>`;
 
 function viewHtml(){
+  if(UI.brand==='__home') return homeView();
   if(UI.brand==='__set') return settingsView();
   switch(UI.tab){
     case 'calendar': return calendarView();
@@ -451,6 +466,75 @@ function viewHtml(){
 }
 
 /* ---------- 요약 ---------- */
+function homeView(){
+  const ym=UI.ym;
+  const brands=DB.brands.filter(b=>!['factory','ddl'].includes(b.id));
+  const pacePct=Math.round(paceRatio(ym)*100);
+  const sum=brands.reduce((a,b)=>{ const t=totals(b.id,ym); return {goal:a.goal+t.goal, actual:a.actual+t.actual}; },{goal:0,actual:0});
+
+  const who=(UI.taskOwner===undefined? (DB.settings.me||'') : UI.taskOwner)||'';
+  const owners=[...new Set([...OWNERS, ...DB.tasks.map(t=>(t.owner||'').trim()).filter(Boolean)])];
+  const openAll=DB.tasks.filter(t=>!t.done && (!who || (t.owner||'')===who));
+  const todayTasks=openAll.filter(t=>t.due===TODAY || (t.start&&t.due&&t.start<=TODAY&&TODAY<=t.due))
+    .sort((x,y)=>PRIOS.indexOf(x.priority)-PRIOS.indexOf(y.priority));
+  const overdue=openAll.filter(t=>t.due&&t.due<TODAY).sort((x,y)=>x.due.localeCompare(y.due));
+
+  const cs=DB.contents.filter(c=>inMonth(c.date,ym));
+  const cCount=t=>cs.filter(c=>c.type===t).length;
+
+  return `
+  <section class="card">
+    <div class="card__hd"><h3>브랜드별 목표 대비 실적</h3>
+      <span class="mono" style="font-size:12px;color:var(--mut)">합계 ${man(sum.actual)} / ${man(sum.goal)}만 · ${sum.goal?Math.round(sum.actual/sum.goal*100):0}%</span>
+      <span class="tag ${sum.goal&&sum.actual/sum.goal*100>=pacePct?'tag--ok':'tag--high'}" style="margin-left:auto">진도 ${pacePct}%</span></div>
+    <div class="card__bd">
+      <div class="bgrid">
+        ${brands.map(b=>{
+          const t=totals(b.id,ym); const pct=t.goal? t.actual/t.goal*100:0;
+          const behind=pct<pacePct-5;
+          return `<button class="bcell" data-gobrand="${b.id}">
+            <div class="bcell__h"><b>${esc(b.name)}</b><span class="mono">${Math.round(pct)}%</span></div>
+            <div class="mono bcell__v">${man(t.actual)} <span>/ ${man(t.goal)}만</span></div>
+            <div class="track"><i style="width:${Math.min(100,pct)}%;background:${behind?'#C9A0A8':hueBg(b.hue,58)}"></i>
+              <span class="pace" style="left:${Math.min(100,pacePct)}%"></span></div>
+          </button>`;
+        }).join('')}
+      </div>
+    </div>
+  </section>
+
+  <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin:16px 0 8px">
+    <span class="eyebrow">업무 담당</span>
+    ${[['','전체'],...owners.map(o=>[o,o])].map(([v,l])=>`<button class="btn btn--sm" data-taskowner="${esc(v)}" style="border-radius:999px;${who===v?'background:var(--ink);border-color:var(--ink);color:#fff':''}">${esc(l)}</button>`).join('')}
+  </div>
+  <div class="grid g2">
+    <section class="card">
+      <div class="card__hd"><h3>오늘 해야 할 업무</h3><span class="eyebrow">전 브랜드 ${todayTasks.length}건</span></div>
+      <div class="card__bd">
+        ${todayTasks.length? todayTasks.map(t=>taskRow(t,true,true)).join('')
+          : `<div class="empty"><b>오늘 마감인 업무가 없습니다</b>브랜드별 업무 탭에서 마감일을 넣으면 그날 여기에 모입니다.</div>`}
+      </div>
+    </section>
+    <section class="card">
+      <div class="card__hd"><h3>지난 업무</h3>
+        ${overdue.length?`<span class="tag tag--urgent">${overdue.length}건 지연</span>`:'<span class="eyebrow">없음</span>'}</div>
+      <div class="card__bd">
+        ${overdue.length? overdue.map(t=>taskRow(t,true,true)).join('')
+          : `<div class="empty"><b>지연된 업무가 없습니다</b>마감일이 지난 미완료 업무가 여기에 모입니다.</div>`}
+      </div>
+    </section>
+  </div>
+
+  <section class="card" style="margin-top:14px">
+    <div class="card__hd"><h3>콘텐츠 운영 현황</h3><span class="eyebrow" style="margin-left:auto">전 브랜드 · ${ymLabel(ym)}</span></div>
+    <div class="card__bd">
+      <div class="types" style="grid-template-columns:repeat(2,1fr)">
+        ${CONTENT_TYPES.map(t=>`<div class="type ${cCount(t)===0?'type--zero':''}">
+          <div class="type__n">${cCount(t)}</div><div class="type__l">${t}</div></div>`).join('')}
+      </div>
+    </div>
+  </section>`;
+}
 function summaryView(){
   const b=brandOf(UI.brand), ym=UI.ym;
   const saved=salesOf(b.id,ym), {goal,actual}=totals(b.id,ym);
@@ -579,7 +663,7 @@ function calendarView(){
 }
 
 /* ---------- 업무 ---------- */
-function taskRow(t,compact){
+function taskRow(t,compact,showBrand){
   const d = t.due? daysBetween(TODAY,t.due) : null;
   const dd = d===null? '' : (d<0? `<span class="dday dday--over">D+${-d}</span>` : d===0? `<span class="dday dday--over">D-DAY</span>` : `<span class="dday ${d<=3?'dday--soon':''}">D-${d}</span>`);
   const pcls = t.priority==='긴급'?'tag--urgent':t.priority==='높음'?'tag--high':'';
@@ -589,6 +673,7 @@ function taskRow(t,compact){
       <div class="tk__title">${esc(t.title)}</div>
       <div class="tk__meta">
         ${dd}
+        ${showBrand?`<span class="tag">${esc(brandOf(t.brandId)?.name||'')}</span>`:''}
         <span class="tag ${pcls}">${esc(t.priority||'보통')}</span>
         ${t.week?`<span class="tag">${esc(t.week)}</span>`:''}
         ${t.owner?`<span class="tag">${esc(t.owner)}</span>`:''}
@@ -1562,6 +1647,7 @@ function bind(){
   document.querySelectorAll('[data-edit-task]').forEach(el=>el.onclick=()=>taskModal(el.dataset.editTask));
   document.querySelectorAll('[data-edit-prod]').forEach(el=>el.onclick=()=>prodModal(el.dataset.editProd));
   document.querySelectorAll('[data-edit-plan]').forEach(el=>el.onclick=()=>planModal(el.dataset.editPlan));
+  document.querySelectorAll('[data-gobrand]').forEach(el=>el.onclick=()=>{ UI.brand=el.dataset.gobrand; UI.tab='summary'; saveUI(); render(); });
   document.querySelectorAll('[data-plankind]').forEach(el=>el.onclick=()=>{ UI.planKind=el.dataset.plankind||''; saveUI(); render(); });
   document.querySelectorAll('[data-newthread]').forEach(el=>el.onclick=()=>{
     planModalWith({id:uid(),brandId:UI.brand,ym:UI.ym,kind:'텍스트',date:el.dataset.newthread,week:'1주차',axis:'',title:'',refs:'',body:'',done:false}, true);
@@ -1599,7 +1685,7 @@ function bind(){
 function act(a){
   if(a==='me') return meModal();
   if(a==='go-summary'){ UI.tab='summary'; saveUI(); render(); return; }
-  if(a==='home'){ UI={brand:(DB.brands[0]?.id||'__all'), tab:'summary', ym:ymOf(today)}; saveUI(); render(); return; }
+  if(a==='home'){ UI.brand='__home'; UI.ym=ymOf(today); saveUI(); render(); return; }
   if(a==='task-new') return taskModal(null);
   if(a==='prod-new') return prodModal(null);
   if(a==='plan-new') return planModal(null);
