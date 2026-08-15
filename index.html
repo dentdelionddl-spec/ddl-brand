@@ -331,7 +331,8 @@ function render(){
       <div class="view" id="view"></div>
     </div>
   </div>`;
-  $('#view').innerHTML = viewHtml();
+  try{ $('#view').innerHTML = viewHtml(); }
+  catch(e){ console.error(e); $('#view').innerHTML = '<div class="card"><div class="empty"><b>이 화면을 그리지 못했습니다</b>' + esc(String(e.message||e)) + '<br><br><button class="btn btn--sm" data-act="go-summary">요약으로 이동</button></div></div>'; }
   bind();
 }
 
@@ -571,6 +572,106 @@ function tasksView(){
       return `<div class="areahd"><h3>${esc(a)}</h3><span class="line"></span><span class="eyebrow">${rows.length}건</span></div>
         ${rows.map(t=>taskRow(t,true)).join('')}`;
     }).join('')}`;
+}
+
+/* ---------- KPI ---------- */
+function kpiView(){
+  const b=brandOf(UI.brand), ym=UI.ym;
+  const {goal,actual}=totals(b.id,ym);
+  const pacePct=Math.round(paceRatio(ym)*100);
+  const pct = goal? actual/goal*100 : 0;
+  const acts=actionsOf(b.id,ym);
+  return `
+  <section class="card">
+    <div class="card__hd"><h3>목표 매출</h3><span class="eyebrow" style="margin-left:auto">${ymLabel(ym)}</span></div>
+    <div class="card__bd">
+      <div style="display:flex;align-items:baseline;gap:10px;margin-bottom:12px">
+        <div class="mono" style="font-size:30px;font-weight:600;letter-spacing:-.02em">${man(actual)}<span style="font-size:13px;color:var(--mut)">만원</span></div>
+        <div class="mono" style="font-size:12.5px;color:var(--mut)">목표 ${man(goal)}만 · 달성 ${Math.round(pct)}%</div>
+        <div class="spacer" style="flex:1"></div>
+        <span class="tag ${pct>=pacePct?'tag--ok':'tag--high'}">진도 ${pacePct}%</span>
+      </div>
+      <div class="track" style="height:18px">
+        <i style="width:${Math.min(100,pct)}%;background:${pct<pacePct-5?'#C9A0A8':hueBg(b.hue,58)}"></i>
+        <span class="pace" style="left:${Math.min(100,pacePct)}%"></span>
+      </div>
+      <div class="eyebrow" style="margin-top:10px">목표·실적 숫자는 매출·손익 탭에서 채널별로 입력합니다</div>
+    </div>
+  </section>
+
+  <div style="display:flex;align-items:center;gap:10px;margin:18px 0 8px">
+    <h3 style="margin:0;font-size:13px;font-weight:700">월별 액션플랜</h3>
+    <span class="eyebrow">목표 매출을 만들기 위한 행동 지표</span>
+    <div class="spacer" style="flex:1"></div>
+    <button class="btn btn--primary btn--sm" data-act="action-new">액션플랜 추가</button>
+  </div>
+  ${acts.length? acts.map(a=>actionCard(a,b)).join('')
+   : `<div class="card"><div class="empty"><b>이 달 액션플랜이 없습니다</b>"릴스 12편 발행", "29CM 상품 30개 등록"처럼 매출을 만드는 행동을 적고, 그 아래에 실제 업무를 붙이세요.</div></div>`}`;
+}
+function actionCard(a,b){
+  const pr=actionProgress(a);
+  const tasks=(a.taskIds||[]).map(taskById).filter(Boolean)
+    .sort((x,y)=>(x.due||'9999').localeCompare(y.due||'9999'));
+  const missing=(a.taskIds||[]).length - tasks.length;
+  return `<section class="card" style="margin-bottom:12px">
+    <div class="card__hd">
+      <h3>${esc(a.title)}</h3>
+      <span class="mono" style="font-size:12px;color:var(--mut)">${pr.byTask?`업무 ${pr.cur}/${pr.goal}`:`${won(pr.cur)} / ${won(pr.goal)}${a.unit?' '+esc(a.unit):''}`}</span>
+      <button class="btn btn--ghost btn--sm" data-edit-action="${a.id}" style="margin-left:auto">편집</button>
+    </div>
+    <div class="card__bd">
+      <div class="track" style="margin-bottom:12px"><i style="width:${pr.pct}%;background:${hueBg(b.hue,58)}"></i></div>
+      ${a.memo?`<div style="font-size:12.5px;color:var(--mut);margin-bottom:10px;white-space:pre-wrap">${esc(a.memo)}</div>`:''}
+      <div class="eyebrow" style="margin-bottom:6px">세부 업무 ${tasks.length}건${missing?` · 연결 끊김 ${missing}`:''}</div>
+      ${tasks.map(t=>taskRow(t,true)).join('')||'<div class="empty" style="border:1px dashed var(--line);border-radius:8px">아직 붙인 업무가 없습니다</div>'}
+      <div style="display:flex;gap:8px;margin-top:10px">
+        <button class="btn btn--sm" data-link-action="${a.id}">기존 업무 연결</button>
+        <button class="btn btn--sm" data-newtask-action="${a.id}">새 업무 만들기</button>
+      </div>
+    </div>
+  </section>`;
+}
+function actionModal(id){
+  const isNew=!id;
+  const a=isNew? {id:uid(),brandId:UI.brand,ym:UI.ym,title:'',goal:'',cur:'',unit:'',memo:'',taskIds:[]}
+               : DB.actions.find(x=>x.id===id);
+  modal({
+    title:isNew?'액션플랜 추가':'액션플랜 편집',
+    body:`<label class="f"><span>액션플랜</span><input type="text" id="a_title" value="${esc(a.title)}" placeholder="릴스 12편 발행" /></label>
+      <div class="row2">
+        <label class="f"><span>목표치 (비우면 업무 완료율로 계산)</span><input type="number" id="a_goal" value="${a.goal||''}" /></label>
+        <label class="f"><span>현재치</span><input type="number" id="a_cur" value="${a.cur||''}" /></label>
+      </div>
+      <label class="f"><span>단위</span><input type="text" id="a_unit" value="${esc(a.unit||'')}" placeholder="편 · 건 · 회" /></label>
+      <label class="f"><span>메모</span><textarea id="a_memo" rows="3">${esc(a.memo||'')}</textarea></label>`,
+    onSave:()=>{
+      const v=$('#a_title').value.trim(); if(!v){ toast('액션플랜 이름을 입력하세요'); return false; }
+      a.title=v; a.goal=$('#a_goal').value; a.cur=$('#a_cur').value;
+      a.unit=$('#a_unit').value.trim(); a.memo=$('#a_memo').value; a.ym=UI.ym;
+      a.dirty=true; if(isNew) DB.actions.push(a);
+    },
+    onDelete:isNew?null:()=>{ DB.actions=DB.actions.filter(x=>x.id!==id); }
+  });
+}
+function linkTaskModal(actionId){
+  const a=DB.actions.find(x=>x.id===actionId); if(!a) return;
+  const cand=tasksOf(a.brandId).filter(t=>!(a.taskIds||[]).includes(t.id))
+    .sort((x,y)=>(y.due||'').localeCompare(x.due||''));
+  modal({
+    title:'업무 연결', saveLabel:'연결',
+    body: cand.length? `<div style="max-height:52vh;overflow:auto">${cand.map(t=>`
+        <label class="tk" style="cursor:pointer">
+          <input type="checkbox" value="${t.id}" class="linkT" style="margin-top:3px" />
+          <div class="tk__t"><div class="tk__title">${esc(t.title)}</div>
+            <div class="tk__meta">${t.area?`<span class="tag">${esc(t.area)}</span>`:''}${t.due?`<span class="eyebrow">${t.due}</span>`:''}${t.done?'<span class="tag tag--ok">완료</span>':''}</div></div>
+        </label>`).join('')}</div>`
+      : `<div class="empty"><b>연결할 업무가 없습니다</b>업무 탭이나 캘린더에서 먼저 업무를 만드세요.</div>`,
+    onSave:()=>{
+      const picked=[...document.querySelectorAll('.linkT:checked')].map(el=>el.value);
+      if(!picked.length) return;
+      a.taskIds=[...(a.taskIds||[]), ...picked]; a.dirty=true;
+    }
+  });
 }
 
 /* ---------- 콘텐츠 기획안 ---------- */
@@ -1192,6 +1293,7 @@ function bind(){
 }
 
 function act(a){
+  if(a==='go-summary'){ UI.tab='summary'; saveUI(); render(); return; }
   if(a==='home'){ UI={brand:(DB.brands[0]?.id||'__all'), tab:'summary', ym:ymOf(today)}; saveUI(); render(); return; }
   if(a==='task-new') return taskModal(null);
   if(a==='prod-new') return prodModal(null);
