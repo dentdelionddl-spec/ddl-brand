@@ -138,6 +138,12 @@ tr:last-child td{border-bottom:0}
 .ev{display:block;width:100%;text-align:left;border:0;border-left:3px solid;border-radius:4px;background:#F6F6F2;padding:3px 5px;margin-top:3px;font-size:11px;line-height:1.3;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .ev:hover{background:#EDEDE7}
 .ev--task{background:#EEF1FA;border-left-color:var(--accent)}
+.refgrid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin-bottom:14px}
+.refcell{border:1px solid var(--line);border-radius:10px;overflow:hidden;background:#fff}
+.refcell iframe{width:100%;height:420px;display:block;border:0;background:#fff}
+.refcell__u{padding:7px 9px;font-size:11px;line-height:1.5;border-top:1px solid var(--line2);word-break:break-all;background:var(--card)}
+@media(max-width:1000px){.refgrid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:640px){.refgrid{grid-template-columns:1fr}}
 .ev--task:hover{background:#E4E9F7}
 .ev--done{opacity:.45;text-decoration:line-through}
 @media(max-width:700px){.cell{min-height:82px}.ev{font-size:10px}}
@@ -762,11 +768,10 @@ function embedOf(url){
 }
 function refRow(planId, idx, r){
   const e=embedOf(r);
-  return `<div style="margin-bottom:14px">
-    <div style="margin-bottom:6px;word-break:break-all">${linkify(r)}</div>
-    ${e?`<iframe src="${e.src}" width="${e.w}" height="${e.h}" loading="lazy" frameborder="0" scrolling="no"
-      allow="autoplay; encrypted-media; picture-in-picture; clipboard-write" allowfullscreen
-      style="max-width:100%;border:1px solid var(--line);border-radius:10px;background:#fff;display:block"></iframe>`:''}
+  return `<div class="refcell">
+    ${e?`<iframe src="${e.src}" loading="lazy" frameborder="0" scrolling="no"
+      allow="autoplay; encrypted-media; picture-in-picture; clipboard-write" allowfullscreen></iframe>`:''}
+    <div class="refcell__u">${linkify(r)}</div>
   </div>`;
 }
 function toggleEmbed(planId, idx, url){
@@ -787,7 +792,7 @@ function planCard(p,b){
     </div>
     <div class="card__bd">
       ${refs.length?`<div class="eyebrow" style="margin-bottom:5px">레퍼런스 ${refs.length}</div>
-        <div style="margin-bottom:12px;font-size:12.5px;line-height:1.7">${refs.map((r,i)=>refRow(p.id,i,r)).join('')}</div>`:''}
+        <div class="refgrid">${refs.map((r,i)=>refRow(p.id,i,r)).join('')}</div>`:''}
       ${p.body?`<div style="white-space:pre-wrap;font-size:13px;line-height:1.75">${linkify(p.body)}</div>`:'<div class="eyebrow">내용 없음</div>'}
     </div>
   </section>`;
@@ -1361,7 +1366,7 @@ async function pushAll(onlyDirty){
   }
   DB.settings.lastSync=new Date().toLocaleString('ko-KR'); save();
   if(!onlyDirty || n || fail) toast(`노션에 ${n}건 반영${fail?` · 실패 ${fail}건`:''}`,2200);
-  syncing=false; render();
+  syncing=false; if(!onlyDirty || n || fail) render();
 }
 
 /* ---------- 자동 동기화 ---------- */
@@ -1381,6 +1386,8 @@ async function bootSync(){
 }
 async function pullAll(quiet){
   const s=DB.settings; let n=0;
+  const snap=()=>JSON.stringify(['contents','tasks','sales','products','plans','costs','actions'].map(k=>DB[k]));
+  const before=snap();
   const txt=p=>p?.rich_text?.[0]?.plain_text||'';
   const sel=p=>p?.select?.name||'';
   const ttl=p=>p?.title?.[0]?.plain_text||'';
@@ -1428,7 +1435,7 @@ async function pullAll(quiet){
   }
   DB.settings.lastSync=new Date().toLocaleString('ko-KR'); save();
   if(!quiet) toast(`노션에서 ${n}건 내려받았습니다`,3000);
-  render();
+  if(!quiet || before!==snap()) render();
 }
 
 /* =========================================================
