@@ -236,6 +236,7 @@ const PRIOS = ['긴급','높음','보통','낮음'];
 const OWNERS = ['승호','산들','효정','재욱','정모'];
 const PSTATUS = ['기획','발주','생산중','입고','업로드','판매중','드랍'];
 const WEEKS = ['1주차','2주차','3주차','4주차','5주차'];
+const PLAN_KINDS = ['영상','이미지','텍스트'];
 const COST_KINDS = ['원가','광고비','수수료','인건비','기타'];
 
 const SEED_BRANDS = [
@@ -291,6 +292,7 @@ DB.brands.sort((a,b)=>{ const oa=SEED_BRANDS.findIndex(x=>x.id===a.id), ob=SEED_
   return (oa<0?99:oa)-(ob<0?99:ob); });
 for(const k of ['plans','costs','actions']) if(!Array.isArray(DB[k])) DB[k]=[];
 for(const c of DB.contents){ if(TYPE_ALIAS[c.type]){ c.type=TYPE_ALIAS[c.type]; c.dirty=true; } }
+for(const pl of DB.plans){ if(!pl.kind){ pl.kind='영상'; pl.dirty=true; } }
 for(const t of DB.tasks){ if(/\d+\s*월\s*\d+\s*주/.test(t.area||'')){ t.week=t.area; t.area=''; } }
 
 const save=()=>{ store.set(KEY,JSON.stringify(DB)); if(typeof autoSync==='function') autoSync(); };
@@ -744,11 +746,16 @@ function linkify(t){
 }
 function plansView(){
   const b=brandOf(UI.brand), ym=UI.ym;
-  const list=plansOf(b.id,ym);
+  const all=plansOf(b.id,ym);
+  const kind=UI.planKind||'';
+  const list=kind? all.filter(x=>(x.kind||'영상')===kind) : all;
   const byWeek=WEEKS.map(w=>[w, list.filter(p=>p.week===w)]);
   const has=list.length;
   return `<div style="display:flex;align-items:center;gap:10px;margin-bottom:12px">
       <div class="eyebrow">${ymLabel(ym)} 기획안 ${has}건</div>
+      <div style="display:flex;gap:6px;flex-wrap:wrap">
+        ${[['','전체'],...PLAN_KINDS.map(k=>[k,k])].map(([v,l])=>`<button class="btn btn--sm" data-plankind="${v}" style="border-radius:999px;${kind===v?'background:var(--ink);border-color:var(--ink);color:#fff':''}">${l} ${v? all.filter(x=>(x.kind||'영상')===v).length : all.length}</button>`).join('')}
+      </div>
       <div class="spacer" style="flex:1"></div>
       <button class="btn btn--primary btn--sm" data-act="plan-new">기획안 추가</button>
     </div>
@@ -788,6 +795,7 @@ function planCard(p,b){
   const refs=(p.refs||'').split('\n').map(r=>r.trim()).filter(Boolean);
   return `<section class="card" style="margin-bottom:12px">
     <div class="card__hd">
+      <span class="tag">${esc(p.kind||'영상')}</span>
       ${p.axis?`<span class="tag" style="border-color:${hueBg(b.hue,75)};color:${hueBg(b.hue,42)}">${esc(p.axis)}</span>`:''}
       <h3>${esc(p.title||'(제목 없음)')}</h3>
       ${p.done?'<span class="tag tag--ok">완료</span>':''}
@@ -822,7 +830,7 @@ function parsePlanText(text){
 }
 function planModal(id){
   const isNew=!id;
-  const p=isNew? {id:uid(),brandId:UI.brand,ym:UI.ym,week:'1주차',axis:'',title:'',refs:'',body:'',done:false}
+  const p=isNew? {id:uid(),brandId:UI.brand,ym:UI.ym,kind:(UI.planKind||'영상'),week:'1주차',axis:'',title:'',refs:'',body:'',done:false}
                : DB.plans.find(x=>x.id===id);
   modal({
     title:isNew?'기획안 추가':'기획안 편집',
@@ -830,9 +838,10 @@ function planModal(id){
         <textarea id="p_paste" rows="4" placeholder="오브서울 8월 기획안&#10;8월2주차&#10;트래픽&#10;주제: 중국 공장/시장 방문+대표의 셀렉&제작 과정&#10;레퍼런스&#10;instagram.com/reel/..."></textarea></label>
       <button class="btn btn--sm" id="p_fill" style="margin:-4px 0 12px">정리해서 채우기</button>
       <div class="row2">
+        <label class="f"><span>형식</span><select id="p_kind">${opt(PLAN_KINDS,p.kind||'영상')}</select></label>
         <label class="f"><span>주차</span><select id="p_week">${opt(WEEKS,p.week)}</select></label>
-        <label class="f"><span>축 (트래픽 · 브릿지 등)</span><input type="text" id="p_axis" value="${esc(p.axis)}" placeholder="트래픽" /></label>
       </div>
+      <label class="f"><span>축 (트래픽 · 브릿지 등)</span><input type="text" id="p_axis" value="${esc(p.axis)}" placeholder="트래픽" /></label>
       <label class="f"><span>주제</span><input type="text" id="p_title" value="${esc(p.title)}" placeholder="중국 공장·시장 방문 + 대표의 셀렉/제작 과정" /></label>
       <label class="f"><span>레퍼런스 (한 줄에 하나)</span><textarea id="p_refs" rows="3" placeholder="instagram.com/reel/...">${esc(p.refs)}</textarea></label>
       <label class="f"><span>기획 내용</span><textarea id="p_body" rows="10" placeholder="초반 2-3초 중국 현장, 공장 등 전문적인 느낌으로 후킹&#10;- 여러 니트/우븐 제품을 직접 만져보고 비교하는 모습&#10;- 왜 이건 안되고 이건 괜찮은지 대표 기준 설명">${esc(p.body)}</textarea></label>
@@ -840,7 +849,7 @@ function planModal(id){
     onSave:()=>{
       if(!$('#p_title').value.trim() && $('#p_paste').value.trim()){ fillPlanFromPaste(); }
       const v=$('#p_title').value.trim(); if(!v){ toast('주제를 입력하세요'); return false; }
-      p.title=v; p.week=$('#p_week').value; p.axis=$('#p_axis').value.trim();
+      p.title=v; p.kind=$('#p_kind').value; p.week=$('#p_week').value; p.axis=$('#p_axis').value.trim();
       p.refs=$('#p_refs').value.trim(); p.body=$('#p_body').value; p.done=$('#p_done').checked;
       p.ym=UI.ym; p.dirty=true; if(isNew) DB.plans.push(p);
     },
@@ -1312,6 +1321,7 @@ const KIND={
       ...(p.axis?{'축':{rich_text:[{text:{content:p.axis}}]}}:{}),
       ...(p.refs?{'레퍼런스':{rich_text:[{text:{content:p.refs.slice(0,1900)}}]}}:{}),
       ...(p.body?{'내용':{rich_text:[{text:{content:p.body.slice(0,1900)}}]}}:{}),
+      '형식':{select:{name:p.kind||'영상'}},
       '완료':{checkbox:!!p.done}, '로컬ID':{rich_text:[{text:{content:p.id}}]} }) },
   actions:{ db:'actions',
     props:a=>({ '액션플랜':{title:[{text:{content:a.title||''}}]}, '브랜드':{select:{name:brandOf(a.brandId)?.name||''}},
@@ -1422,7 +1432,7 @@ async function pullAll(quiet){
       if(kind==='sales'){ Object.assign(rec,{brandId:brandByName(sel(P['브랜드'])), ym:txt(P['월']),
         channel:sel(P['채널']), goal:P['목표']?.number||0, actual:P['실적']?.number||0}); }
       if(kind==='plans'){ Object.assign(rec,{brandId:brandByName(sel(P['브랜드'])), ym:txt(P['월']),
-        week:sel(P['주차'])||'1주차', axis:txt(P['축']), title:ttl(P['주제']),
+        week:sel(P['주차'])||'1주차', kind:sel(P['형식'])||'영상', axis:txt(P['축']), title:ttl(P['주제']),
         refs:txt(P['레퍼런스']), body:txt(P['내용']), done:!!P['완료']?.checkbox}); }
       if(kind==='actions'){ Object.assign(rec,{brandId:brandByName(sel(P['브랜드'])), ym:txt(P['월']),
         title:ttl(P['액션플랜']), goal:P['목표치']?.number??'', cur:P['현재치']?.number??'',
@@ -1460,6 +1470,7 @@ function bind(){
   document.querySelectorAll('[data-edit-task]').forEach(el=>el.onclick=()=>taskModal(el.dataset.editTask));
   document.querySelectorAll('[data-edit-prod]').forEach(el=>el.onclick=()=>prodModal(el.dataset.editProd));
   document.querySelectorAll('[data-edit-plan]').forEach(el=>el.onclick=()=>planModal(el.dataset.editPlan));
+  document.querySelectorAll('[data-plankind]').forEach(el=>el.onclick=()=>{ UI.planKind=el.dataset.plankind||''; saveUI(); render(); });
   document.querySelectorAll('[data-play]').forEach(el=>el.onclick=()=>{
     const [pid,idx]=el.dataset.play.split('|');
     const pl=DB.plans.find(x=>x.id===pid); if(!pl) return;
