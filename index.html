@@ -468,29 +468,16 @@ function summaryView(){
     </section>
   </div>
 
-  <div class="grid g2" style="margin-top:14px">
-    <section class="card">
-      <div class="card__hd"><h3>콘텐츠 운영 현황</h3>
-        <span class="eyebrow" style="margin-left:auto">${counts.filter(([t,n])=>OPS_TYPES.includes(t)&&n===0).length}개 유형 비어 있음</span></div>
-      <div class="card__bd">
-        <div class="types" style="grid-template-columns:repeat(5,1fr)">
-          ${counts.filter(([t])=>OPS_TYPES.includes(t)).map(([t,n])=>`<div class="type ${n===0?'type--zero':''}">
-            <div class="type__n">${n}</div><div class="type__l">${t}</div></div>`).join('')}
-        </div>
+  <section class="card" style="margin-top:14px">
+    <div class="card__hd"><h3>콘텐츠 운영 현황</h3>
+      <span class="eyebrow" style="margin-left:auto">${ymLabel(ym)}</span></div>
+    <div class="card__bd">
+      <div class="types" style="grid-template-columns:repeat(2,1fr)">
+        ${counts.filter(([t])=>CONTENT_TYPES.includes(t)).map(([t,n])=>`<div class="type ${n===0?'type--zero':''}">
+          <div class="type__n">${n}</div><div class="type__l">${t}</div></div>`).join('')}
       </div>
-    </section>
-
-    <section class="card">
-      <div class="card__hd"><h3>EGC / UGC</h3>
-        <span class="eyebrow" style="margin-left:auto">${ymLabel(ym)}</span></div>
-      <div class="card__bd">
-        <div class="types" style="grid-template-columns:repeat(2,1fr)">
-          ${counts.filter(([t])=>CONTENT_TYPES.includes(t)).map(([t,n])=>`<div class="type ${n===0?'type--zero':''}">
-            <div class="type__n">${n}</div><div class="type__l">${t}</div></div>`).join('')}
-        </div>
-      </div>
-    </section>
-  </div>`;
+    </div>
+  </section>`;
 }
 
 /* ---------- 캘린더 ---------- */
