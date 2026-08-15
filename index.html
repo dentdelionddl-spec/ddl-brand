@@ -511,7 +511,7 @@ function calendarView(){
   const calWho=(UI.taskOwner===undefined? (DB.settings.me||'') : UI.taskOwner)||'';
   const allDayTasks=tasksSpanning(b.id,ym);
   const dayTasks=allDayTasks.filter(t=>!calWho || (t.owner||'')===calWho);
-  const calOwners=[...new Set(allDayTasks.map(t=>(t.owner||'').trim()).filter(Boolean))].sort((x,y)=>x.localeCompare(y,'ko'));
+  const calOwners=[...new Set([...OWNERS, ...allDayTasks.map(t=>(t.owner||'').trim()).filter(Boolean)])];
   const cells=[];
   for(let i=0;i<lead;i++) cells.push(`<div class="cell cell--out"></div>`);
   for(let d=1;d<=dim;d++){
@@ -577,7 +577,7 @@ function weekKey(w){
 function tasksView(){
   const b=brandOf(UI.brand);
   const all=tasksOf(b.id);
-  const owners=[...new Set(all.map(t=>(t.owner||'').trim()).filter(Boolean))].sort((x,y)=>x.localeCompare(y,'ko'));
+  const owners=[...new Set([...OWNERS, ...all.map(t=>(t.owner||'').trim()).filter(Boolean)])];
   const me=DB.settings.me||'';
   const who=(UI.taskOwner===undefined? me : UI.taskOwner)||'';
   const scoped = who? all.filter(t=>(t.owner||'')===who) : all;
