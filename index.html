@@ -248,6 +248,7 @@ try{ DB = JSON.parse(store.get(KEY)) || blank(); }catch(e){ DB = blank(); }
 for(const k of ['contents','tasks','sales','products','plans','costs','actions']) if(!Array.isArray(DB[k])) DB[k]=[];
 if(!DB.settings) DB.settings=blank().settings;
 if(!DB.settings.db) DB.settings.db={...NOTION_DB};
+if(DB.settings.dbv!==3){ DB.settings.db={...DB.settings.db, ...NOTION_DB}; DB.settings.dbv=3; }
 for(const k in NOTION_DB) if(!DB.settings.db[k]) DB.settings.db[k]=NOTION_DB[k];
 if(!DB.settings.workerUrl) DB.settings.workerUrl=PROXY_URL;
 if(!DB.brands||!DB.brands.length) DB.brands=JSON.parse(JSON.stringify(SEED_BRANDS));
@@ -1130,6 +1131,11 @@ const KIND={
       'Status':{select:{name:t.done?'Done':'To do'}},
       ...(t.owner?{'담당자':{multi_select:[{name:t.owner}]}}:{}),
       ...(t.memo?{'상세':{rich_text:[{text:{content:t.memo.slice(0,1900)}}]}}:{}) }) },
+  sales:{ db:'sales',
+    props:s=>({ '항목':{title:[{text:{content:`${brandOf(s.brandId)?.name||''} ${s.ym} ${s.channel}`}}]},
+      '브랜드':{select:{name:brandOf(s.brandId)?.name||''}}, '월':{rich_text:[{text:{content:s.ym}}]},
+      '채널':{select:{name:s.channel}}, '목표':{number:Number(s.goal||0)}, '실적':{number:Number(s.actual||0)},
+      '로컬ID':{rich_text:[{text:{content:s.id}}]} }) },
   plans:{ db:'plans',
     props:p=>({ '주제':{title:[{text:{content:p.title||''}}]}, '브랜드':{select:{name:brandOf(p.brandId)?.name||''}},
       '월':{rich_text:[{text:{content:p.ym||''}}]}, '주차':{select:{name:p.week||'1주차'}},
