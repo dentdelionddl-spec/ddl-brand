@@ -332,7 +332,8 @@ function actionProgress(a){
   return { cur:done, goal:ids.length, pct: ids.length? done/ids.length*100 : 0, byTask:true };
 }
 function totals(bid,ym){
-  const rows=salesOf(bid,ym);
+  const chs=brandOf(bid)?.channels||[];
+  const rows=salesOf(bid,ym).filter(r=>!chs.length||chs.includes(r.channel));
   return { goal:rows.reduce((a,r)=>a+Number(r.goal||0),0), actual:rows.reduce((a,r)=>a+Number(r.actual||0),0) };
 }
 function paceRatio(ym){
@@ -425,8 +426,7 @@ function viewHtml(){
 function summaryView(){
   const b=brandOf(UI.brand), ym=UI.ym;
   const saved=salesOf(b.id,ym), {goal,actual}=totals(b.id,ym);
-  const rows=b.channels.map(ch=>saved.find(s=>s.channel===ch)||{channel:ch,goal:0,actual:0})
-                       .concat(saved.filter(s=>!b.channels.includes(s.channel)));
+  const rows=b.channels.map(ch=>saved.find(s=>s.channel===ch)||{channel:ch,goal:0,actual:0});
   const pacePct=Math.round(paceRatio(ym)*100);
   const cs=contentsOf(b.id,ym);
   const counts=TYPES.map(t=>[t,cs.filter(c=>c.type===t).length]);
