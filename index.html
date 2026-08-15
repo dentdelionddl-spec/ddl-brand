@@ -57,7 +57,9 @@ button{cursor:pointer}
 .monthnav button{border:0;background:transparent;padding:4px 9px;border-radius:999px;color:var(--mut)}
 .monthnav button:hover{background:var(--line2);color:var(--ink)}
 .monthnav .cur{font-family:var(--mono);font-size:12px;font-weight:600;color:var(--ink);padding:4px 4px;min-width:96px;text-align:center}
-.tabs{display:flex;gap:2px;margin-top:12px;overflow-x:auto;scrollbar-width:none}
+.tabrow{display:flex;align-items:center;gap:12px;max-width:1240px;width:100%}
+.tabrow .monthnav{margin-left:auto;flex:0 0 auto;margin-top:12px}
+.tabs{display:flex;gap:2px;margin-top:12px;overflow-x:auto;scrollbar-width:none;flex:1;min-width:0}
 .tabs::-webkit-scrollbar{display:none}
 .tab{border:0;background:transparent;padding:9px 12px;border-bottom:2px solid transparent;color:var(--mut);font-weight:600;font-size:13px;white-space:nowrap}
 .tab:hover{color:var(--ink)}
@@ -174,11 +176,28 @@ tr:last-child td{border-bottom:0}
 .syncdot{width:6px;height:6px;border-radius:50%;background:#C3C3BC;display:inline-block;margin-right:6px}
 .syncdot--on{background:var(--ok)}
 
+@media(max-width:1100px){ .g2{grid-template-columns:1fr} }
 @media(max-width:860px){
   .btab--util{margin-left:0}
   .btab{padding:11px 11px 8px}
-  .view{padding:16px 14px 72px}
-  .topbar{padding:10px 14px 0}
+  .view{padding:14px 12px 80px}
+  .topbar{padding:10px 12px 0}
+  .brandtitle{font-size:19px}
+  .tabrow{flex-direction:column;align-items:stretch;gap:4px}
+  .tabrow .monthnav{margin-left:0;margin-top:4px;align-self:flex-start}
+  .row2{grid-template-columns:1fr}
+  .card__bd{padding:12px}
+  .modal{max-height:92vh}
+}
+@media(max-width:640px){
+  .cal{grid-template-columns:repeat(7,minmax(44px,1fr));overflow-x:auto}
+  .cell{min-height:68px}
+  .cell__d{font-size:10px}
+  .ev{font-size:9.5px;padding:2px 4px}
+  .types{grid-template-columns:repeat(2,1fr)!important}
+  .tk{flex-wrap:wrap}
+  .btab__p{display:none}
+  table{font-size:12px}
 }
 </style>
 </head>
@@ -193,9 +212,10 @@ tr:last-child td{border-bottom:0}
    ========================================================= */
 
 const CONTENT_TYPES = ['EGC','UGC'];
-const OPS_TYPES = ['제품 업로드','제품 입고','공구','기획전','오프라인'];
+const OPS_TYPES = ['온라인','오프라인','이벤트','제품 업로드','제품 입고'];
+const TYPE_ALIAS = {'공구':'이벤트','기획전':'이벤트','피드':'EGC','릴스':'EGC','스레드':'EGC'};
 const TYPES = [...CONTENT_TYPES, ...OPS_TYPES];
-const TYPE_HUE = {'EGC':262,'UGC':330,'제품 업로드':160,'제품 입고':38,'공구':18,'기획전':288,'오프라인':122};
+const TYPE_HUE = {'EGC':262,'UGC':330,'온라인':200,'오프라인':122,'이벤트':18,'제품 업로드':160,'제품 입고':38};
 const catOf = t => CONTENT_TYPES.includes(t) ? '콘텐츠' : '운영';
 /* 업무 영역은 고정값이 아니라 입력된 내용에서 자동 수집됩니다 */
 function areasIn(bid){
@@ -263,7 +283,7 @@ for(const sb of SEED_BRANDS) if(!DB.brands.some(b=>b.id===sb.id)) DB.brands.push
 DB.brands.sort((a,b)=>{ const oa=SEED_BRANDS.findIndex(x=>x.id===a.id), ob=SEED_BRANDS.findIndex(x=>x.id===b.id);
   return (oa<0?99:oa)-(ob<0?99:ob); });
 for(const k of ['plans','costs','actions']) if(!Array.isArray(DB[k])) DB[k]=[];
-for(const c of DB.contents){ if(['피드','릴스','스레드'].includes(c.type)){ c.type='EGC'; c.dirty=true; } }
+for(const c of DB.contents){ if(TYPE_ALIAS[c.type]){ c.type=TYPE_ALIAS[c.type]; c.dirty=true; } }
 for(const t of DB.tasks){ if(/\d+\s*월\s*\d+\s*주/.test(t.area||'')){ t.week=t.area; t.area=''; } }
 
 const save=()=>{ store.set(KEY,JSON.stringify(DB)); if(typeof autoSync==='function') autoSync(); };
@@ -373,11 +393,12 @@ function topbar(){
         <h1 class="brandtitle">${esc(b.name)}</h1>
         <div class="brandsub">${esc(b.ko||'')}</div>
       </div>
-      <div class="spacer"></div>
-      ${monthNav()}
     </div>
-    <div class="tabs" role="tablist">
-      ${tabs.map(([k,l])=>`<button class="tab" role="tab" data-tab="${k}" aria-selected="${UI.tab===k}">${l}</button>`).join('')}
+    <div class="tabrow">
+      <div class="tabs" role="tablist">
+        ${tabs.map(([k,l])=>`<button class="tab" role="tab" data-tab="${k}" aria-selected="${UI.tab===k}">${l}</button>`).join('')}
+      </div>
+      ${monthNav()}
     </div>
   </header>`;
 }
@@ -404,8 +425,8 @@ function viewHtml(){
 function summaryView(){
   const b=brandOf(UI.brand), ym=UI.ym;
   const saved=salesOf(b.id,ym), {goal,actual}=totals(b.id,ym);
-  const rows=(goal||actual)? b.channels.map(ch=>saved.find(s=>s.channel===ch)||{channel:ch,goal:0,actual:0})
-                             .concat(saved.filter(s=>!b.channels.includes(s.channel))) : [];
+  const rows=b.channels.map(ch=>saved.find(s=>s.channel===ch)||{channel:ch,goal:0,actual:0})
+                       .concat(saved.filter(s=>!b.channels.includes(s.channel)));
   const pacePct=Math.round(paceRatio(ym)*100);
   const cs=contentsOf(b.id,ym);
   const counts=TYPES.map(t=>[t,cs.filter(c=>c.type===t).length]);
@@ -425,7 +446,7 @@ function summaryView(){
         <span class="pace" style="left:${Math.min(100,pacePct)}%"></span>
       </div>
     </div>`;
-  }).join('') : `<div class="empty"><b>이 달 채널 목표가 없습니다</b>매출·손익 탭에서 채널별 목표를 넣으면 여기에 진행률이 망니다.</div>`;
+  }).join('') : `<div class="empty"><b>이 브랜드에 채널이 없습니다</b>설정에서 브랜드 채널을 추가하면 여기에 표시됩니다.</div>`;
 
   return `
   <section class="card">
@@ -486,7 +507,10 @@ function calendarView(){
   const [y,m]=ym.split('-').map(Number);
   const first=new Date(y,m-1,1), dim=new Date(y,m,0).getDate(), lead=first.getDay();
   const cs=contentsSpanning(b.id,ym);
-  const dayTasks=tasksSpanning(b.id,ym);
+  const calWho=(UI.taskOwner===undefined? (DB.settings.me||'') : UI.taskOwner)||'';
+  const allDayTasks=tasksSpanning(b.id,ym);
+  const dayTasks=allDayTasks.filter(t=>!calWho || (t.owner||'')===calWho);
+  const calOwners=[...new Set(allDayTasks.map(t=>(t.owner||'').trim()).filter(Boolean))].sort((x,y)=>x.localeCompare(y,'ko'));
   const cells=[];
   for(let i=0;i<lead;i++) cells.push(`<div class="cell cell--out"></div>`);
   for(let d=1;d<=dim;d++){
@@ -503,9 +527,16 @@ function calendarView(){
   }
   while(cells.length%7) cells.push(`<div class="cell cell--out"></div>`);
 
-  return `<section class="card">
+  const chip=(label,val,on)=>`<button class="btn btn--sm" data-taskowner="${esc(val)}" style="border-radius:999px;${on?'background:var(--ink);border-color:var(--ink);color:#fff':''}">${esc(label)}</button>`;
+  return `<div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin-bottom:12px">
+      <span class="eyebrow">업무 담당</span>
+      ${chip('전체','',!calWho)}${calOwners.map(o=>chip(o,o,calWho===o)).join('')}
+      <div class="spacer" style="flex:1"></div>
+      <button class="btn btn--sm btn--primary" data-newdate="${ym}-${pad(Math.min(today.getDate(),dim))}">항목 추가</button>
+    </div>
+  <section class="card">
     <div class="card__hd"><h3>${ymLabel(ym)} 운영 캘린더</h3>
-      <button class="btn btn--sm btn--primary" data-newdate="${ym}-${pad(Math.min(today.getDate(),dim))}" style="margin-left:auto">항목 추가</button></div>
+      <span class="eyebrow" style="margin-left:auto">${calWho?esc(calWho)+' 업무만':'전체 업무'}</span></div>
     <div class="cal">
       ${['일','월','화','수','목','금','토'].map(d=>`<div class="cal__dow">${d}</div>`).join('')}
       ${cells.join('')}
@@ -1059,7 +1090,7 @@ function addOnDate(date,end){
 
 function contentModal(id,date,cat,end){
   const isNew=!id;
-  const c = isNew? {id:uid(),brandId:UI.brand,date:date||TODAY,end:(end&&end!==date?end:''),type:(cat==='콘텐츠'?'EGC':'제품 업로드'),title:'',memo:'',done:false}
+  const c = isNew? {id:uid(),brandId:UI.brand,date:date||TODAY,end:(end&&end!==date?end:''),type:(cat==='콘텐츠'?'EGC':'온라인'),title:'',memo:'',done:false}
                  : DB.contents.find(x=>x.id===id);
   const kind = cat || catOf(c.type);
   const typeOptions = kind==='콘텐츠' ? CONTENT_TYPES : OPS_TYPES;
@@ -1286,7 +1317,7 @@ async function pullAll(quiet){
       rec.notionId=pg.id;
       if(kind==='contents'){ Object.assign(rec,{brandId:brandByName(sel(P['브랜드'])),type:sel(P['유형'])||'피드',
         date:P['날짜']?.date?.start||TODAY, end:P['날짜']?.date?.end||'',
-        type:(['피드','릴스','스레드'].includes(sel(P['유형']))?'EGC':(sel(P['유형'])||'EGC')),
+        type:(TYPE_ALIAS[sel(P['유형'])]||sel(P['유형'])||'EGC'),
         title:ttl(P['제목']), memo:txt(P['메모']), done:!!P['완료']?.checkbox}); }
       if(kind==='tasks'){
         const bn=sel(P['Brand']); const bid=DB.brands.find(b=>b.name===bn)?.id;
