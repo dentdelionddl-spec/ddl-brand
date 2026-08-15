@@ -1284,6 +1284,8 @@ async function pullAll(quiet){
   for(const kind of Object.keys(KIND)){
     const dbId=s.db[KIND[kind].db]; if(!dbId) continue;
     let res; try{ res=await api({action:'query', database_id:dbId}); }catch(e){ continue; }
+    const seen=new Set((res.results||[]).map(pg=>pg.id));
+    DB[kind]=DB[kind].filter(r=>!r.notionId || seen.has(r.notionId));
     for(const pg of (res.results||[])){
       const P=pg.properties||{}; const lid=txt(P['로컬ID'])||pg.id;
       let rec=DB[kind].find(r=>r.id===lid);
