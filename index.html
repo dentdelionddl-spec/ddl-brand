@@ -854,10 +854,50 @@ function linkify(t){
     return `<a href="${href}" target="_blank" rel="noopener" style="color:var(--accent);word-break:break-all">${m}</a>`;
   });
 }
+function uploadPlanView(){
+  const b=brandOf(UI.brand), ym=UI.ym;
+  const cs=contentsSpanning(b.id,ym).slice().sort((x,y)=>(x.date||'').localeCompare(y.date||''));
+  const done=cs.filter(c=>c.done).length;
+  const byType={}; cs.forEach(c=>byType[c.type]=(byType[c.type]||0)+1);
+  const byDate={}; cs.forEach(c=>{ (byDate[c.date]=byDate[c.date]||[]).push(c); });
+  const dates=Object.keys(byDate).sort();
+  const dow=ds=>['일','월','화','수','목','금','토'][new Date(ds+'T00:00:00').getDay()];
+  return `
+    <div class="grid g4" style="margin-bottom:14px">
+      <div class="card stat"><div class="stat__n">${done}/${cs.length}</div><div class="stat__l">발행 완료 / 전체</div></div>
+      ${CONTENT_TYPES.concat(OPS_TYPES).filter(tp=>byType[tp]).slice(0,3).map(tp=>
+        `<div class="card stat"><div class="stat__n">${byType[tp]}</div><div class="stat__l">${tp}</div></div>`).join('')}
+    </div>
+    ${!cs.length? `<div class="card"><div class="empty"><b>이 달 등록된 콘텐츠가 없습니다</b>캘린더에서 운영·콘텐츠 항목을 등록하면 여기에 날짜순으로 모입니다.</div></div>`
+    : dates.map(ds=>`
+      <div class="areahd"><h3>${ds.slice(5).replace('-','/')} (${dow(ds)})</h3><span class="line"></span><span class="eyebrow">${byDate[ds].length}건</span></div>
+      ${byDate[ds].map(c=>`<div class="tk tk--click ${c.done?'tk--done':''}" data-content="${c.id}">
+        <span class="dot" style="background:${hueBg(TYPE_HUE[c.type]||210,55)};margin-top:6px"></span>
+        <div class="tk__t">
+          <div class="tk__title">${esc(c.title||'(제목 없음)')}</div>
+          <div class="tk__meta">
+            <span class="tag">${esc(c.type)}</span>
+            ${c.end&&c.end!==c.date?`<span class="eyebrow">${c.date.slice(5)} ~ ${c.end.slice(5)}</span>`:''}
+            ${(c.att&&c.att.length)?`<span class="tag">첨부 ${c.att.length}</span>`:''}
+            ${c.done?'<span class="tag tag--ok">완료</span>':''}
+            ${c.memo?`<span class="eyebrow">${esc(c.memo.slice(0,40))}</span>`:''}
+          </div>
+        </div>
+      </div>`).join('')}`).join('')}`;
+}
 function plansView(){
+  const ptab=UI.planTab||'plan';
+  if(ptab==='upload') return contentTabs(ptab)+uploadPlanView();
+  return contentTabs(ptab)+plansPlanView();
+}
+function contentTabs(ptab){
+  const chip=(v,l,on)=>`<button class="btn btn--sm" data-ptab="${v}" style="border-radius:999px;${on?'background:var(--ink);border-color:var(--ink);color:#fff':''}">${l}</button>`;
+  return `<div style="display:flex;gap:6px;margin-bottom:12px">${chip('plan','기획',ptab==='plan')}${chip('upload','업로드 계획',ptab==='upload')}</div>`;
+}
+function plansPlanView(){
   const b=brandOf(UI.brand), ym=UI.ym;
   const all=plansOf(b.id,ym);
-  const kind=UI.planKind||'';
+  const kind=UI.planKind||'영상';
   const list=kind? all.filter(x=>(x.kind||'영상')===kind) : all;
   const byWeek=WEEKS.map(w=>[w, list.filter(p=>p.week===w)]);
   const has=list.length;
@@ -865,7 +905,7 @@ function plansView(){
   return `<div style="display:flex;align-items:center;gap:10px;margin-bottom:12px">
       <div class="eyebrow">${ymLabel(ym)} 기획안 ${has}건</div>
       <div style="display:flex;gap:6px;flex-wrap:wrap">
-        ${[['','전체'],...PLAN_KINDS.map(k=>[k,k])].map(([v,l])=>`<button class="btn btn--sm" data-plankind="${v}" style="border-radius:999px;${kind===v?'background:var(--ink);border-color:var(--ink);color:#fff':''}">${l} ${v? all.filter(x=>(x.kind||'영상')===v).length : all.length}</button>`).join('')}
+        ${PLAN_KINDS.filter(k=>k!=='텍스트'||all.some(x=>x.kind==='텍스트')).map(k=>[k,k]).map(([v,l])=>`<button class="btn btn--sm" data-plankind="${v}" style="border-radius:999px;${kind===v?'background:var(--ink);border-color:var(--ink);color:#fff':''}">${l} ${v? all.filter(x=>(x.kind||'영상')===v).length : all.length}</button>`).join('')}
       </div>
       <div class="spacer" style="flex:1"></div>
       <button class="btn btn--primary btn--sm" data-act="plan-new">기획안 추가</button>
@@ -1711,6 +1751,7 @@ function bind(){
   document.querySelectorAll('[data-edit-prod]').forEach(el=>el.onclick=()=>prodModal(el.dataset.editProd));
   document.querySelectorAll('[data-edit-plan]').forEach(el=>el.onclick=()=>planModal(el.dataset.editPlan));
   document.querySelectorAll('[data-gobrand]').forEach(el=>el.onclick=()=>{ UI.brand=el.dataset.gobrand; UI.tab='summary'; saveUI(); render(); });
+  document.querySelectorAll('[data-ptab]').forEach(el=>el.onclick=()=>{ UI.planTab=el.dataset.ptab; saveUI(); render(); });
   document.querySelectorAll('[data-plankind]').forEach(el=>el.onclick=()=>{ UI.planKind=el.dataset.plankind||''; saveUI(); render(); });
   document.querySelectorAll('[data-newthread]').forEach(el=>el.onclick=()=>{
     planModalWith({id:uid(),brandId:UI.brand,ym:UI.ym,kind:'텍스트',date:el.dataset.newthread,week:'1주차',axis:'',title:'',refs:'',body:'',done:false}, true);
