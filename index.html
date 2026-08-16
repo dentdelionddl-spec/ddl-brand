@@ -140,6 +140,14 @@ tr:last-child td{border-bottom:0}
 .ev--task{background:#EEF1FA;border-left-color:var(--accent)}
 .bgrid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
 .bcell{text-align:left;border:1px solid var(--line);border-radius:10px;padding:11px 12px;background:var(--card);cursor:pointer;transition:border-color .12s,background .12s}
+@media(max-width:560px){
+  .bcell{padding:9px 11px;display:grid;grid-template-columns:1fr auto;grid-gap:2px 8px;align-items:baseline}
+  .bcell__h{margin:0}
+  .bcell__h span{font-size:10.5px}
+  .bcell__v{font-size:14px;margin:0;text-align:right}
+  .bcell .track{grid-column:1/3;height:5px;margin-top:4px}
+  .bgrid{gap:8px}
+}
 .bcell:hover{border-color:#C9C9C0;background:#FCFCFA}
 .bcell__h{display:flex;align-items:baseline;gap:8px;margin-bottom:5px}
 .bcell__h b{font-size:13px;letter-spacing:-.01em}
@@ -307,7 +315,8 @@ const NOTION_DB={
   products:'ddd18f71b6c9475abc59f74881cff410',
   plans:'30a5544647d84123b4ad5e106c48c64e',
   costs:'e33ee267da7d43fd86f72c28fa888114',
-  actions:'21f72c37590f48dba49455f0c705b4ab'
+  actions:'21f72c37590f48dba49455f0c705b4ab',
+  config:'46b8ab2d1ddc47f7b5f8c0bfa4748ab9'
 };
 const NOTION_HUB='https://app.notion.com/p/3bd4f7cd6b86816cbc56ef161bf47379';
 const PROXY_URL='https://ddl-brand.vercel.app/api/notion';
@@ -518,25 +527,6 @@ function homeView(){
   const cCount=t=>cs.filter(c=>c.type===t).length;
 
   return `
-  <section class="card">
-    <div class="card__hd"><h3>브랜드별 목표 대비 실적</h3>
-      <span class="mono" style="font-size:12px;color:var(--mut)">합계 ${man(sum.actual)} / ${man(sum.goal)}만 · ${sum.goal?Math.round(sum.actual/sum.goal*100):0}%</span>
-      <span class="tag ${sum.goal&&sum.actual/sum.goal*100>=pacePct?'tag--ok':'tag--high'}" style="margin-left:auto">진도 ${pacePct}%</span></div>
-    <div class="card__bd">
-      <div class="bgrid">
-        ${brands.map(b=>{
-          const t=totals(b.id,ym); const pct=t.goal? t.actual/t.goal*100:0;
-          const behind=pct<pacePct-5;
-          return `<button class="bcell" data-gobrand="${b.id}">
-            <div class="bcell__h"><b>${esc(b.name)}</b><span class="mono">${Math.round(pct)}%</span></div>
-            <div class="mono bcell__v">${man(t.actual)} <span>/ ${man(t.goal)}만</span></div>
-            <div class="track"><i style="width:${Math.min(100,pct)}%;background:${behind?'#C9A0A8':hueBg(b.hue,58)}"></i>
-              <span class="pace" style="left:${Math.min(100,pacePct)}%"></span></div>
-          </button>`;
-        }).join('')}
-      </div>
-    </div>
-  </section>
 
   <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin:16px 0 8px">
     <span class="eyebrow">업무 담당</span>
@@ -568,7 +558,28 @@ function homeView(){
           <div class="type__n">${cCount(t)}</div><div class="type__l">${t}</div></div>`).join('')}
       </div>
     </div>
-  </section>`;
+  </section>
+
+  <section class="card">
+    <div class="card__hd"><h3>브랜드별 목표 대비 실적</h3>
+      <span class="mono" style="font-size:12px;color:var(--mut)">합계 ${man(sum.actual)} / ${man(sum.goal)}만 · ${sum.goal?Math.round(sum.actual/sum.goal*100):0}%</span>
+      <span class="tag ${sum.goal&&sum.actual/sum.goal*100>=pacePct?'tag--ok':'tag--high'}" style="margin-left:auto">진도 ${pacePct}%</span></div>
+    <div class="card__bd">
+      <div class="bgrid">
+        ${brands.map(b=>{
+          const t=totals(b.id,ym); const pct=t.goal? t.actual/t.goal*100:0;
+          const behind=pct<pacePct-5;
+          return `<button class="bcell" data-gobrand="${b.id}">
+            <div class="bcell__h"><b>${esc(b.name)}</b><span class="mono">${Math.round(pct)}%</span></div>
+            <div class="mono bcell__v">${man(t.actual)} <span>/ ${man(t.goal)}만</span></div>
+            <div class="track"><i style="width:${Math.min(100,pct)}%;background:${behind?'#C9A0A8':hueBg(b.hue,58)}"></i>
+              <span class="pace" style="left:${Math.min(100,pacePct)}%"></span></div>
+          </button>`;
+        }).join('')}
+      </div>
+    </div>
+  </section>
+`;
 }
 function summaryView(){
   const b=brandOf(UI.brand), ym=UI.ym;
@@ -1603,6 +1614,7 @@ function brandModal(id){
       b.hue=Number($('#b_hue').value)||210;
       b.channels=$('#b_ch').value.split(',').map(s=>s.trim()).filter(Boolean);
       if(isNew){ DB.brands.push(b); UI.brand=b.id; saveUI(); }
+      setTimeout(pushBrands,300);
     },
     onDelete:isNew?null:()=>{
       DB.brands=DB.brands.filter(x=>x.id!==id);
@@ -1721,7 +1733,37 @@ async function bootSync(){
   if(!DB.settings.workerUrl || DB.settings.auto===false) return;
   try{ await pullAll(true); }catch(e){}
 }
+async function pushBrands(){
+  const s=DB.settings; const dbId=s.db&&s.db.config;
+  if(!s.workerUrl||!dbId) return;
+  try{
+    const res=await api({action:'query', database_id:dbId});
+    const row=(res.results||[]).find(p=>(p.properties['항목']?.title?.[0]?.plain_text||'')==='brands');
+    const props={ '항목':{title:[{text:{content:'brands'}}]},
+      '값':{rich_text:[{text:{content:JSON.stringify(DB.brands).slice(0,1900)}}]},
+      '수정시각':{rich_text:[{text:{content:new Date().toISOString()}}]} };
+    if(row) await api({action:'update', page_id:row.id, properties:props});
+    else await api({action:'create', database_id:dbId, properties:props});
+  }catch(e){}
+}
+async function pullBrands(){
+  const s=DB.settings; const dbId=s.db&&s.db.config;
+  if(!s.workerUrl||!dbId) return;
+  try{
+    const res=await api({action:'query', database_id:dbId});
+    const row=(res.results||[]).find(p=>(p.properties['항목']?.title?.[0]?.plain_text||'')==='brands');
+    const raw=row&&row.properties['값']?.rich_text?.[0]?.plain_text;
+    if(!raw){ await pushBrands(); return; }
+    const list=JSON.parse(raw);
+    if(Array.isArray(list)&&list.length){
+      DB.brands=list;
+      for(const sb of SEED_BRANDS) if(!DB.brands.some(b=>b.id===sb.id)) DB.brands.push(JSON.parse(JSON.stringify(sb)));
+      store.set(KEY,JSON.stringify(DB));
+    }
+  }catch(e){}
+}
 async function pullAll(quiet){
+  await pullBrands();
   const s=DB.settings; let n=0;
   const snap=()=>JSON.stringify(['contents','tasks','sales','products','plans','costs','actions'].map(k=>DB[k]));
   const before=snap();
@@ -1784,7 +1826,7 @@ async function pullAll(quiet){
    ========================================================= */
 function bind(){
   document.querySelectorAll('[data-brand]').forEach(el=>el.onclick=()=>{
-    UI.brand=el.dataset.brand; if(!['__set'].includes(UI.brand)&&!['summary','calendar','kpi','tasks','plans','sales','products'].includes(UI.tab)) UI.tab='summary';
+    UI.brand=el.dataset.brand; UI.tab='summary'; if(!['__set'].includes(UI.brand)&&!['summary','calendar','kpi','tasks','plans','sales','products'].includes(UI.tab)) UI.tab='summary';
     saveUI(); render();
   });
   document.querySelectorAll('[data-tab]').forEach(el=>el.onclick=()=>{ UI.tab=el.dataset.tab; saveUI(); render(); });
@@ -1831,7 +1873,7 @@ function bind(){
       const fi=list.findIndex(b=>b.id===from), ti=list.findIndex(b=>b.id===to);
       if(fi<0||ti<0) return;
       const [moved]=list.splice(fi,1); list.splice(ti,0,moved);
-      DB.brands=list; save(); render(); toast('브랜드 순서를 바꿔습니다',1800);
+      DB.brands=list; save(); pushBrands(); render(); toast('브랜드 순서를 바꿔습니다',1800);
     });
   });
   document.querySelectorAll('[data-toggle-content]').forEach(el=>el.onclick=(e)=>{
