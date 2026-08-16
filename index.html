@@ -168,6 +168,16 @@ tr:last-child td{border-bottom:0}
 .post:last-child{margin-bottom:0}
 .post:hover{background:#F1F4FD;border-color:#C7D2F0}
 .post__m{display:flex;gap:5px;margin-bottom:4px;flex-wrap:wrap}
+.ustat{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin-bottom:16px}
+.ustat__c{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:12px 14px;text-align:center}
+.ustat__c--warn{border-color:#E4C9CE;background:#FCF6F6}
+.ustat__n{font-family:var(--mono);font-size:20px;font-weight:700;letter-spacing:-.02em}
+.ustat__l{font-size:11px;color:var(--mut);margin-top:2px}
+.ucard--done{opacity:.72}
+.ugal{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px}
+.ugal a{display:block;border:1px solid var(--line);border-radius:10px;overflow:hidden;background:#fff}
+.ugal img{width:100%;height:190px;object-fit:cover;display:block}
+@media(max-width:640px){.ustat{grid-template-columns:repeat(2,minmax(0,1fr))}.ugal{grid-template-columns:repeat(2,minmax(0,1fr))}.ugal img{height:150px}}
 .refgrid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin-bottom:14px}
 .refcell{border:1px solid var(--line);border-radius:10px;overflow:hidden;background:#fff}
 .refcell iframe{width:100%;height:420px;display:block;border:0;background:#fff}
@@ -878,32 +888,40 @@ function uploadPlanView(){
   const b=brandOf(UI.brand), ym=UI.ym;
   const cs=contentsSpanning(b.id,ym).slice().sort((x,y)=>(x.date||'').localeCompare(y.date||''));
   const done=cs.filter(c=>c.done).length;
-  const byType={}; cs.forEach(c=>byType[c.type]=(byType[c.type]||0)+1);
+  const withImg=cs.filter(c=>(c.att||[]).some(a=>a.url&&!/video/i.test(a.mime||''))).length;
+  const noAtt=cs.filter(c=>!(c.att||[]).length).length;
   const byDate={}; cs.forEach(c=>{ (byDate[c.date]=byDate[c.date]||[]).push(c); });
   const dates=Object.keys(byDate).sort();
   const dow=ds=>['일','월','화','수','목','금','토'][new Date(ds+'T00:00:00').getDay()];
+  const stat=(n,l,tone)=>`<div class="ustat__c${tone?' ustat__c--'+tone:''}"><div class="ustat__n">${n}</div><div class="ustat__l">${l}</div></div>`;
   return `
-    <div class="grid g4" style="margin-bottom:14px">
-      <div class="card stat"><div class="stat__n">${done}/${cs.length}</div><div class="stat__l">발행 완료 / 전체</div></div>
-      ${CONTENT_TYPES.concat(OPS_TYPES).filter(tp=>byType[tp]).slice(0,3).map(tp=>
-        `<div class="card stat"><div class="stat__n">${byType[tp]}</div><div class="stat__l">${tp}</div></div>`).join('')}
+    <div class="ustat">
+      ${stat(`${done}/${cs.length}`,'발행 완료 / 전체')}
+      ${stat(withImg,'소재 첨부됨')}
+      ${stat(noAtt,'소재 없음', noAtt?'warn':'')}
+      ${stat(dates.length,'등록된 날짜')}
     </div>
-    ${!cs.length? `<div class="card"><div class="empty"><b>이 달 등록된 콘텐츠가 없습니다</b>캘린더에서 운영·콘텐츠 항목을 등록하면 여기에 날짜순으로 모입니다.</div></div>`
+    ${!cs.length? `<div class="card"><div class="empty"><b>이 달 등록된 콘텐츠가 없습니다</b>캘린더에서 콘텐츠·운영 항목을 등록하면 여기에 날짜순으로 모입니다.</div></div>`
     : dates.map(ds=>`
       <div class="areahd"><h3>${ds.slice(5).replace('-','/')} (${dow(ds)})</h3><span class="line"></span><span class="eyebrow">${byDate[ds].length}건</span></div>
-      ${byDate[ds].map(c=>`<div class="tk tk--click ${c.done?'tk--done':''}" data-content="${c.id}">
-        <span class="dot" style="background:${hueBg(TYPE_HUE[c.type]||210,55)};margin-top:6px"></span>
-        <div class="tk__t">
-          <div class="tk__title">${esc(c.title||'(제목 없음)')}</div>
-          <div class="tk__meta">
+      ${byDate[ds].map(c=>{
+        const imgs=(c.att||[]).filter(a=>a.url&&!/video/i.test(a.mime||''));
+        const vids=(c.att||[]).filter(a=>a.url&&/video/i.test(a.mime||''));
+        return `<section class="card ucard ${c.done?'ucard--done':''}" style="margin-bottom:12px">
+          <div class="card__hd" data-content="${c.id}" style="cursor:pointer">
             <span class="tag">${esc(c.type)}</span>
+            <h3>${esc(c.title||'(제목 없음)')}</h3>
             ${c.end&&c.end!==c.date?`<span class="eyebrow">${c.date.slice(5)} ~ ${c.end.slice(5)}</span>`:''}
-            ${(c.att&&c.att.length)?`<span class="tag">첨부 ${c.att.length}</span>`:''}
-            ${c.done?'<span class="tag tag--ok">완료</span>':''}
-            ${c.memo?`<span class="eyebrow">${esc(c.memo.slice(0,40))}</span>`:''}
+            ${c.done?'<span class="tag tag--ok">발행</span>':''}
+            <span class="eyebrow" style="margin-left:auto">${(c.att||[]).length?`소재 ${(c.att||[]).length}`:'소재 없음'}</span>
           </div>
-        </div>
-      </div>`).join('')}`).join('')}`;
+          ${(imgs.length||vids.length||c.memo)? `<div class="card__bd">
+            ${c.memo?`<div class="eyebrow" style="margin-bottom:10px;white-space:pre-wrap">${esc(c.memo)}</div>`:''}
+            ${imgs.length?`<div class="ugal">${imgs.map(a=>`<a href="${a.url}" target="_blank" rel="noopener" title="${esc(a.name||'')}"><img src="${a.url}" loading="lazy" alt="${esc(a.name||'')}" /></a>`).join('')}</div>`:''}
+            ${vids.length?`<div class="eyebrow" style="margin-top:8px">${vids.map(a=>`<a href="${a.url}" target="_blank" rel="noopener">▶ ${esc(a.name||'영상')}</a>`).join(' · ')}</div>`:''}
+          </div>`:''}
+        </section>`;
+      }).join('')}`).join('')}`;
 }
 function plansView(){
   const ptab=UI.planTab||'plan';
@@ -1716,7 +1734,8 @@ async function pullAll(quiet){
       if(kind==='contents'){ Object.assign(rec,{brandId:brandByName(sel(P['브랜드'])),type:sel(P['유형'])||'피드',
         date:P['날짜']?.date?.start||TODAY, end:P['날짜']?.date?.end||'',
         type:(TYPE_ALIAS[sel(P['유형'])]||sel(P['유형'])||'EGC'),
-        title:ttl(P['제목']), memo:txt(P['메모']), done:!!P['완료']?.checkbox});
+        title:ttl(P['제목']), memo:txt(P['메모']), done:!!P['완료']?.checkbox,
+        att:(P['첨부']?.files||[]).map(f=>({name:f.name, url:f.file?.url||f.external?.url||'', mime:(/\.(mp4|mov|webm)$/i.test(f.name||'')?'video/mp4':'image/jpeg')})) });
         const fl=P['첨부']?.files||[];
         if(fl.length && !(rec.att||[]).length) rec.attView=fl.map(f=>({name:f.name, url:f.file?.url||f.external?.url||''}));
       }
