@@ -349,6 +349,11 @@ body{background:radial-gradient(1200px 600px at 50% -200px, #FBFAFF 0%, transpar
 .modal{border-radius:22px;border:1px solid rgba(20,24,40,.08);box-shadow:0 40px 90px -40px rgba(16,24,40,.55)}
 .mono{font-feature-settings:"tnum" 1}
 h1,h2,h3{font-weight:700}
+
+/* 이미지 로딩 전 자리 확보 */
+.ugal a{min-height:170px;background:linear-gradient(180deg,#F4F5F9,#EEF0F6)}
+.ugal video{min-height:170px}
+@media(max-width:640px){.ugal a,.ugal video{min-height:130px}}
 </style>
 </head>
 <body>
