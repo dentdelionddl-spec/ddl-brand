@@ -1895,6 +1895,15 @@ function act(a){
 
 render();
 bootSync();
+/* 자동 갱신 */
+function liveRefresh(){
+  if(!DB.settings.workerUrl || DB.settings.auto===false) return;
+  if(document.querySelector('#layer')?.innerHTML) return;
+  pullAll(true).catch(()=>{});
+}
+if(EMBED) setInterval(liveRefresh, 30000);
+document.addEventListener('visibilitychange',()=>{ if(!document.hidden) liveRefresh(); });
+window.addEventListener('focus', liveRefresh);
 </script>
 </body>
 </html>
