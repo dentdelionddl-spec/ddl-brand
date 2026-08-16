@@ -7,10 +7,11 @@
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable.min.css" />
 <style>
 :root{
-  --ink:#15181D; --ink2:#2A2F38; --paper:#F5F5F2; --card:#FFFFFF;
-  --line:#E3E3DC; --line2:#F0F0EA; --mut:#787E88;
-  --accent:#2647F0; --ok:#1E6E58; --warn:#8A6A12; --alert:#A82B3B;
-  --r:10px;
+  --ink:#12141A; --ink2:#343A46; --paper:#F4F5F9; --card:#FFFFFF;
+  --line:#E8EAF0; --line2:#F1F2F7; --mut:#7A8194;
+  --accent:#6D5AE6; --ok:#0F9D74; --warn:#B4801A; --alert:#DC4A5B;
+  --r:16px;
+  --sh:0 1px 2px rgba(16,24,40,.04), 0 12px 28px -20px rgba(16,24,40,.28);
   --mono:'Pretendard Variable',Pretendard,-apple-system,BlinkMacSystemFont,system-ui,sans-serif;
   --sans:'Pretendard Variable',Pretendard,-apple-system,BlinkMacSystemFont,system-ui,'Apple SD Gothic Neo','Malgun Gothic',sans-serif;
 }
@@ -29,14 +30,15 @@ button{cursor:pointer}
 .dot{width:7px;height:7px;border-radius:2px;flex:0 0 auto}
 
 /* 상단 브랜드 탭 */
-.brandbar{background:var(--ink);display:flex;align-items:stretch;position:sticky;top:0;z-index:30;overflow-x:auto;scrollbar-width:none;padding:0 6px}
+.brandbar{background:var(--ink);display:flex;align-items:stretch;position:sticky;top:0;z-index:30;overflow-x:auto;scrollbar-width:none;padding:0 10px}
 .brandbar::-webkit-scrollbar{display:none}
 .blogo{display:flex;align-items:center;gap:9px;padding:0 16px 0 10px;flex:0 0 auto;background:transparent;border:0;cursor:pointer;border-right:1px solid #262B34;margin-right:6px}
 .blogo:hover{opacity:.75}
 .blogo img{height:19px;width:auto;display:block}
 .blogo span{font-size:9px;letter-spacing:.14em;color:#7E848E;font-weight:600}
 @media(max-width:860px){.blogo span{display:none}}
-.btab{flex:0 0 auto;border:0;background:transparent;color:#9AA0A9;padding:12px 13px 9px;border-bottom:3px solid transparent;display:flex;align-items:center;gap:7px;white-space:nowrap}
+.btab{flex:0 0 auto;border:0;background:transparent;color:#9BA2B4;padding:12px 14px 9px;border-bottom:3px solid transparent;display:flex;align-items:center;gap:7px;white-space:nowrap;transition:color .12s}
+.btab:hover{color:#E7E9F0}
 .btab:hover{color:#fff;background:#1D2128}
 .btab[aria-current="true"]{color:#fff;background:#20242B}
 .btab__n{font-size:13px;font-weight:700;letter-spacing:-.01em}
@@ -47,7 +49,7 @@ button{cursor:pointer}
 .btab--me .btab__n{font-weight:600}
 
 .main{min-width:0;display:flex;flex-direction:column}
-.topbar{position:sticky;top:44px;z-index:20;background:rgba(245,245,242,.94);backdrop-filter:blur(8px);border-bottom:1px solid var(--line);padding:12px 22px 0}
+.topbar{position:sticky;top:44px;z-index:20;background:rgba(244,245,249,.92);backdrop-filter:blur(10px);border-bottom:1px solid var(--line);padding:16px 26px 0}
 .tophead{display:flex;align-items:flex-end;gap:14px;flex-wrap:wrap}
 .brandtitle{font-size:22px;font-weight:700;letter-spacing:-.02em;margin:0;display:flex;align-items:center;gap:9px}
 .brandtitle .dot{width:10px;height:10px;border-radius:3px}
@@ -62,22 +64,25 @@ button{cursor:pointer}
 .tabrow .monthnav{margin-left:auto;flex:0 0 auto;margin-top:12px}
 .tabs{display:flex;gap:2px;margin-top:12px;overflow-x:auto;scrollbar-width:none;flex:1;min-width:0}
 .tabs::-webkit-scrollbar{display:none}
-.tab{border:0;background:transparent;padding:9px 12px;border-bottom:2px solid transparent;color:var(--mut);font-weight:600;font-size:13px;white-space:nowrap}
+.tab{border:0;background:transparent;padding:9px 14px;border-bottom:2px solid transparent;color:var(--mut);font-weight:600;font-size:13px;white-space:nowrap;border-radius:10px 10px 0 0}
+.tab:hover{color:var(--ink2);background:#EEF0F7}
 .tab:hover{color:var(--ink)}
 .tab[aria-selected="true"]{color:var(--ink);border-bottom-color:var(--ink)}
-.view{padding:20px 22px 72px;max-width:1240px;width:100%}
+.view{padding:24px 26px 80px;max-width:1240px;width:100%}
 
 /* ---------- primitives ---------- */
-.card{background:var(--card);border:1px solid var(--line);border-radius:var(--r)}
+.card{background:var(--card);border:1px solid var(--line);border-radius:var(--r);box-shadow:var(--sh)}
 .card__hd{display:flex;align-items:center;gap:10px;padding:12px 14px;border-bottom:1px solid var(--line2)}
 .card__hd h3{margin:0;font-size:13px;font-weight:700;letter-spacing:-.01em}
 .card__bd{padding:14px}
 .grid{display:grid;gap:14px}
 .g2{grid-template-columns:1.55fr 1fr}
 @media(max-width:1000px){.g2{grid-template-columns:1fr}}
-.btn{border:1px solid var(--line);background:var(--card);border-radius:8px;padding:7px 11px;font-weight:600;font-size:12.5px}
+.btn{border:1px solid var(--line);background:var(--card);border-radius:10px;padding:8px 13px;font-weight:600;font-size:12.5px;color:var(--ink2);transition:background .12s,border-color .12s,color .12s}
+.btn:hover{background:#F7F8FC;border-color:#DCDFE9}
 .btn:hover{border-color:#C9C9C0;background:#FCFCFA}
-.btn--primary{background:var(--ink);border-color:var(--ink);color:#fff}
+.btn--primary{background:var(--accent);border-color:var(--accent);color:#fff;box-shadow:0 6px 14px -10px rgba(109,90,230,.9)}
+.btn--primary:hover{background:#5B49D6;border-color:#5B49D6}
 .btn--primary:hover{background:#000;border-color:#000}
 .btn--ghost{border-color:transparent;background:transparent;color:var(--mut)}
 .btn--ghost:hover{background:var(--line2);color:var(--ink)}
@@ -91,7 +96,7 @@ th{font-family:var(--mono);font-size:10px;letter-spacing:.1em;text-transform:upp
 td{padding:7px 8px;border-bottom:1px solid var(--line2);vertical-align:middle}
 tr:last-child td{border-bottom:0}
 .num{text-align:right;font-family:var(--mono);font-variant-numeric:tabular-nums}
-.tag{display:inline-block;font-family:var(--mono);font-size:10px;letter-spacing:.06em;padding:2px 6px;border-radius:5px;border:1px solid var(--line);color:var(--mut);white-space:nowrap}
+.tag{display:inline-block;font-family:var(--mono);font-size:10.5px;font-weight:600;letter-spacing:.02em;padding:3px 8px;border-radius:999px;border:1px solid transparent;background:#F1F2F7;color:#6B7285;white-space:nowrap}
 .tag--urgent{border-color:#E8C6CC;background:#FBEFF1;color:var(--alert)}
 .tag--high{border-color:#E7DCC0;background:#FBF6E9;color:var(--warn)}
 .tag--ok{border-color:#C8DED6;background:#EEF6F3;color:var(--ok)}
@@ -202,7 +207,7 @@ tr:last-child td{border-bottom:0}
 .areahd .line{flex:1;height:1px;background:var(--line)}
 .tasks2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
 @media(max-width:800px){.tasks2{grid-template-columns:1fr}}
-.tk{display:flex;gap:9px;align-items:flex-start;padding:8px 10px;border:1px solid var(--line);border-radius:8px;background:#fff;margin-bottom:6px}
+.tk{display:flex;gap:10px;align-items:flex-start;padding:11px 13px;border:1px solid var(--line);border-radius:12px;background:#fff;margin-bottom:8px}
 .tk--done{opacity:.5}
 .tk--click{cursor:pointer;transition:background .12s,border-color .12s}
 .tk--click:hover{background:#F1F4FD;border-color:#C7D2F0}
@@ -254,6 +259,31 @@ tr:last-child td{border-bottom:0}
   .btab__p{display:none}
   table{font-size:12px}
 }
+
+/* --- SaaS 스타일 보강 --- */
+.card__hd{padding:16px 18px 12px;border-bottom:1px solid var(--line2)}
+.card__hd h3{font-size:14.5px;letter-spacing:-.01em}
+.card__bd{padding:16px 18px}
+.grid{gap:16px}
+.areahd{margin:26px 0 10px}
+.areahd h3{font-size:13px;letter-spacing:-.01em}
+.f input,.f select,.f textarea{border-radius:11px;background:#FBFBFD;border-color:var(--line);padding:10px 12px}
+.f input:focus,.f select:focus,.f textarea:focus{outline:0;border-color:var(--accent);box-shadow:0 0 0 3px rgba(109,90,230,.14);background:#fff}
+.f>span{font-size:11.5px;color:#8B92A5;font-weight:600}
+.modal{border-radius:20px;box-shadow:0 30px 70px -30px rgba(16,24,40,.45)}
+.track{background:#EDEFF5;border-radius:999px;overflow:hidden}
+.track i{border-radius:999px}
+.tag--ok{background:#E7F7F1;color:#0B7A5B}
+.tag--urgent{background:#FDEAED;color:#C43D4E}
+.tag--high{background:#FEF4E3;color:#9A6B0E}
+.ustat__c{border-radius:16px;box-shadow:var(--sh)}
+.bcell{border-radius:14px;box-shadow:0 1px 2px rgba(16,24,40,.03)}
+.bcell:hover{border-color:#D6D9E6;background:#FBFBFE}
+.tk--click:hover{background:#F5F4FE;border-color:#D9D3FA}
+.cell--today{background:#F3F1FE}
+.thr--today{box-shadow:inset 3px 0 0 var(--accent)}
+.dday--soon{color:var(--warn)}
+.type{border-radius:14px}
 </style>
 </head>
 <body>
