@@ -284,6 +284,36 @@ tr:last-child td{border-bottom:0}
 .thr--today{box-shadow:inset 3px 0 0 var(--accent)}
 .dday--soon{color:var(--warn)}
 .type{border-radius:14px}
+
+/* --- 여백 통일 (8 / 12 / 16 / 24) --- */
+#view > * + *{margin-top:16px}
+#view > *[style*="margin-top"]{margin-top:16px !important}
+#view > *:first-child{margin-top:0 !important}
+#view > .areahd{margin:24px 0 10px !important}
+#view > .areahd:first-child{margin-top:0 !important}
+#view > .areahd + *{margin-top:0 !important}
+#view > section.card[style*="margin-bottom"]{margin-bottom:0 !important}
+.grid{gap:16px}
+.bgrid{gap:16px}
+.ustat{gap:16px;margin-bottom:0 !important}
+.card__hd{padding:18px 18px 14px}
+.card__bd{padding:18px}
+.card__bd > .empty{padding:22px 0}
+.tk{margin-bottom:8px}
+.tk:last-child{margin-bottom:0}
+.post{margin-bottom:8px}
+.ugal{gap:12px}
+.refgrid{gap:16px}
+.types{gap:12px}
+@media(max-width:640px){
+  .view{padding:16px 14px 80px}
+  #view > * + *{margin-top:12px}
+  #view > *[style*="margin-top"]{margin-top:12px !important}
+  #view > .areahd{margin:18px 0 8px !important}
+  .card__hd{padding:14px 14px 10px}
+  .card__bd{padding:14px}
+  .grid,.bgrid{gap:12px}
+}
 </style>
 </head>
 <body>
