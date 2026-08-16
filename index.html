@@ -174,10 +174,10 @@ tr:last-child td{border-bottom:0}
 .ustat__n{font-family:var(--mono);font-size:20px;font-weight:700;letter-spacing:-.02em}
 .ustat__l{font-size:11px;color:var(--mut);margin-top:2px}
 .ucard--done{opacity:.72}
-.ugal{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px}
+.ugal{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:8px;align-items:start}
 .ugal a{display:block;border:1px solid var(--line);border-radius:10px;overflow:hidden;background:#fff}
-.ugal img{width:100%;height:190px;object-fit:cover;display:block}
-@media(max-width:640px){.ustat{grid-template-columns:repeat(2,minmax(0,1fr))}.ugal{grid-template-columns:repeat(2,minmax(0,1fr))}.ugal img{height:150px}}
+.ugal img,.ugal video{width:100%;height:auto;display:block}
+@media(max-width:640px){.ustat{grid-template-columns:repeat(2,minmax(0,1fr))}.ugal{grid-template-columns:repeat(3,minmax(0,1fr))}}
 .refgrid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin-bottom:14px}
 .refcell{border:1px solid var(--line);border-radius:10px;overflow:hidden;background:#fff}
 .refcell iframe{width:100%;height:420px;display:block;border:0;background:#fff}
@@ -917,8 +917,8 @@ function uploadPlanView(){
           </div>
           ${(imgs.length||vids.length||c.memo)? `<div class="card__bd">
             ${c.memo?`<div class="eyebrow" style="margin-bottom:10px;white-space:pre-wrap">${esc(c.memo)}</div>`:''}
-            ${imgs.length?`<div class="ugal">${imgs.map(a=>`<a href="${a.url}" target="_blank" rel="noopener" title="${esc(a.name||'')}"><img src="${a.url}" loading="lazy" alt="${esc(a.name||'')}" /></a>`).join('')}</div>`:''}
-            ${vids.length?`<div class="eyebrow" style="margin-top:8px">${vids.map(a=>`<a href="${a.url}" target="_blank" rel="noopener">▶ ${esc(a.name||'영상')}</a>`).join(' · ')}</div>`:''}
+            ${(imgs.length||vids.length)?`<div class="ugal">${imgs.map(a=>`<a href="${a.url}" target="_blank" rel="noopener" title="${esc(a.name||'')}"><img src="${a.url}" loading="lazy" alt="${esc(a.name||'')}" /></a>`).join('')}${vids.map(a=>`<video src="${a.url}" controls preload="metadata" title="${esc(a.name||'')}" style="border:1px solid var(--line);border-radius:10px;background:#000"></video>`).join('')}</div>`:''}
+            
           </div>`:''}
         </section>`;
       }).join('')}`).join('')}`;
@@ -927,8 +927,11 @@ function plansView(){
   const ptab=UI.planTab||'plan';
   if(ptab==='upload'){
     const b=brandOf(UI.brand);
-    const thr = EMBED? '' : `<div class="areahd" style="margin-top:22px"><h3>스레드 작성판</h3><span class="line"></span><span class="eyebrow">날짜별 업로드 글</span></div>`+threadsView(b,UI.ym,plansOf(b.id,UI.ym));
-    return contentTabs(ptab)+uploadPlanView()+thr;
+    const utab = EMBED? 'media' : (UI.upTab||'media');
+    const chip=(v,l,on)=>`<button class="btn btn--sm" data-uptab="${v}" style="border-radius:999px;${on?'background:var(--ink);border-color:var(--ink);color:#fff':''}">${l}</button>`;
+    const sub = EMBED? '' : `<div style="display:flex;gap:6px;margin-bottom:14px">${chip('media','영상 / 이미지',utab==='media')}${chip('thread','스레드',utab==='thread')}</div>`;
+    const body = utab==='thread'? threadsView(b,UI.ym,plansOf(b.id,UI.ym)) : uploadPlanView();
+    return contentTabs(ptab)+sub+body;
   }
   return contentTabs(ptab)+plansPlanView();
 }
@@ -1792,6 +1795,7 @@ function bind(){
   document.querySelectorAll('[data-edit-plan]').forEach(el=>el.onclick=()=>planModal(el.dataset.editPlan));
   document.querySelectorAll('[data-gobrand]').forEach(el=>el.onclick=()=>{ UI.brand=el.dataset.gobrand; UI.tab='summary'; saveUI(); render(); });
   document.querySelectorAll('[data-ptab]').forEach(el=>el.onclick=()=>{ UI.planTab=el.dataset.ptab; saveUI(); render(); });
+  document.querySelectorAll('[data-uptab]').forEach(el=>el.onclick=()=>{ UI.upTab=el.dataset.uptab; saveUI(); render(); });
   document.querySelectorAll('[data-plankind]').forEach(el=>el.onclick=()=>{ UI.planKind=el.dataset.plankind||''; saveUI(); render(); });
   document.querySelectorAll('[data-newthread]').forEach(el=>el.onclick=()=>{
     planModalWith({id:uid(),brandId:UI.brand,ym:UI.ym,kind:'텍스트',date:el.dataset.newthread,week:'1주차',axis:'',title:'',refs:'',body:'',done:false}, true);
