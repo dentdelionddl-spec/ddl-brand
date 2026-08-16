@@ -2046,6 +2046,13 @@ function liveRefresh(){
   pullAll(true).catch(()=>{});
 }
 if(EMBED) setInterval(liveRefresh, 30000);
+/* 임베드 높이를 부모 페이지에 알림 */
+if(EMBED){
+  const postH=()=>{ try{ parent.postMessage({ddlHeight: Math.ceil(document.documentElement.scrollHeight)}, '*'); }catch(e){} };
+  try{ new ResizeObserver(postH).observe(document.body); }catch(e){}
+  window.addEventListener('load', postH);
+  setTimeout(postH, 400); setInterval(postH, 1500);
+}
 document.addEventListener('visibilitychange',()=>{ if(!document.hidden) liveRefresh(); });
 window.addEventListener('focus', liveRefresh);
 </script>
