@@ -895,12 +895,7 @@ function uploadPlanView(){
   const dow=ds=>['일','월','화','수','목','금','토'][new Date(ds+'T00:00:00').getDay()];
   const stat=(n,l,tone)=>`<div class="ustat__c${tone?' ustat__c--'+tone:''}"><div class="ustat__n">${n}</div><div class="ustat__l">${l}</div></div>`;
   return `
-    <div class="ustat">
-      ${stat(`${done}/${cs.length}`,'발행 완료 / 전체')}
-      ${stat(withImg,'소재 첨부됨')}
-      ${stat(noAtt,'소재 없음', noAtt?'warn':'')}
-      ${stat(dates.length,'등록된 날짜')}
-    </div>
+    <div class="eyebrow" style="margin-bottom:14px">발행 완료 <b class="mono" style="color:var(--ink);font-size:13px">${done}/${cs.length}</b></div>
     ${!cs.length? `<div class="card"><div class="empty"><b>이 달 등록된 콘텐츠가 없습니다</b>캘린더에서 콘텐츠·운영 항목을 등록하면 여기에 날짜순으로 모입니다.</div></div>`
     : dates.map(ds=>`
       <div class="areahd"><h3>${ds.slice(5).replace('-','/')} (${dow(ds)})</h3><span class="line"></span><span class="eyebrow">${byDate[ds].length}건</span></div>
