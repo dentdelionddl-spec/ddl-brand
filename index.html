@@ -329,6 +329,16 @@ for(const k in NOTION_DB) if(!DB.settings.db[k]) DB.settings.db[k]=NOTION_DB[k];
 if(!DB.settings.workerUrl) DB.settings.workerUrl=PROXY_URL;
 if(!DB.brands||!DB.brands.length) DB.brands=JSON.parse(JSON.stringify(SEED_BRANDS));
 for(const sb of SEED_BRANDS) if(!DB.brands.some(b=>b.id===sb.id)) DB.brands.push(JSON.parse(JSON.stringify(sb)));
+/* 기기마다 따로 만들어진 동명 브랜드 합치기 */
+for(const sb of SEED_BRANDS){
+  const dup=DB.brands.filter(b=>b.name===sb.name && b.id!==sb.id);
+  for(const d of dup){
+    for(const k of ['contents','tasks','sales','products','plans','costs','actions'])
+      (DB[k]||[]).forEach(r=>{ if(r.brandId===d.id){ r.brandId=sb.id; r.dirty=true; } });
+    DB.brands=DB.brands.filter(b=>b!==d);
+    if(UI.brand===d.id) UI.brand=sb.id;
+  }
+}
 /* 브랜드 순서는 설정에서 직접 정합니다 */
 for(const k of ['plans','costs','actions']) if(!Array.isArray(DB[k])) DB[k]=[];
 for(const c of DB.contents){ if(TYPE_ALIAS[c.type]){ c.type=TYPE_ALIAS[c.type]; c.dirty=true; } }
