@@ -1893,6 +1893,8 @@ function act(a){
   }
 }
 
+/* 새로 접속하면 항상 홈 화면부터 */
+if(!EMBED){ UI.brand='__home'; UI.ym=ymOf(today); saveUI(); }
 render();
 bootSync();
 /* 자동 갱신 */
