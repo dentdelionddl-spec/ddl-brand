@@ -641,7 +641,7 @@ function calendarView(){
     const tks=dayTasks.filter(t=>spans({date:t.start||t.due,end:t.due},ds));
     cells.push(`<div class="cell ${ds===TODAY?'cell--today':''}" data-date="${ds}">
       <div class="cell__d ${dow===0?'cell__sun':''}">${d}</div>
-      ${evs.map(e=>`<button class="ev ${e.done?'ev--done':''}" draggable="true" data-drag="c:${e.id}" data-content="${e.id}" style="border-left-color:${hueBg(TYPE_HUE[e.type]||0,55)}">${e.end&&e.end!==e.date?(ds===e.date?'▶ ':(ds===e.end?'■ ':'· ')):''}${esc(e.type)} · ${esc(e.title||'')}</button>`).join('')}
+      ${evs.map(e=>`<button class="ev ${e.done?'ev--done':''}" draggable="true" data-drag="c:${e.id}" data-content="${e.id}" style="border-left-color:${hueBg(TYPE_HUE[e.type]||0,55)}">${e.end&&e.end!==e.date?(ds===e.date?'▶ ':(ds===e.end?'■ ':'· ')):''}${(e.att&&e.att.length)||(e.attView&&e.attView.length)?'📎':''}${esc(e.type)} · ${esc(e.title||'')}</button>`).join('')}
       ${tks.map(t=>`<span class="ev ev--task ${t.done?'ev--done':''}" draggable="true" data-drag="t:${t.id}"><b data-toggle-task-btn="${t.id}" title="완료 표시" style="cursor:pointer;padding:0 3px 0 0">${t.done?'✓':'□'}</b><span data-edit-task="${t.id}" style="cursor:pointer">${t.start&&t.start!==t.due?(ds===t.start?'▶ ':(ds===t.due?'■ ':'· ')):''}${esc(t.title)}</span></span>`).join('')}
       <button class="cell__add" data-newdate="${ds}" aria-label="${d}일 추가">+</button>
     </div>`);
@@ -1360,6 +1360,35 @@ function addOnDate(date,end){
   $('#addTask').onclick=()=>{ $('#layer').innerHTML=''; taskModal(null,(end||date),null,(end&&end!==date)?date:''); };
 }
 
+async function shrinkImage(file, maxSide, quality){
+  const bmp = await createImageBitmap(file);
+  const scale = Math.min(1, maxSide/Math.max(bmp.width,bmp.height));
+  const w = Math.round(bmp.width*scale), h = Math.round(bmp.height*scale);
+  const cv = document.createElement('canvas'); cv.width=w; cv.height=h;
+  cv.getContext('2d').drawImage(bmp,0,0,w,h);
+  const blob = await new Promise(r=>cv.toBlob(r,'image/jpeg',quality));
+  return blob && blob.size < file.size ? blob : file;
+}
+function toB64(blob){
+  return new Promise((res,rej)=>{ const fr=new FileReader();
+    fr.onload=()=>res(String(fr.result).split(',')[1]); fr.onerror=rej; fr.readAsDataURL(blob); });
+}
+async function uploadAttachment(file){
+  let payload = file, note='';
+  if(/^image\//.test(file.type)){
+    payload = await shrinkImage(file, 1600, 0.82);
+    note = payload!==file ? ' (' + Math.round(file.size/1024) + 'KB → ' + Math.round(payload.size/1024) + 'KB)' : '';
+  }
+  if(payload.size > 9*1024*1024) throw new Error('파일이 너무 큽니다 · ' + Math.round(payload.size/1024/1024) + 'MB (9MB 이하)');
+  const data = await toB64(payload);
+  const r = await api({action:'upload', filename:file.name, content_type:(payload.type||file.type||'application/octet-stream'), data});
+  return { id:r.id, name:file.name, mime:(payload.type||file.type||''), size:payload.size, note };
+}
+function attChips(list, editable){
+  if(!list||!list.length) return '<div class="eyebrow">첨부 없음</div>';
+  return `<div style="display:flex;gap:6px;flex-wrap:wrap">${list.map((a,i)=>`
+    <span class="tag" style="padding:5px 8px">${/^video\//.test(a.mime||'')?'🎬':'🖼'} ${esc(a.name||'파일')}${editable?` <b data-attdel="${i}" style="cursor:pointer;color:var(--alert);margin-left:4px">✕</b>`:''}</span>`).join('')}</div>`;
+}
 function contentModal(id,date,cat,end){
   const isNew=!id;
   const c = isNew? {id:uid(),brandId:UI.brand,date:date||TODAY,end:(end&&end!==date?end:''),type:(cat==='콘텐츠'?'EGC':'온라인'),title:'',memo:'',done:false}
@@ -1375,17 +1404,36 @@ function contentModal(id,date,cat,end){
       <label class="f"><span>유형</span><select id="c_type">${opt(typeOptions,c.type)}</select></label>
       <label class="f"><span>제목</span><input type="text" id="c_title" value="${esc(c.title)}" placeholder="예: 실버 반지 릴스 3편 · 아쿠아마린 기획전 오픈" /></label>
       <label class="f"><span>메모</span><textarea id="c_memo" rows="3" placeholder="레퍼런스 링크, 담당, 준비물">${esc(c.memo)}</textarea></label>
+      <label class="f"><span>첨부 (이미지·영상 · 이미지는 자동 압축)</span>
+        <input type="file" id="c_file" accept="image/*,video/*" multiple />
+      </label>
+      <div id="c_atts" style="margin:-6px 0 12px">${attChips(c.att, true)}</div>
       <label style="display:flex;gap:8px;align-items:center"><input type="checkbox" id="c_done" ${c.done?'checked':''} style="width:16px;height:16px;accent-color:var(--ink)" /> 완료</label>`,
     onSave:()=>{
       c.date=$('#c_date').value||TODAY;
       const ce=$('#c_end').value; c.end=(ce&&ce>=c.date)?ce:'';
       if(ce&&ce<c.date){ toast('마감일이 시작일보다 빠릅니다'); return false; }
-      c.type=$('#c_type').value;
+      c.type=$('#c_type').value; c.att=window.__attDraft||c.att||[];
       c.title=$('#c_title').value.trim(); c.memo=$('#c_memo').value.trim(); c.done=$('#c_done').checked;
       c.dirty=true; if(isNew) DB.contents.push(c);
     },
     onDelete: isNew?null:()=>{ notionDrop(DB.contents.find(x=>x.id===id)); DB.contents=DB.contents.filter(x=>x.id!==id); }
   });
+  window.__attDraft = (c.att||[]).slice();
+  const paint=()=>{ $('#c_atts').innerHTML = attChips(window.__attDraft, true);
+    document.querySelectorAll('[data-attdel]').forEach(el=>el.onclick=()=>{ window.__attDraft.splice(Number(el.dataset.attdel),1); paint(); }); };
+  paint();
+  $('#c_file').onchange=async e=>{
+    const files=[...e.target.files]; e.target.value='';
+    for(const f of files){
+      try{
+        toast(f.name+' 올리는 중…',60000);
+        const a=await uploadAttachment(f);
+        window.__attDraft.push(a); paint();
+        toast(f.name+' 첨부 완료'+(a.note||''),2600);
+      }catch(err){ toast(String(err.message||err),4000); }
+    }
+  };
 }
 
 function taskModal(id,due,actionId,startAt){
@@ -1487,7 +1535,9 @@ const KIND={
   contents:{ db:'contents', title:'title',
     props:c=>({ '제목':{title:[{text:{content:c.title||c.type}}]}, '브랜드':{select:{name:brandOf(c.brandId)?.name||''}},
       '유형':{select:{name:c.type}}, '날짜':{date:{start:c.date, ...(c.end&&c.end!==c.date?{end:c.end}:{})}}, '완료':{checkbox:!!c.done},
-      '메모':{rich_text:[{text:{content:c.memo||''}}]}, '로컬ID':{rich_text:[{text:{content:c.id}}]} }) },
+      '메모':{rich_text:[{text:{content:c.memo||''}}]},
+      ...(c.att&&c.att.length?{'첨부':{files:c.att.map(a=>({type:'file_upload', file_upload:{id:a.id}, name:(a.name||'파일')}))}}:{}),
+      '로컬ID':{rich_text:[{text:{content:c.id}}]} }) },
   tasks:{ db:'tasks',
     props:t=>({ 'Task':{title:[{text:{content:t.title}}]}, 'Brand':{select:{name:brandOf(t.brandId)?.name||''}},
       ...((t.week||autoWeek(t.due))?{'Week':{select:{name:t.week||autoWeek(t.due)}}}:{}),
@@ -1605,7 +1655,10 @@ async function pullAll(quiet){
       if(kind==='contents'){ Object.assign(rec,{brandId:brandByName(sel(P['브랜드'])),type:sel(P['유형'])||'피드',
         date:P['날짜']?.date?.start||TODAY, end:P['날짜']?.date?.end||'',
         type:(TYPE_ALIAS[sel(P['유형'])]||sel(P['유형'])||'EGC'),
-        title:ttl(P['제목']), memo:txt(P['메모']), done:!!P['완료']?.checkbox}); }
+        title:ttl(P['제목']), memo:txt(P['메모']), done:!!P['완료']?.checkbox});
+        const fl=P['첨부']?.files||[];
+        if(fl.length && !(rec.att||[]).length) rec.attView=fl.map(f=>({name:f.name, url:f.file?.url||f.external?.url||''}));
+      }
       if(kind==='tasks'){
         const bn=sel(P['Brand']); const bid=DB.brands.find(b=>b.name===bn)?.id;
         if(!bid){ DB[kind]=DB[kind].filter(r=>r!==rec); continue; }
