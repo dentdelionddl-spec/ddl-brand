@@ -907,7 +907,11 @@ function uploadPlanView(){
 }
 function plansView(){
   const ptab=UI.planTab||'plan';
-  if(ptab==='upload') return contentTabs(ptab)+uploadPlanView();
+  if(ptab==='upload'){
+    const b=brandOf(UI.brand);
+    const thr = EMBED? '' : `<div class="areahd" style="margin-top:22px"><h3>스레드 작성판</h3><span class="line"></span><span class="eyebrow">날짜별 업로드 글</span></div>`+threadsView(b,UI.ym,plansOf(b.id,UI.ym));
+    return contentTabs(ptab)+uploadPlanView()+thr;
+  }
   return contentTabs(ptab)+plansPlanView();
 }
 function contentTabs(ptab){
@@ -918,15 +922,14 @@ function contentTabs(ptab){
 function plansPlanView(){
   const b=brandOf(UI.brand), ym=UI.ym;
   const all=plansOf(b.id,ym);
-  const kind=UI.planKind||'영상';
+  let kind=UI.planKind||'영상'; if(kind==='텍스트') kind='영상';
   const list=kind? all.filter(x=>(x.kind||'영상')===kind) : all;
   const byWeek=WEEKS.map(w=>[w, list.filter(p=>p.week===w)]);
   const has=list.length;
-  if(kind==='텍스트') return threadsView(b,ym,all);
   return `<div style="display:flex;align-items:center;gap:10px;margin-bottom:12px">
       <div class="eyebrow">${ymLabel(ym)} 기획안 ${has}건</div>
       <div style="display:flex;gap:6px;flex-wrap:wrap">
-        ${PLAN_KINDS.filter(k=>k!=='텍스트'||all.some(x=>x.kind==='텍스트')).map(k=>[k,k]).map(([v,l])=>`<button class="btn btn--sm" data-plankind="${v}" style="border-radius:999px;${kind===v?'background:var(--ink);border-color:var(--ink);color:#fff':''}">${l} ${v? all.filter(x=>(x.kind||'영상')===v).length : all.length}</button>`).join('')}
+        ${PLAN_KINDS.filter(k=>k!=='텍스트').map(k=>[k,k]).map(([v,l])=>`<button class="btn btn--sm" data-plankind="${v}" style="border-radius:999px;${kind===v?'background:var(--ink);border-color:var(--ink);color:#fff':''}">${l} ${v? all.filter(x=>(x.kind||'영상')===v).length : all.length}</button>`).join('')}
       </div>
       <div class="spacer" style="flex:1"></div>
       <button class="btn btn--primary btn--sm" data-act="plan-new">기획안 추가</button>
@@ -992,9 +995,6 @@ function threadsView(b,ym,all){
   return `<div style="display:flex;align-items:center;gap:10px;margin-bottom:12px;flex-wrap:wrap">
       <div class="eyebrow">${ymLabel(ym)} 스레드 ${total}편 · ${filled}/${dim}일</div>
       <div class="track" style="flex:1;max-width:240px"><i style="width:${Math.round(filled/dim*100)}%;background:${hueBg(b.hue,58)}"></i></div>
-      <div style="display:flex;gap:6px;flex-wrap:wrap">
-        ${[['','전체'],...PLAN_KINDS.map(k=>[k,k])].map(([v,l])=>`<button class="btn btn--sm" data-plankind="${v}" style="border-radius:999px;${v==='텍스트'?'background:var(--ink);border-color:var(--ink);color:#fff':''}">${l} ${v? all.filter(x=>(x.kind||'영상')===v).length : all.length}</button>`).join('')}
-      </div>
       <div class="spacer" style="flex:1"></div>
       <button class="btn btn--primary btn--sm" data-newthread="${ym}-${pad(Math.min(today.getDate(),dim))}">글 추가</button>
     </div>
