@@ -1912,5 +1912,26 @@ if(EMBED) setInterval(liveRefresh, 30000);
 document.addEventListener('visibilitychange',()=>{ if(!document.hidden) liveRefresh(); });
 window.addEventListener('focus', liveRefresh);
 </script>
+<script>
+window.addEventListener("error", function(e){ window.__bootErr = (e && e.message) || "오류"; });
+setTimeout(function(){
+  var v = document.getElementById("view");
+  if (v && v.innerHTML.trim()) return;
+  var app = document.getElementById("app"); if(!app) return;
+  app.innerHTML = '<div style="max-width:520px;margin:80px auto;padding:24px;border:1px solid #E2E2DA;border-radius:14px;font:14px/1.7 -apple-system,BlinkMacSystemFont,system-ui,sans-serif;background:#fff">'+
+    '<b style="font-size:15px">화면을 불러오지 못했습니다</b><br>'+
+    '<span style="color:#6B6B64">잠시 후 다시 시도하거나, 아래 버튼으로 이 브라우저의 임시 저장본을 지우고 노션에서 다시 받아올 수 있습니다. 노션 데이터는 지워지지 않습니다.</span>'+
+    '<div style="margin-top:8px;color:#9A9A93;font-size:12px">'+ (window.__bootErr||"") +'</div>'+
+    '<div style="display:flex;gap:8px;margin-top:16px">'+
+      '<button id="__rl" style="padding:9px 14px;border-radius:9px;border:1px solid #E2E2DA;background:#fff;cursor:pointer">새로고침</button>'+
+      '<button id="__rs" style="padding:9px 14px;border-radius:9px;border:1px solid #1A1A18;background:#1A1A18;color:#fff;cursor:pointer">임시 저장본 지우고 다시 열기</button>'+
+    '</div></div>';
+  document.getElementById("__rl").onclick = function(){ location.reload(); };
+  document.getElementById("__rs").onclick = function(){
+    try{ localStorage.removeItem("ddl-brand-commerce-v1"); localStorage.removeItem("ddl-brand-commerce-v1:ui"); }catch(err){}
+    location.reload();
+  };
+}, 2000);
+</script>
 </body>
 </html>
