@@ -336,7 +336,6 @@ for(const sb of SEED_BRANDS){
     for(const k of ['contents','tasks','sales','products','plans','costs','actions'])
       (DB[k]||[]).forEach(r=>{ if(r.brandId===d.id){ r.brandId=sb.id; r.dirty=true; } });
     DB.brands=DB.brands.filter(b=>b!==d);
-    if(UI.brand===d.id) UI.brand=sb.id;
   }
 }
 /* 브랜드 순서는 설정에서 직접 정합니다 */
