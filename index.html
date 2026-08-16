@@ -386,11 +386,23 @@ function ymLabel(ym){ const [y,m]=ym.split('-'); return `${y}년 ${Number(m)}월
 /* =========================================================
    RENDER
    ========================================================= */
+const EMBED=(()=>{ const q=new URLSearchParams(location.search); if(!q.get('embed')) return null;
+  return { brand:(q.get('brand')||'').toLowerCase(), view:(q.get('view')||'calendar'), only:(q.get('only')||'') }; })();
+function applyEmbed(){
+  if(!EMBED) return;
+  const b=DB.brands.find(x=>x.id.toLowerCase()===EMBED.brand || (x.name||'').toLowerCase()===EMBED.brand);
+  if(b) UI.brand=b.id;
+  if(EMBED.view==='upload'){ UI.tab='plans'; UI.planTab='upload'; }
+  else { UI.tab='calendar'; }
+}
 function render(){
+  applyEmbed();
   if(UI.brand==='__all') UI.brand=DB.brands[0]?.id||'__set';
   const special = UI.brand==='__set' || UI.brand==='__home';
   if(!special){ const b=brandOf(UI.brand)||DB.brands[0]; UI.brand=b?.id||'__set'; }
-  $('#app').innerHTML=`
+  $('#app').innerHTML= EMBED
+  ? `<div class="app"><div class="main"><div class="view" id="view" style="padding:14px"></div></div></div>`
+  : `
   <div class="app">
     ${brandBar()}
     <div class="main">
@@ -627,10 +639,11 @@ function calendarView(){
   const b=brandOf(UI.brand), ym=UI.ym;
   const [y,m]=ym.split('-').map(Number);
   const first=new Date(y,m-1,1), dim=new Date(y,m,0).getDate(), lead=first.getDay();
-  const cs=contentsSpanning(b.id,ym);
+  const onlyContent = EMBED && EMBED.only==='content';
+  const cs=contentsSpanning(b.id,ym).filter(c=>!onlyContent || CONTENT_TYPES.includes(c.type));
   const calWho=(UI.taskOwner===undefined? (DB.settings.me||'') : UI.taskOwner)||'';
   const allDayTasks=tasksSpanning(b.id,ym);
-  const dayTasks=allDayTasks.filter(t=>!calWho || (t.owner||'')===calWho);
+  const dayTasks=(EMBED&&EMBED.only==='content')? [] : allDayTasks.filter(t=>!calWho || (t.owner||'')===calWho);
   const calOwners=[...new Set([...OWNERS, ...allDayTasks.map(t=>(t.owner||'').trim()).filter(Boolean)])];
   const cells=[];
   for(let i=0;i<lead;i++) cells.push(`<div class="cell cell--out"></div>`);
@@ -649,6 +662,13 @@ function calendarView(){
   while(cells.length%7) cells.push(`<div class="cell cell--out"></div>`);
 
   const chip=(label,val,on)=>`<button class="btn btn--sm" data-taskowner="${esc(val)}" style="border-radius:999px;${on?'background:var(--ink);border-color:var(--ink);color:#fff':''}">${esc(label)}</button>`;
+  if(EMBED) return `<section class="card">
+    <div class="card__hd"><h3>${ymLabel(ym)} 콘텐츠 캘린더</h3></div>
+    <div class="cal">
+      ${['일','월','화','수','목','금','토'].map(d=>`<div class="cal__dow">${d}</div>`).join('')}
+      ${cells.join('')}
+    </div>
+  </section>`;
   return `<div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin-bottom:12px">
       <span class="eyebrow">업무 담당</span>
       ${chip('전체','',!calWho)}${calOwners.map(o=>chip(o,o,calWho===o)).join('')}
@@ -891,6 +911,7 @@ function plansView(){
   return contentTabs(ptab)+plansPlanView();
 }
 function contentTabs(ptab){
+  if(EMBED) return '';
   const chip=(v,l,on)=>`<button class="btn btn--sm" data-ptab="${v}" style="border-radius:999px;${on?'background:var(--ink);border-color:var(--ink);color:#fff':''}">${l}</button>`;
   return `<div style="display:flex;gap:6px;margin-bottom:12px">${chip('plan','기획',ptab==='plan')}${chip('upload','업로드 계획',ptab==='upload')}</div>`;
 }
