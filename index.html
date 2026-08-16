@@ -2053,7 +2053,7 @@ function liveRefresh(){
 if(EMBED) setInterval(liveRefresh, 30000);
 /* 임베드 높이를 부모 페이지에 알림 */
 if(EMBED){
-  const postH=()=>{ try{ parent.postMessage({ddlHeight: Math.ceil(document.documentElement.scrollHeight)}, '*'); }catch(e){} };
+  const postH=()=>{ try{ const el=document.getElementById('view'); const h=el? el.getBoundingClientRect().height+28 : document.documentElement.scrollHeight; parent.postMessage({ddlHeight: Math.ceil(h)}, '*'); }catch(e){} };
   try{ new ResizeObserver(postH).observe(document.body); }catch(e){}
   window.addEventListener('load', postH);
   setTimeout(postH, 400); setInterval(postH, 1500);
