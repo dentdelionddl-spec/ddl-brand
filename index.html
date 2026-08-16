@@ -610,6 +610,37 @@ function viewHtml(){
 }
 
 /* ---------- 요약 ---------- */
+function todayUploads(bid){
+  const list=(DB.contents||[]).filter(c=>{
+    if(bid && c.brandId!==bid) return false;
+    if(!CONTENT_TYPES.includes(c.type)) return false;
+    return c.date===TODAY || (c.end && c.date<=TODAY && TODAY<=c.end);
+  });
+  return list.sort((x,y)=>Number(x.done)-Number(y.done)||(x.title||'').localeCompare(y.title||'','ko'));
+}
+function uploadCard(bid, showBrand){
+  const list=todayUploads(bid);
+  const done=list.filter(c=>c.done).length;
+  return `<section class="card">
+    <div class="card__hd"><h3>오늘 업로드 해야 할 콘텐츠</h3>
+      <span class="eyebrow">${showBrand?'전 브랜드 ':''}${done}/${list.length}</span></div>
+    <div class="card__bd">
+      ${list.length? list.map(c=>`<div class="tk tk--click ${c.done?'tk--done':''}">
+        <b data-toggle-content="${c.id}" title="업로드 완료" style="cursor:pointer;font-size:13px;line-height:1.3;padding-top:1px">${c.done?'✓':'□'}</b>
+        <div class="tk__t" data-content="${c.id}" style="cursor:pointer">
+          <div class="tk__title">${esc(c.title||'(제목 없음)')}</div>
+          <div class="tk__meta">
+            <span class="tag">${esc(c.type)}</span>
+            ${showBrand?`<span class="tag">${esc(brandOf(c.brandId)?.name||'')}</span>`:''}
+            ${c.end&&c.end!==c.date?`<span class="eyebrow">${c.date.slice(5)} ~ ${c.end.slice(5)}</span>`:''}
+            ${c.done?'<span class="tag tag--ok">업로드 완료</span>':''}
+          </div>
+        </div>
+      </div>`).join('')
+      : `<div class="empty"><b>오늘 올릴 콘텐츠가 없습니다</b>캘린더에서 콘텐츠를 등록하면 그날 여기에 뚜니다.</div>`}
+    </div>
+  </section>`;
+}
 function homeView(){
   const ym=UI.ym;
   const brands=DB.brands.filter(b=>!['factory','ddl'].includes(b.id));
@@ -649,6 +680,8 @@ function homeView(){
       </div>
     </section>
   </div>
+
+  ${uploadCard(null,true)}
 
   <section class="card" style="margin-top:14px">
     <div class="card__hd"><h3>콘텐츠 운영 현황</h3><span class="eyebrow" style="margin-left:auto">전 브랜드 · ${ymLabel(ym)}</span></div>
@@ -709,25 +742,6 @@ function summaryView(){
   }).join('') : `<div class="empty"><b>이 브랜드에 채널이 없습니다</b>설정에서 브랜드 채널을 추가하면 여기에 표시됩니다.</div>`;
 
   return `
-  <section class="card">
-    <div class="card__hd"><h3>목표 대비 실적</h3>
-      <span class="eyebrow" style="margin-left:auto">${ymLabel(ym)}</span></div>
-    <div class="card__bd">
-      <div style="display:flex;align-items:baseline;gap:10px;margin-bottom:14px">
-        <div class="mono" style="font-size:26px;font-weight:600;letter-spacing:-.02em">${man(actual)}<span style="font-size:13px;color:var(--mut)">만원</span></div>
-        <div class="mono" style="font-size:12px;color:var(--mut)">목표 ${man(goal)}만 · 달성 ${goal?Math.round(actual/goal*100):0}%</div>
-        <div class="spacer"></div>
-        <span class="tag ${goal&&actual/goal*100>=pacePct?'tag--ok':'tag--high'}">진도 ${pacePct}%</span>
-      </div>
-      ${gauges}
-      <div class="legend">
-        <span><i class="key" style="background:${hueBg(b.hue,58)}"></i>정상 페이스</span>
-        <span><i class="key" style="background:#C9A0A8"></i>페이스 미달</span>
-        <span><i class="key" style="background:var(--ink);width:2px;height:11px"></i>오늘 기준 진도선</span>
-      </div>
-    </div>
-  </section>
-
   <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin:16px 0 8px">
     <span class="eyebrow">업무 담당</span>
     ${[['','전체'],...sumOwners.map(o=>[o,o])].map(([v,l])=>`<button class="btn btn--sm" data-taskowner="${esc(v)}" style="border-radius:999px;${sumWho===v?'background:var(--ink);border-color:var(--ink);color:#fff':''}">${esc(l)}</button>`).join('')}
@@ -753,6 +767,8 @@ function summaryView(){
     </section>
   </div>
 
+  ${uploadCard(b.id,false)}
+
   <section class="card" style="margin-top:14px">
     <div class="card__hd"><h3>콘텐츠 운영 현황</h3>
       <span class="eyebrow" style="margin-left:auto">${ymLabel(ym)}</span></div>
@@ -762,7 +778,28 @@ function summaryView(){
           <div class="type__n">${n}</div><div class="type__l">${t}</div></div>`).join('')}
       </div>
     </div>
-  </section>`;
+  </section>
+
+  <section class="card">
+    <div class="card__hd"><h3>목표 대비 실적</h3>
+      <span class="eyebrow" style="margin-left:auto">${ymLabel(ym)}</span></div>
+    <div class="card__bd">
+      <div style="display:flex;align-items:baseline;gap:10px;margin-bottom:14px">
+        <div class="mono" style="font-size:26px;font-weight:600;letter-spacing:-.02em">${man(actual)}<span style="font-size:13px;color:var(--mut)">만원</span></div>
+        <div class="mono" style="font-size:12px;color:var(--mut)">목표 ${man(goal)}만 · 달성 ${goal?Math.round(actual/goal*100):0}%</div>
+        <div class="spacer"></div>
+        <span class="tag ${goal&&actual/goal*100>=pacePct?'tag--ok':'tag--high'}">진도 ${pacePct}%</span>
+      </div>
+      ${gauges}
+      <div class="legend">
+        <span><i class="key" style="background:${hueBg(b.hue,58)}"></i>정상 페이스</span>
+        <span><i class="key" style="background:#C9A0A8"></i>페이스 미달</span>
+        <span><i class="key" style="background:var(--ink);width:2px;height:11px"></i>오늘 기준 진도선</span>
+      </div>
+    </div>
+  </section>
+
+`;
 }
 
 /* ---------- 캘린더 ---------- */
