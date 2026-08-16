@@ -1618,7 +1618,7 @@ const KIND={
     props:c=>({ '제목':{title:[{text:{content:c.title||c.type}}]}, '브랜드':{select:{name:brandOf(c.brandId)?.name||''}},
       '유형':{select:{name:c.type}}, '날짜':{date:{start:c.date, ...(c.end&&c.end!==c.date?{end:c.end}:{})}}, '완료':{checkbox:!!c.done},
       '메모':{rich_text:[{text:{content:c.memo||''}}]},
-      ...(c.att&&c.att.length?{'첨부':{files:c.att.map(a=>({type:'file_upload', file_upload:{id:a.id}, name:(a.name||'파일')}))}}:{}),
+            ...((c.att||[]).length && c.att.every(a=>a.id)?{'첨부':{files:c.att.map(a=>({type:'file_upload', file_upload:{id:a.id}, name:a.name}))}}:{}),
       '로컬ID':{rich_text:[{text:{content:c.id}}]} }) },
   tasks:{ db:'tasks',
     props:t=>({ 'Task':{title:[{text:{content:t.title}}]}, 'Brand':{select:{name:brandOf(t.brandId)?.name||''}},
@@ -1738,7 +1738,7 @@ async function pullAll(quiet){
         date:P['날짜']?.date?.start||TODAY, end:P['날짜']?.date?.end||'',
         type:(TYPE_ALIAS[sel(P['유형'])]||sel(P['유형'])||'EGC'),
         title:ttl(P['제목']), memo:txt(P['메모']), done:!!P['완료']?.checkbox,
-        att:(P['첨부']?.files||[]).map(f=>({name:f.name, url:f.file?.url||f.external?.url||'', mime:(/\.(mp4|mov|webm)$/i.test(f.name||'')?'video/mp4':'image/jpeg')})) });
+                att:(P['첨부']?.files||[]).map(f=>({name:f.name, url:f.file?.url||f.external?.url||'', mime:(/\.(mp4|mov|webm)$/i.test(f.name||'')?'video/mp4':'image/jpeg'), id:(rec.att||[]).find(a=>a.name===f.name)?.id })) });
         const fl=P['첨부']?.files||[];
         if(fl.length && !(rec.att||[]).length) rec.attView=fl.map(f=>({name:f.name, url:f.file?.url||f.external?.url||''}));
       }
