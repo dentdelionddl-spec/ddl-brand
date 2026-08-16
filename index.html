@@ -148,6 +148,10 @@ tr:last-child td{border-bottom:0}
 .bcell__v span{font-size:11px;color:var(--mut);font-weight:400}
 @media(max-width:900px){.bgrid{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media(max-width:560px){.bgrid{grid-template-columns:1fr}}
+.brow{cursor:grab;user-select:none}
+.brow.dragging{opacity:.45}
+.brow.over{box-shadow:inset 0 2px 0 var(--ink)}
+.grip{flex:0 0 auto;color:#B9BAB4;font-size:14px;line-height:1;margin-top:3px;letter-spacing:-2px}
 .thrlist{display:flex;flex-direction:column}
 .thr{display:flex;gap:12px;align-items:flex-start;padding:10px 14px;border-bottom:1px solid var(--line2)}
 .thr:last-child{border-bottom:0}
@@ -314,8 +318,7 @@ for(const k in NOTION_DB) if(!DB.settings.db[k]) DB.settings.db[k]=NOTION_DB[k];
 if(!DB.settings.workerUrl) DB.settings.workerUrl=PROXY_URL;
 if(!DB.brands||!DB.brands.length) DB.brands=JSON.parse(JSON.stringify(SEED_BRANDS));
 for(const sb of SEED_BRANDS) if(!DB.brands.some(b=>b.id===sb.id)) DB.brands.push(JSON.parse(JSON.stringify(sb)));
-DB.brands.sort((a,b)=>{ const oa=SEED_BRANDS.findIndex(x=>x.id===a.id), ob=SEED_BRANDS.findIndex(x=>x.id===b.id);
-  return (oa<0?99:oa)-(ob<0?99:ob); });
+/* 브랜드 순서는 설정에서 직접 정합니다 */
 for(const k of ['plans','costs','actions']) if(!Array.isArray(DB[k])) DB[k]=[];
 for(const c of DB.contents){ if(TYPE_ALIAS[c.type]){ c.type=TYPE_ALIAS[c.type]; c.dirty=true; } }
 for(const pl of DB.plans){ if(!pl.kind){ pl.kind='영상'; pl.dirty=true; } }
@@ -1210,7 +1213,9 @@ function settingsView(){
       <div class="card__hd"><h3>브랜드</h3>
         <button class="btn btn--sm" data-act="brand-new" style="margin-left:auto">브랜드 추가</button></div>
       <div class="card__bd">
-        ${DB.brands.map(b=>`<div class="tk">
+        <div class="eyebrow" style="margin-bottom:8px">순서를 바꾸려면 ⠿ 를 잡고 위아래로 끌어 놓으세요</div>
+        ${DB.brands.map(b=>`<div class="tk brow" draggable="true" data-brandrow="${b.id}">
+          <span class="grip" title="끌어서 순서 변경">⠿</span>
           <span class="dot" style="background:${hueBg(b.hue,52)};margin-top:5px"></span>
           <div class="tk__t"><div class="tk__title">${esc(b.name)} <span style="font-weight:400;color:var(--mut)">${esc(b.ko||'')}</span></div>
             <div class="tk__meta"><span class="eyebrow">${b.channels.map(esc).join(' · ')}</span></div></div>
@@ -1669,6 +1674,23 @@ function bind(){
   document.querySelectorAll('[data-link-action]').forEach(el=>el.onclick=()=>linkTaskModal(el.dataset.linkAction));
   document.querySelectorAll('[data-newtask-action]').forEach(el=>el.onclick=()=>taskModal(null,'',el.dataset.newtaskAction));
   document.querySelectorAll('[data-edit-brand]').forEach(el=>el.onclick=()=>brandModal(el.dataset.editBrand));
+  let dragId=null;
+  document.querySelectorAll('[data-brandrow]').forEach(row=>{
+    row.addEventListener('dragstart',e=>{ dragId=row.dataset.brandrow; row.classList.add('dragging'); e.dataTransfer.effectAllowed='move'; e.dataTransfer.setData('text/plain',dragId); });
+    row.addEventListener('dragend',()=>{ dragId=null; document.querySelectorAll('.brow').forEach(r=>r.classList.remove('dragging','over')); });
+    row.addEventListener('dragover',e=>{ e.preventDefault(); row.classList.add('over'); });
+    row.addEventListener('dragleave',()=>row.classList.remove('over'));
+    row.addEventListener('drop',e=>{
+      e.preventDefault(); row.classList.remove('over');
+      const from=dragId||e.dataTransfer.getData('text/plain'); const to=row.dataset.brandrow;
+      if(!from||from===to) return;
+      const list=DB.brands.slice();
+      const fi=list.findIndex(b=>b.id===from), ti=list.findIndex(b=>b.id===to);
+      if(fi<0||ti<0) return;
+      const [moved]=list.splice(fi,1); list.splice(ti,0,moved);
+      DB.brands=list; save(); render(); toast('브랜드 순서를 바꿔습니다',1800);
+    });
+  });
   document.querySelectorAll('[data-toggle-task-btn]').forEach(el=>el.onclick=(e)=>{
     e.stopPropagation();
     const t=DB.tasks.find(x=>x.id===el.dataset.toggleTaskBtn); if(!t) return;
