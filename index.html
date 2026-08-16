@@ -907,7 +907,7 @@ function uploadPlanView(){
             <span class="tag">${esc(c.type)}</span>
             <h3>${esc(c.title||'(제목 없음)')}</h3>
             ${c.end&&c.end!==c.date?`<span class="eyebrow">${c.date.slice(5)} ~ ${c.end.slice(5)}</span>`:''}
-            ${c.done?'<span class="tag tag--ok">발행</span>':''}
+            ${c.done?'<span class="tag tag--ok">업로드 완료</span>':''}
             <span class="eyebrow" style="margin-left:auto">${(c.att||[]).length?`소재 ${(c.att||[]).length}`:'소재 없음'}</span>
           </div>
           ${(imgs.length||vids.length||c.memo)? `<div class="card__bd">
