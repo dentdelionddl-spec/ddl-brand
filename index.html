@@ -194,7 +194,9 @@ tr:last-child td{border-bottom:0}
 .refgrid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin-bottom:14px}
 .refcell{border:1px solid var(--line);border-radius:10px;overflow:hidden;background:#fff}
 .card[data-ref]{user-select:none}
-.card.refpick{cursor:pointer}
+.card.refpick{cursor:pointer;position:relative}
+.card.refpick iframe{pointer-events:none}
+.card.refpick::after{content:'';position:absolute;inset:0;border-radius:18px}
 .card.refpick:hover{border-color:#C9C0F5}
 .card.refsel{outline:2px solid var(--accent);outline-offset:2px;box-shadow:0 8px 24px -18px rgba(109,90,230,.9)}
 .refcell iframe{width:100%;height:420px;display:block;border:0;background:#fff}
@@ -1116,7 +1118,7 @@ function bindRefSelect(){
     el.classList.toggle('refpick', refMode);
     el.onclick=(e)=>{
       if(!refMode) return;
-      if(e.target.closest('button, a, iframe')) return;
+      if(e.target.closest('button, a')) return;
       const id=el.dataset.ref;
       if(refSel.has(id)) refSel.delete(id); else refSel.add(id);
       render();
