@@ -451,6 +451,10 @@ for(const sb of SEED_BRANDS){
 for(const k of ['plans','costs','actions']) if(!Array.isArray(DB[k])) DB[k]=[];
 for(const c of DB.contents){ if(TYPE_ALIAS[c.type]){ c.type=TYPE_ALIAS[c.type]; c.dirty=true; } }
 for(const pl of DB.plans){ if(!pl.kind){ pl.kind='영상'; pl.dirty=true; } }
+for(const k of ['contents','tasks','sales','products','plans','costs','actions']){
+  const seen=new Set();
+  DB[k]=(DB[k]||[]).filter(r=>{ if(!r.notionId) return true; if(seen.has(r.notionId)) return false; seen.add(r.notionId); return true; });
+}
 for(const t of DB.tasks){ if(/\d+\s*월\s*\d+\s*주/.test(t.area||'')){ t.week=t.area; t.area=''; } }
 
 const save=()=>{ store.set(KEY,JSON.stringify(DB)); if(typeof autoSync==='function') autoSync(); };
@@ -1915,7 +1919,7 @@ async function pullAll(quiet){
     DB[kind]=DB[kind].filter(r=>!r.notionId || seen.has(r.notionId));
     for(const pg of (res.results||[])){
       const P=pg.properties||{}; const lid=txt(P['로컬ID'])||pg.id;
-      let rec=DB[kind].find(r=>r.id===lid);
+      let rec=DB[kind].find(r=>r.id===lid) || DB[kind].find(r=>r.notionId && r.notionId===pg.id);
       if(!rec){ rec={id:lid}; DB[kind].push(rec); }
       rec.notionId=pg.id;
       if(kind==='contents'){ Object.assign(rec,{brandId:brandByName(sel(P['브랜드'])),type:sel(P['유형'])||'피드',
