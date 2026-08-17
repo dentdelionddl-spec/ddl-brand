@@ -385,6 +385,7 @@ const OWNERS = ['승호','산들','효정','재욱','정모'];
 const PSTATUS = ['기획','발주','생산중','입고','업로드','판매중','드랍'];
 const WEEKS = ['1주차','2주차','3주차','4주차','5주차'];
 const PLAN_KINDS = ['영상','이미지','텍스트'];
+const REF_CATS = ['릴스','피드','스레드','계정'];
 const COST_KINDS = ['원가','광고비','수수료','인건비','기타'];
 
 const SEED_BRANDS = [
@@ -416,7 +417,8 @@ const NOTION_DB={
   plans:'30a5544647d84123b4ad5e106c48c64e',
   costs:'e33ee267da7d43fd86f72c28fa888114',
   actions:'21f72c37590f48dba49455f0c705b4ab',
-  config:'46b8ab2d1ddc47f7b5f8c0bfa4748ab9'
+  config:'46b8ab2d1ddc47f7b5f8c0bfa4748ab9',
+  refs:'ae4c78c3a8324090b2617774d9ae3f01'
 };
 const NOTION_HUB='https://app.notion.com/p/3bd4f7cd6b86816cbc56ef161bf47379';
 const PROXY_URL='https://ddl-brand.vercel.app/api/notion';
@@ -425,12 +427,12 @@ const blank = () => ({
   v:1,
   settings:{ workerUrl:PROXY_URL, db:{...NOTION_DB}, lastSync:null },
   brands: JSON.parse(JSON.stringify(SEED_BRANDS)),
-  contents:[], tasks:[], sales:[], products:[], plans:[], costs:[], actions:[]
+  contents:[], tasks:[], sales:[], products:[], plans:[], costs:[], actions:[], refs:[]
 });
 
 let DB;
 try{ DB = JSON.parse(store.get(KEY)) || blank(); }catch(e){ DB = blank(); }
-for(const k of ['contents','tasks','sales','products','plans','costs','actions']) if(!Array.isArray(DB[k])) DB[k]=[];
+for(const k of ['contents','tasks','sales','products','plans','costs','actions','refs']) if(!Array.isArray(DB[k])) DB[k]=[];
 if(!DB.settings) DB.settings=blank().settings;
 if(!DB.settings.db) DB.settings.db={...NOTION_DB};
 if(DB.settings.dbv!==3){ DB.settings.db={...DB.settings.db, ...NOTION_DB}; DB.settings.dbv=3; }
@@ -451,7 +453,7 @@ for(const sb of SEED_BRANDS){
 for(const k of ['plans','costs','actions']) if(!Array.isArray(DB[k])) DB[k]=[];
 for(const c of DB.contents){ if(TYPE_ALIAS[c.type]){ c.type=TYPE_ALIAS[c.type]; c.dirty=true; } }
 for(const pl of DB.plans){ if(!pl.kind){ pl.kind='영상'; pl.dirty=true; } }
-for(const k of ['contents','tasks','sales','products','plans','costs','actions']){
+for(const k of ['contents','tasks','sales','products','plans','costs','actions','refs']){
   const seen=new Set();
   DB[k]=(DB[k]||[]).filter(r=>{ if(!r.notionId) return true; if(seen.has(r.notionId)) return false; seen.add(r.notionId); return true; });
 }
@@ -1082,6 +1084,7 @@ function uploadPlanView(){
 }
 function plansView(){
   const ptab=UI.planTab||'plan';
+  if(ptab==='ref') return contentTabs(ptab)+refsView();
   if(ptab==='upload'){
     const b=brandOf(UI.brand);
     const utab = EMBED? 'media' : (UI.upTab||'media');
@@ -1092,10 +1095,61 @@ function plansView(){
   }
   return contentTabs(ptab)+plansPlanView();
 }
+function refsView(){
+  const b=brandOf(UI.brand);
+  const cat=UI.refCat||'릴스';
+  const all=(DB.refs||[]).filter(r=>r.brandId===b.id);
+  const list=all.filter(r=>(r.cat||'릴스')===cat);
+  const chip=(v,l,on,n)=>`<button class="btn btn--sm" data-refcat="${v}" style="border-radius:999px;${on?'background:var(--ink);border-color:var(--ink);color:#fff':''}">${l} ${n}</button>`;
+  return `<div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin-bottom:14px">
+      ${REF_CATS.map(k=>chip(k,k,cat===k,all.filter(r=>(r.cat||'릴스')===k).length)).join('')}
+      <div class="spacer" style="flex:1"></div>
+      <button class="btn btn--primary btn--sm" data-act="ref-new">레퍼런스 추가</button>
+    </div>
+    ${!list.length? `<div class="card"><div class="empty"><b>${cat} 레퍼런스가 없습니다</b>링크를 붙여 넣으면 영상·게시물이 그대로 펼쳐집니다. 월 구분 없이 계속 쌓입니다.</div></div>`
+    : `<div class="refgrid">${list.map(r=>{
+        const e=embedOf(r.url||'');
+        return `<div class="card" style="overflow:hidden">
+          ${e?`<iframe src="${e.src}" loading="lazy" frameborder="0" scrolling="no" allow="autoplay; encrypted-media; picture-in-picture; clipboard-write" allowfullscreen style="width:100%;height:${cat==='계정'?320:520}px;border:0;display:block;background:#fff"></iframe>`
+            : `<div class="empty" style="padding:26px 12px">링크 미리보기를 지원하지 않는 주소입니다</div>`}
+          <div class="card__bd" style="padding:12px 14px">
+            <div class="tk__title" style="margin-bottom:4px">${esc(r.title||'(제목 없음)')}</div>
+            ${r.memo?`<div class="eyebrow" style="margin-bottom:6px;white-space:pre-wrap">${esc(r.memo)}</div>`:''}
+            <div style="display:flex;gap:8px;align-items:center">
+              <div style="flex:1;min-width:0;font-size:11px;word-break:break-all">${linkify(r.url||'')}</div>
+              <button class="btn btn--ghost btn--sm" data-edit-ref="${r.id}">편집</button>
+            </div>
+          </div>
+        </div>`;
+      }).join('')}</div>`}`;
+}
+function refModal(id){
+  const isNew=!id;
+  const r=isNew? {id:uid(),brandId:UI.brand,cat:(UI.refCat||'릴스'),title:'',url:'',memo:''}
+               : (DB.refs||[]).find(x=>x.id===id);
+  modal({
+    title:isNew?'레퍼런스 추가':'레퍼런스 편집',
+    body:`<div class="row2">
+        <label class="f"><span>분류</span><select id="r_cat">${opt(REF_CATS,r.cat||'릴스')}</select></label>
+        <label class="f"><span>제목</span><input type="text" id="r_title" value="${esc(r.title||'')}" placeholder="후킹 좋은 공장 릴스" /></label>
+      </div>
+      <label class="f"><span>링크</span><input type="url" id="r_url" value="${esc(r.url||'')}" placeholder="https://www.instagram.com/reel/..." /></label>
+      <label class="f"><span>메모 (왜 좋은지)</span><textarea id="r_memo" rows="3">${esc(r.memo||'')}</textarea></label>`,
+    onSave:()=>{
+      const u=$('#r_url').value.trim();
+      if(!u){ toast('링크를 입력하세요'); return false; }
+      r.cat=$('#r_cat').value; r.url=u;
+      r.title=$('#r_title').value.trim()||u.replace(/^https?:\/\//,'').slice(0,40);
+      r.memo=$('#r_memo').value; r.dirty=true;
+      if(isNew){ DB.refs=DB.refs||[]; DB.refs.push(r); UI.refCat=r.cat; saveUI(); }
+    },
+    onDelete:isNew?null:()=>{ notionDrop((DB.refs||[]).find(x=>x.id===id)); DB.refs=(DB.refs||[]).filter(x=>x.id!==id); }
+  });
+}
 function contentTabs(ptab){
   if(EMBED) return '';
   const chip=(v,l,on)=>`<button class="btn btn--sm" data-ptab="${v}" style="border-radius:999px;${on?'background:var(--ink);border-color:var(--ink);color:#fff':''}">${l}</button>`;
-  return `<div style="display:flex;gap:6px;margin-bottom:12px">${chip('plan','기획',ptab==='plan')}${chip('upload','업로드 계획',ptab==='upload')}</div>`;
+  return `<div style="display:flex;gap:6px;margin-bottom:12px">${chip('plan','기획',ptab==='plan')}${chip('upload','업로드 계획',ptab==='upload')}${chip('ref','레퍼런스',ptab==='ref')}</div>`;
 }
 function plansPlanView(){
   const b=brandOf(UI.brand), ym=UI.ym;
@@ -1759,7 +1813,7 @@ function brandModal(id){
     },
     onDelete:isNew?null:()=>{
       DB.brands=DB.brands.filter(x=>x.id!==id);
-      ['contents','tasks','sales','products','plans','costs','actions'].forEach(k=>{
+      ['contents','tasks','sales','products','plans','costs','actions','refs'].forEach(k=>{
         notionDrop(...DB[k].filter(r=>r.brandId===id));
         DB[k]=DB[k].filter(r=>r.brandId!==id);
       });
@@ -1809,6 +1863,12 @@ const KIND={
       ...(a.memo?{'메모':{rich_text:[{text:{content:a.memo.slice(0,1900)}}]}}:{}),
       '연결업무':{rich_text:[{text:{content:(a.taskIds||[]).join(',').slice(0,1900)}}]},
       '로컬ID':{rich_text:[{text:{content:a.id}}]} }) },
+  refs:{ db:'refs',
+    props:r=>({ '제목':{title:[{text:{content:r.title||''}}]}, '브랜드':{select:{name:brandOf(r.brandId)?.name||''}},
+      '분류':{select:{name:r.cat||'릴스'}},
+      ...(r.url?{'링크':{url:r.url}}:{}),
+      ...(r.memo?{'메모':{rich_text:[{text:{content:r.memo.slice(0,1900)}}]}}:{}),
+      '로컬ID':{rich_text:[{text:{content:r.id}}]} }) },
   costs:{ db:'costs',
     props:c=>({ '항목':{title:[{text:{content:c.name||''}}]}, '브랜드':{select:{name:brandOf(c.brandId)?.name||''}},
       '월':{rich_text:[{text:{content:c.ym||''}}]}, '구분':{select:{name:c.kind||'기타'}},
@@ -1906,7 +1966,7 @@ async function pullBrands(){
 async function pullAll(quiet){
   await pullBrands();
   const s=DB.settings; let n=0;
-  const snap=()=>JSON.stringify(['contents','tasks','sales','products','plans','costs','actions'].map(k=>DB[k]));
+  const snap=()=>JSON.stringify(['contents','tasks','sales','products','plans','costs','actions','refs'].map(k=>DB[k]));
   const before=snap();
   const txt=p=>p?.rich_text?.[0]?.plain_text||'';
   const sel=p=>p?.select?.name||'';
@@ -1949,6 +2009,8 @@ async function pullAll(quiet){
         title:ttl(P['액션플랜']), goal:P['목표치']?.number??'', cur:P['현재치']?.number??'',
         unit:txt(P['단위']), memo:txt(P['메모']),
         taskIds:txt(P['연결업무']).split(',').map(x=>x.trim()).filter(Boolean)}); }
+      if(kind==='refs'){ Object.assign(rec,{brandId:brandByName(sel(P['브랜드'])), cat:sel(P['분류'])||'릴스',
+        title:ttl(P['제목']), url:P['링크']?.url||'', memo:txt(P['메모'])}); }
       if(kind==='costs'){ Object.assign(rec,{brandId:brandByName(sel(P['브랜드'])), ym:txt(P['월']),
         kind:sel(P['구분'])||'기타', name:ttl(P['항목']), amount:P['금액']?.number||0}); }
       if(kind==='products'){ Object.assign(rec,{brandId:brandByName(sel(P['브랜드'])), name:ttl(P['제품명']),
@@ -1983,6 +2045,8 @@ function bind(){
   document.querySelectorAll('[data-edit-plan]').forEach(el=>el.onclick=()=>planModal(el.dataset.editPlan));
   document.querySelectorAll('[data-gobrand]').forEach(el=>el.onclick=()=>{ UI.brand=el.dataset.gobrand; UI.tab='summary'; saveUI(); render(); });
   document.querySelectorAll('[data-ptab]').forEach(el=>el.onclick=()=>{ UI.planTab=el.dataset.ptab; saveUI(); render(); });
+  document.querySelectorAll('[data-refcat]').forEach(el=>el.onclick=()=>{ UI.refCat=el.dataset.refcat; saveUI(); render(); });
+  document.querySelectorAll('[data-edit-ref]').forEach(el=>el.onclick=()=>refModal(el.dataset.editRef));
   document.querySelectorAll('[data-uptab]').forEach(el=>el.onclick=()=>{ UI.upTab=el.dataset.uptab; saveUI(); render(); });
   document.querySelectorAll('[data-plankind]').forEach(el=>el.onclick=()=>{ UI.planKind=el.dataset.plankind||''; saveUI(); render(); });
   document.querySelectorAll('[data-newthread]').forEach(el=>el.onclick=()=>{
@@ -2047,6 +2111,7 @@ function act(a){
   if(a==='task-new') return taskModal(null);
   if(a==='prod-new') return prodModal(null);
   if(a==='plan-new') return planModal(null);
+  if(a==='ref-new') return refModal(null);
   if(a==='cost-new') return costModal(null);
   if(a==='action-new') return actionModal(null);
   if(a==='brand-new') return brandModal(null);
