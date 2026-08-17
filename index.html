@@ -385,7 +385,7 @@ const OWNERS = ['승호','산들','효정','재욱','정모'];
 const PSTATUS = ['기획','발주','생산중','입고','업로드','판매중','드랍'];
 const WEEKS = ['1주차','2주차','3주차','4주차','5주차'];
 const PLAN_KINDS = ['영상','이미지','텍스트'];
-const REF_CATS = ['릴스','피드','스레드','계정'];
+const REF_CATS = ['릴스','피드','스레드','계정','구분 필요'];
 const COST_KINDS = ['원가','광고비','수수료','인건비','기타'];
 
 const SEED_BRANDS = [
@@ -1134,7 +1134,7 @@ function guessRefCat(u){
   if(/(youtube\.com\/watch|youtu\.be\/)/.test(s)) return '릴스';
   if(/instagram\.com\/[^\/?#]+\/?($|\?)/.test(s)) return '계정';
   if(/(x\.com|twitter\.com|tiktok\.com\/@)[^\/]*\/?($|\?)/.test(s)) return '계정';
-  return '릴스';
+  return '구분 필요';
 }
 function bulkRefModal(){
   const cat=UI.refCat||'릴스';
