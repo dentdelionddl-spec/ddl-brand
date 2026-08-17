@@ -750,7 +750,7 @@ function summaryView(){
     <section class="card">
       <div class="card__hd"><h3>오늘 해야 할 업무</h3>
         <span class="eyebrow">${todayTasks.length}건</span>
-        <button class="btn btn--sm" data-act="task-new" style="margin-left:auto">업무 추가</button></div>
+        </div>
       <div class="card__bd">
         ${todayTasks.length? todayTasks.map(t=>taskRow(t,true)).join('')
           : `<div class="empty"><b>오늘 마감인 업무가 없습니다</b>업무 탭에서 마감일을 넣으면 그날 여기에 망니다.</div>`}
