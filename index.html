@@ -193,7 +193,9 @@ tr:last-child td{border-bottom:0}
 @media(max-width:640px){.ustat{grid-template-columns:repeat(2,minmax(0,1fr))}.ugal{grid-template-columns:repeat(3,minmax(0,1fr))}}
 .refgrid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin-bottom:14px}
 .refcell{border:1px solid var(--line);border-radius:10px;overflow:hidden;background:#fff}
-.card[data-ref]{cursor:pointer;user-select:none}
+.card[data-ref]{user-select:none}
+.card.refpick{cursor:pointer}
+.card.refpick:hover{border-color:#C9C0F5}
 .card.refsel{outline:2px solid var(--accent);outline-offset:2px;box-shadow:0 8px 24px -18px rgba(109,90,230,.9)}
 .refcell iframe{width:100%;height:420px;display:block;border:0;background:#fff}
 .refcell__u{padding:7px 9px;font-size:11px;line-height:1.5;border-top:1px solid var(--line2);word-break:break-all;background:var(--card)}
@@ -1097,75 +1099,29 @@ function plansView(){
   }
   return contentTabs(ptab)+plansPlanView();
 }
-let refSel=new Set(), refBox=null, refAnchor=null;
-function paintRefSel(){
-  document.querySelectorAll('[data-ref]').forEach(el=>el.classList.toggle('refsel', refSel.has(el.dataset.ref)));
-  const bar=document.getElementById('refbar');
-  if(bar){ bar.textContent = refSel.size? refSel.size+'개 선택됨 · Backspace로 삭제 · Esc로 해제' : ''; bar.style.display = refSel.size? 'block':'none'; }
-}
+let refSel=new Set(), refMode=false;
+function refSelCount(){ return refSel.size; }
 function deleteSelectedRefs(){
-  if(!refSel.size) return;
-  const ids=[...refSel];
+  const ids=[...refSel]; if(!ids.length){ toast('선택된 항목이 없습니다'); return; }
   const gone=(DB.refs||[]).filter(r=>ids.includes(r.id));
   notionDrop(...gone);
   DB.refs=(DB.refs||[]).filter(r=>!ids.includes(r.id));
-  refSel.clear(); save(); render();
+  refSel.clear(); refMode=false; save(); render();
   toast(ids.length+'개 삭제했습니다',2200);
 }
 function bindRefSelect(){
-  const grid=document.getElementById('refgrid'); if(!grid) return;
   refSel=new Set([...refSel].filter(id=>(DB.refs||[]).some(r=>r.id===id)));
   document.querySelectorAll('[data-ref]').forEach(el=>{
-    el.addEventListener('mousedown',e=>{ if(e.target.closest('button, a, iframe')) return; e.preventDefault(); });
-    el.addEventListener('click',e=>{
+    el.classList.toggle('refsel', refSel.has(el.dataset.ref));
+    el.classList.toggle('refpick', refMode);
+    el.onclick=(e)=>{
+      if(!refMode) return;
       if(e.target.closest('button, a, iframe')) return;
       const id=el.dataset.ref;
-      if(e.shiftKey && refAnchor){
-        const all=[...document.querySelectorAll('[data-ref]')].map(x=>x.dataset.ref);
-        const a=all.indexOf(refAnchor), b=all.indexOf(id);
-        if(a>=0&&b>=0) all.slice(Math.min(a,b),Math.max(a,b)+1).forEach(x=>refSel.add(x));
-      } else {
-        if(refSel.has(id)) refSel.delete(id); else refSel.add(id);
-        refAnchor=id;
-      }
-      paintRefSel();
-    });
+      if(refSel.has(id)) refSel.delete(id); else refSel.add(id);
+      render();
+    };
   });
-  grid.addEventListener('mousedown',e=>{
-    if(e.target.closest('[data-ref]')) return;
-    refBox={x:e.pageX,y:e.pageY,add:e.shiftKey};
-    if(!e.shiftKey){ refSel.clear(); paintRefSel(); }
-    const box=document.createElement('div'); box.id='refband';
-    box.style.cssText='position:absolute;border:1px solid rgba(109,90,230,.6);background:rgba(109,90,230,.10);z-index:5;pointer-events:none';
-    document.body.appendChild(box);
-  });
-  if(!window.__refSelBound){
-    window.__refSelBound=1;
-    document.addEventListener('mousemove',e=>{
-      if(!refBox) return;
-      const box=document.getElementById('refband'); if(!box) return;
-      const x=Math.min(refBox.x,e.pageX), y=Math.min(refBox.y,e.pageY);
-      const w=Math.abs(e.pageX-refBox.x), h=Math.abs(e.pageY-refBox.y);
-      box.style.left=x+'px'; box.style.top=y+'px'; box.style.width=w+'px'; box.style.height=h+'px';
-      const r={l:x,t:y,r:x+w,b:y+h};
-      document.querySelectorAll('[data-ref]').forEach(el=>{
-        const q=el.getBoundingClientRect();
-        const el_l=q.left+scrollX, el_t=q.top+scrollY, el_r=q.right+scrollX, el_b=q.bottom+scrollY;
-        const hit = !(el_r<r.l||el_l>r.r||el_b<r.t||el_t>r.b);
-        if(hit) refSel.add(el.dataset.ref); else if(!refBox.add) refSel.delete(el.dataset.ref);
-      });
-      paintRefSel();
-    });
-    document.addEventListener('mouseup',()=>{ refBox=null; const b=document.getElementById('refband'); if(b) b.remove(); });
-    document.addEventListener('keydown',e=>{
-      const tag=(document.activeElement&&document.activeElement.tagName)||'';
-      if(/INPUT|TEXTAREA|SELECT/.test(tag)) return;
-      if(document.querySelector('#layer')?.innerHTML.trim()) return;
-      if((e.key==='Backspace'||e.key==='Delete') && refSel.size){ e.preventDefault(); deleteSelectedRefs(); }
-      if(e.key==='Escape' && refSel.size){ refSel.clear(); paintRefSel(); }
-    });
-  }
-  paintRefSel();
 }
 function refsView(){
   const b=brandOf(UI.brand);
@@ -1176,6 +1132,10 @@ function refsView(){
   return `<div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin-bottom:14px">
       ${REF_CATS.map(k=>chip(k,k,cat===k,all.filter(r=>(r.cat||'릴스')===k).length)).join('')}
       <div class="spacer" style="flex:1"></div>
+      ${refMode? `<span class="eyebrow" style="color:var(--accent)">${refSel.size}개 선택</span>
+        <button class="btn btn--sm" data-act="ref-del" style="border-color:#E4B4BC;color:var(--alert)">선택 삭제</button>
+        <button class="btn btn--sm" data-act="ref-selcancel">취소</button>`
+        : `<button class="btn btn--sm" data-act="ref-select">선택</button>`}
       <button class="btn btn--sm" data-act="ref-bulk">링크 여러 개</button>
       <button class="btn btn--primary btn--sm" data-act="ref-new">레퍼런스 추가</button>
     </div>
@@ -2236,6 +2196,9 @@ function act(a){
   if(a==='plan-new') return planModal(null);
   if(a==='ref-new') return refModal(null);
   if(a==='ref-bulk') return bulkRefModal();
+  if(a==='ref-select'){ refMode=true; refSel.clear(); render(); return; }
+  if(a==='ref-selcancel'){ refMode=false; refSel.clear(); render(); return; }
+  if(a==='ref-del') return deleteSelectedRefs();
   if(a==='cost-new') return costModal(null);
   if(a==='action-new') return actionModal(null);
   if(a==='brand-new') return brandModal(null);
