@@ -1104,6 +1104,7 @@ function refsView(){
   return `<div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin-bottom:14px">
       ${REF_CATS.map(k=>chip(k,k,cat===k,all.filter(r=>(r.cat||'릴스')===k).length)).join('')}
       <div class="spacer" style="flex:1"></div>
+      <button class="btn btn--sm" data-act="ref-bulk">링크 여러 개</button>
       <button class="btn btn--primary btn--sm" data-act="ref-new">레퍼런스 추가</button>
     </div>
     ${!list.length? `<div class="card"><div class="empty"><b>${cat} 레퍼런스가 없습니다</b>링크를 붙여 넣으면 영상·게시물이 그대로 펼쳐집니다. 월 구분 없이 계속 쌓입니다.</div></div>`
@@ -1122,6 +1123,39 @@ function refsView(){
           </div>
         </div>`;
       }).join('')}</div>`}`;
+}
+function bulkRefModal(){
+  const cat=UI.refCat||'릴스';
+  modal({
+    title:'링크 여러 개 한번에 추가',
+    saveLabel:'추가',
+    body:`<div class="row2">
+        <label class="f"><span>분류</span><select id="rb_cat">${opt(REF_CATS,cat)}</select></label>
+        <label class="f"><span>공통 메모 (선택)</span><input type="text" id="rb_memo" placeholder="8월 레퍼런스 조사" /></label>
+      </div>
+      <label class="f"><span>링크 (한 줄에 하나씩 · 그대로 붙여넣기)</span>
+        <textarea id="rb_urls" rows="10" placeholder="https://www.instagram.com/reel/...&#10;https://www.instagram.com/reel/...&#10;https://youtu.be/..."></textarea></label>
+      <div class="eyebrow" style="margin-top:6px">제목은 자동으로 채우고, 각 카드에서 나중에 수정하면 됩니다</div>`,
+    onSave:()=>{
+      const raw=$('#rb_urls').value||'';
+      const cat2=$('#rb_cat').value, memo=$('#rb_memo').value.trim();
+      const found=raw.match(/https?:\/\/[^\s"'<>]+/gi)||[];
+      const urls=[...new Set(found.map(u=>u.replace(/[)\],.]+$/,'')))];
+      if(!urls.length){ toast('링크를 찾지 못했습니다'); return false; }
+      DB.refs=DB.refs||[];
+      const norm=u=>u.replace(/\/$/,'');
+      const have=new Set(DB.refs.filter(r=>r.brandId===UI.brand).map(r=>norm(r.url||'')));
+      let added=0, skipped=0;
+      for(const u of urls){
+        if(have.has(norm(u))){ skipped++; continue; }
+        have.add(norm(u));
+        DB.refs.push({id:uid(),brandId:UI.brand,cat:cat2,title:u.replace(/^https?:\/\//,'').slice(0,40),url:u,memo:memo,dirty:true});
+        added++;
+      }
+      UI.refCat=cat2; saveUI();
+      toast(added+'개 추가'+(skipped? ' · 중복 '+skipped+'개 제외':''),2600);
+    }
+  });
 }
 function refModal(id){
   const isNew=!id;
@@ -2112,6 +2146,7 @@ function act(a){
   if(a==='prod-new') return prodModal(null);
   if(a==='plan-new') return planModal(null);
   if(a==='ref-new') return refModal(null);
+  if(a==='ref-bulk') return bulkRefModal();
   if(a==='cost-new') return costModal(null);
   if(a==='action-new') return actionModal(null);
   if(a==='brand-new') return brandModal(null);
