@@ -1596,7 +1596,7 @@ function addOnDate(date,end){
     onSave:()=>{} });
   $('#addOps').onclick=()=>{ $('#layer').innerHTML=''; contentModal(null,date,'운영',end); };
   $('#addContent').onclick=()=>{ $('#layer').innerHTML=''; contentModal(null,date,'콘텐츠',end); };
-  $('#addTask').onclick=()=>{ $('#layer').innerHTML=''; taskModal(null,(end||date),null,(end&&end!==date)?date:''); };
+  $('#addTask').onclick=()=>{ $('#layer').innerHTML=''; taskModal(null,(end||date),null,date); };
 }
 
 async function shrinkImage(file, maxSide, quality){
