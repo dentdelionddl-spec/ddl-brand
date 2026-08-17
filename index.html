@@ -1161,7 +1161,7 @@ function bulkRefModal(){
       for(const u of urls){
         if(have.has(norm(u))){ skipped++; continue; }
         have.add(norm(u));
-        DB.refs.push({id:uid(),brandId:UI.brand,cat:(cat2||guessRefCat(u)),title:u.replace(/^https?:\/\//,'').slice(0,40),url:u,memo:memo,dirty:true});
+        DB.refs.push({id:uid(),brandId:UI.brand,cat:(cat2||guessRefCat(u)),title:'기입 필요',url:u,memo:memo,dirty:true});
         added++;
       }
       if(cat2) UI.refCat=cat2; saveUI();
@@ -1963,7 +1963,9 @@ async function pushAll(onlyDirty){
   }
   DB.settings.lastSync=new Date().toLocaleString('ko-KR'); save();
   if(!onlyDirty || n || fail) toast(`노션에 ${n}건 반영${fail?` · 실패 ${fail}건`:''}`,2200);
-  syncing=false; if(!onlyDirty || n || fail) render();
+  syncing=false;
+  const modalOpen=()=>!!document.querySelector('#layer')?.innerHTML.trim();
+  if((!onlyDirty || n || fail) && !modalOpen()) render();
 }
 
 /* ---------- 자동 동기화 ---------- */
@@ -2068,7 +2070,7 @@ async function pullAll(quiet){
   }
   DB.settings.lastSync=new Date().toLocaleString('ko-KR'); save();
   if(!quiet) toast(`노션에서 ${n}건 내려받았습니다`,3000);
-  if(!quiet || before!==snap()) render();
+  if((!quiet || before!==snap()) && !document.querySelector('#layer')?.innerHTML.trim()) render();
 }
 
 /* =========================================================
