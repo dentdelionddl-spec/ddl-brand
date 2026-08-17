@@ -1124,13 +1124,25 @@ function refsView(){
         </div>`;
       }).join('')}</div>`}`;
 }
+function guessRefCat(u){
+  const s=String(u||'').toLowerCase();
+  if(/threads\.(net|com)/.test(s)) return '스레드';
+  if(/instagram\.com\/(reel|reels|tv)\//.test(s)) return '릴스';
+  if(/instagram\.com\/p\//.test(s)) return '피드';
+  if(/tiktok\.com\/.+\/video\//.test(s)) return '릴스';
+  if(/youtube\.com\/shorts\//.test(s)) return '릴스';
+  if(/(youtube\.com\/watch|youtu\.be\/)/.test(s)) return '릴스';
+  if(/instagram\.com\/[^\/?#]+\/?($|\?)/.test(s)) return '계정';
+  if(/(x\.com|twitter\.com|tiktok\.com\/@)[^\/]*\/?($|\?)/.test(s)) return '계정';
+  return '릴스';
+}
 function bulkRefModal(){
   const cat=UI.refCat||'릴스';
   modal({
     title:'링크 여러 개 한번에 추가',
     saveLabel:'추가',
     body:`<div class="row2">
-        <label class="f"><span>분류</span><select id="rb_cat">${opt(REF_CATS,cat)}</select></label>
+        <label class="f"><span>분류</span><select id="rb_cat"><option value="">자동 (링크로 구분)</option>${opt(REF_CATS,'')}</select></label>
         <label class="f"><span>공통 메모 (선택)</span><input type="text" id="rb_memo" placeholder="8월 레퍼런스 조사" /></label>
       </div>
       <label class="f"><span>링크 (한 줄에 하나씩 · 그대로 붙여넣기)</span>
@@ -1149,10 +1161,10 @@ function bulkRefModal(){
       for(const u of urls){
         if(have.has(norm(u))){ skipped++; continue; }
         have.add(norm(u));
-        DB.refs.push({id:uid(),brandId:UI.brand,cat:cat2,title:u.replace(/^https?:\/\//,'').slice(0,40),url:u,memo:memo,dirty:true});
+        DB.refs.push({id:uid(),brandId:UI.brand,cat:(cat2||guessRefCat(u)),title:u.replace(/^https?:\/\//,'').slice(0,40),url:u,memo:memo,dirty:true});
         added++;
       }
-      UI.refCat=cat2; saveUI();
+      if(cat2) UI.refCat=cat2; saveUI();
       toast(added+'개 추가'+(skipped? ' · 중복 '+skipped+'개 제외':''),2600);
     }
   });
@@ -1179,6 +1191,7 @@ function refModal(id){
     },
     onDelete:isNew?null:()=>{ notionDrop((DB.refs||[]).find(x=>x.id===id)); DB.refs=(DB.refs||[]).filter(x=>x.id!==id); }
   });
+  const ue=$('#r_url'); if(ue) ue.addEventListener('change',()=>{ const g=guessRefCat(ue.value); const s=$('#r_cat'); if(s&&g) s.value=g; });
 }
 function contentTabs(ptab){
   if(EMBED) return '';
