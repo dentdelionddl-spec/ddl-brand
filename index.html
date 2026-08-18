@@ -360,6 +360,15 @@ h1,h2,h3{font-weight:700}
 .ugal a{min-height:170px;background:linear-gradient(180deg,#F4F5F9,#EEF0F6)}
 .ugal video{min-height:170px}
 @media(max-width:640px){.ugal a,.ugal video{min-height:130px}}
+
+/* 모바일: 브랜드 탭을 가로 스크롤 대신 두 줄로 펼쳐 모두 탭 가능하게 */
+@media(max-width:720px){
+  .brandbar{flex-wrap:wrap;overflow-x:visible;row-gap:0;padding:0 8px 2px}
+  .btab{padding:9px 10px 7px;font-size:11.5px}
+  .btab__p{display:none}
+  .btab--me{margin-left:0}
+  .blogo{padding:8px 10px}
+}
 </style>
 </head>
 <body>
@@ -554,6 +563,8 @@ function render(){
   try{ $('#view').innerHTML = viewHtml(); }
   catch(e){ console.error(e); $('#view').innerHTML = '<div class="card"><div class="empty"><b>이 화면을 그리지 못했습니다</b>' + esc(String(e.message||e)) + '<br><br><button class="btn btn--sm" data-act="go-summary">요약으로 이동</button></div></div>'; }
   const bb=document.querySelector('.brandbar'), tb=document.querySelector('.topbar');
+  if(bb && window.__barScroll) bb.scrollLeft=window.__barScroll;
+  if(bb) bb.addEventListener('scroll',()=>{ window.__barScroll=bb.scrollLeft; });
   if(bb&&tb) tb.style.top=bb.offsetHeight+'px';
   if(!window.__stickFix){ window.__stickFix=1; window.addEventListener('resize',()=>{ const b=document.querySelector('.brandbar'), t=document.querySelector('.topbar'); if(b&&t) t.style.top=b.offsetHeight+'px'; }); }
   bind();
