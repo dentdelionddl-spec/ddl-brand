@@ -1078,7 +1078,7 @@ function linkify(t){
 }
 function uploadPlanView(){
   const b=brandOf(UI.brand), ym=UI.ym;
-  const cs=contentsSpanning(b.id,ym).slice().sort((x,y)=>(x.date||'').localeCompare(y.date||''));
+  const cs=contentsSpanning(b.id,ym).filter(c=>c.type!=='제품 업로드').slice().sort((x,y)=>(x.date||'').localeCompare(y.date||''));
   const done=cs.filter(c=>c.done).length;
   const withImg=cs.filter(c=>(c.att||[]).some(a=>a.url&&!/video/i.test(a.mime||''))).length;
   const noAtt=cs.filter(c=>!(c.att||[]).length).length;
@@ -1087,7 +1087,11 @@ function uploadPlanView(){
   const dow=ds=>['일','월','화','수','목','금','토'][new Date(ds+'T00:00:00').getDay()];
   const stat=(n,l,tone)=>`<div class="ustat__c${tone?' ustat__c--'+tone:''}"><div class="ustat__n">${n}</div><div class="ustat__l">${l}</div></div>`;
   return `
-    <div class="eyebrow" style="margin-bottom:14px">발행 완료 <b class="mono" style="color:var(--ink);font-size:13px">${done}/${cs.length}</b></div>
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px">
+      <div class="eyebrow">발행 완료 <b class="mono" style="color:var(--ink);font-size:13px">${done}/${cs.length}</b></div>
+      <div class="spacer" style="flex:1"></div>
+      ${EMBED?'':`<button class="btn btn--primary btn--sm" data-newupload="${ym}-${pad(Math.min(today.getDate(), new Date(Number(ym.slice(0,4)), Number(ym.slice(5,7)), 0).getDate()))}">콘텐츠 추가</button>`}
+    </div>
     ${!cs.length? `<div class="card"><div class="empty"><b>이 달 등록된 콘텐츠가 없습니다</b>캘린더에서 콘텐츠·운영 항목을 등록하면 여기에 날짜순으로 모입니다.</div></div>`
     : dates.map(ds=>`
       <div class="areahd"><h3>${ds.slice(5).replace('-','/')} (${dow(ds)})</h3><span class="line"></span><span class="eyebrow">${byDate[ds].length}건</span></div>
@@ -2179,6 +2183,7 @@ function bind(){
   bindRefSelect();
   document.querySelectorAll('[data-uptab]').forEach(el=>el.onclick=()=>{ UI.upTab=el.dataset.uptab; saveUI(); render(); });
   document.querySelectorAll('[data-plankind]').forEach(el=>el.onclick=()=>{ UI.planKind=el.dataset.plankind||''; saveUI(); render(); });
+  document.querySelectorAll('[data-newupload]').forEach(el=>el.onclick=()=>contentModal(null, el.dataset.newupload, '콘텐츠'));
   document.querySelectorAll('[data-newthread]').forEach(el=>el.onclick=()=>{
     planModalWith({id:uid(),brandId:UI.brand,ym:UI.ym,kind:'텍스트',date:el.dataset.newthread,week:'1주차',axis:'',title:'',refs:'',body:'',done:false}, true);
   });
