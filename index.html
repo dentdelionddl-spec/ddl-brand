@@ -546,6 +546,12 @@ h1,h2,h3{font-weight:700}
 #view table:has(input.num) tfoot td:nth-child(2),
 #view table:has(input.num) tfoot td:nth-child(3){padding-right:29px}
 #view tfoot td.num{font-size:13px;font-weight:700}
+
+/* --- 합계행은 th로 렌더됨 (v6) --- */
+#view tfoot th{height:48px;padding:0 18px;border-top:1px solid var(--line);border-bottom:0;background:#FAFBFE;font-family:var(--mono);font-variant-numeric:tabular-nums;font-size:13px;font-weight:700;color:var(--ink);text-align:right;letter-spacing:0;line-height:48px}
+#view tfoot th:first-child{font-family:var(--sans);text-align:left;font-size:13px;font-weight:700;color:var(--ink);letter-spacing:0}
+#view table:has(input.num) tfoot th:nth-child(2),
+#view table:has(input.num) tfoot th:nth-child(3){padding-right:29px}
 </style>
 </head>
 <body>
