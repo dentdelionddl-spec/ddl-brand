@@ -374,8 +374,18 @@ h1,h2,h3{font-weight:700}
 .assetbox__k{font-size:10px;font-weight:700;letter-spacing:.08em;color:#9299AB}
 .assetbox__v{font-size:11.5px;font-weight:700;color:var(--accent);background:rgba(109,90,230,.10);padding:3px 9px;border-radius:999px}
 .assetbox__n{font-size:11.5px;color:#5F6779}
-.post{padding-bottom:0}
-.post .assetbox{margin-left:-10px;margin-right:-10px}
+.post{padding:0}
+.post .thr__t{padding:12px 12px 0}
+.post__m{padding:0 12px}
+.post__m:empty{display:none}
+.metabox{display:flex;gap:6px;flex-wrap:wrap;padding:10px 12px;border-bottom:1px dashed var(--line);background:#FCFCFE}
+.mchip{font-size:10.5px;font-weight:700;padding:3px 9px;border-radius:999px}
+.mchip--p{background:rgba(56,116,222,.10);color:#2F62BE}
+.mchip--a{background:rgba(16,150,110,.10);color:#0B7A5B}
+.mchip--h{background:rgba(160,90,200,.12);color:#7A45A8}
+.row3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
+@media(max-width:640px){.row3{grid-template-columns:1fr}}
+.post .assetbox{margin:12px 0 0;border-radius:0 0 8px 8px;padding:9px 12px}
 </style>
 </head>
 <body>
@@ -1333,7 +1343,12 @@ function threadsView(b,ym,all){
       <div class="thr__d"><b>${d}</b><span>${dow}</span>${items.length>1?`<em class="thr__c">${items.length}</em>`:''}</div>
       <div class="thr__b">
         ${items.length? items.map(it=>`<div class="post" data-edit-plan="${it.id}">
-            <div class="post__m">${it.axis?`<span class="tag">${esc(it.axis)}</span>`:''}${it.done?'<span class="tag tag--ok">발행</span>':''}</div>
+            ${(it.purpose||it.axis||it.hook)?`<div class="metabox">
+              ${it.purpose?`<span class="mchip mchip--p">${esc(it.purpose)}</span>`:''}
+              ${it.axis?`<span class="mchip mchip--a">${esc(it.axis)}</span>`:''}
+              ${it.hook?`<span class="mchip mchip--h">${esc(it.hook)}</span>`:''}
+            </div>`:''}
+            <div class="post__m">
             <div class="thr__t">${esc((it.body||it.title||'').slice(0,300))}</div>
             ${(it.asset||it.assetNote)?`<div class="assetbox"><span class="assetbox__k">소재</span><span class="assetbox__v">${esc(it.asset||'미정')}</span>${it.assetNote?`<span class="assetbox__n">${esc(it.assetNote)}</span>`:''}</div>`:''}
           </div>`).join('')
@@ -1413,7 +1428,11 @@ function planModalWith(p,isNew){
           ? `<label class="f"><span>발행일</span><input type="date" id="p_date" value="${p.date||''}" /></label>`
           : `<label class="f"><span>주차</span><select id="p_week">${opt(WEEKS,p.week)}</select></label>`}
       </div>
-      <label class="f"><span>축 (트래픽 · 브릿지 등)</span><input type="text" id="p_axis" value="${esc(p.axis)}" list="axisSuggest" placeholder="트래픽" autocomplete="off" />
+      <div class="row3">
+        <label class="f"><span>목적</span><select id="p_purpose"><option value="">미지정</option>${opt(['트래픽','브릿지','인지·고려'], p.purpose||'')}</select></label>
+        <label class="f"><span>축 (기둥)</span><select id="p_axis"><option value="">미지정</option>${opt([...new Set(['대화','지식','공장','신상',...(p.axis?[p.axis]:[])])], p.axis||'')}</select></label>
+        <label class="f"><span>훅 유형</span><select id="p_hook"><option value="">미지정</option>${opt(['고백','반전','질문','수치','비교','선언'], p.hook||'')}</select></label>
+      </div>
         <datalist id="axisSuggest">${[...new Set(DB.plans.map(x=>x.axis).filter(Boolean))].map(a=>`<option value="${esc(a)}"></option>`).join('')}</datalist></label>
       <label class="f"><span>${(p.kind||'영상')==='텍스트'?'제목 (선택 · 목록 정리용)':'주제'}</span><input type="text" id="p_title" value="${esc(p.title)}" placeholder="${(p.kind||'영상')==='텍스트'?'8/16 스레드':'중국 공장·시장 방문 + 대표의 셀렉/제작 과정'}" /></label>
       ${(p.kind||'영상')==='텍스트' ? '' : `<label class="f"><span>레퍼런스 (한 줄에 하나)</span><textarea id="p_refs" rows="3" placeholder="instagram.com/reel/...">${esc(p.refs)}</textarea></label>`}
@@ -1436,12 +1455,13 @@ function planModalWith(p,isNew){
         p.title=v||(bodyV.trim().split('\n')[0].slice(0,40));
         p.date=$('#p_date')?.value||'';
         p.week=autoWeek(p.date)? autoWeek(p.date).replace(/^\d+월\s*/,'') : (p.week||'1주차');
-        p.axis=$('#p_axis')?.value.trim()||''; p.refs='';
+        p.axis=$('#p_axis')?.value||''; p.refs='';
       } else {
         if(!v){ toast('주제를 입력하세요'); return false; }
-        p.title=v; p.week=$('#p_week').value; p.axis=$('#p_axis').value.trim(); p.refs=$('#p_refs').value.trim(); p.date='';
+        p.title=v; p.week=$('#p_week').value; p.axis=$('#p_axis').value; p.refs=$('#p_refs').value.trim(); p.date='';
       }
       p.kind=kd; p.body=bodyV; p.done=$('#p_done').checked;
+      p.purpose=$('#p_purpose')?.value||''; p.hook=$('#p_hook')?.value||'';
       if(kd==='텍스트'){ p.asset=$('#p_asset')?.value||''; p.assetNote=$('#p_assetnote')?.value.trim()||''; }
       p.att=(window.__attDraft||[]).slice();
       p.ym=UI.ym; p.dirty=true; if(isNew) DB.plans.push(p);
@@ -1999,6 +2019,8 @@ const KIND={
       ...(p.body?{'내용':{rich_text:[{text:{content:p.body.slice(0,1900)}}]}}:{}),
       '형식':{select:{name:p.kind||'영상'}},
       ...(p.asset?{'소재':{select:{name:p.asset}}}:{}),
+      ...(p.purpose?{'목적':{select:{name:p.purpose}}}:{}),
+      ...(p.hook?{'훅유형':{select:{name:p.hook}}}:{}),
       ...(p.assetNote?{'소재 메모':{rich_text:[{text:{content:p.assetNote.slice(0,1900)}}]}}:{}),
       ...((p.att||[]).length && p.att.every(a=>a.id)?{'첨부':{files:p.att.map(a=>({type:'file_upload', file_upload:{id:a.id}, name:a.name}))}}:{}),
       ...(p.date?{'발행일':{date:{start:p.date}}}:{}),
@@ -2156,6 +2178,7 @@ async function pullAll(quiet){
       if(kind==='plans'){ Object.assign(rec,{brandId:brandByName(sel(P['브랜드'])), ym:txt(P['월']),
         att:(P['첨부']?.files||[]).map(f=>({name:f.name, url:f.file?.url||f.external?.url||'', mime:(/\.(mp4|mov|webm)$/i.test(f.name||'')?'video/mp4':'image/jpeg'), id:(rec.att||[]).find(a=>a.name===f.name)?.id })),
         asset:sel(P['소재'])||'', assetNote:txt(P['소재 메모']),
+        purpose:sel(P['목적'])||'', hook:sel(P['훅유형'])||'',
         week:sel(P['주차'])||'1주차', kind:sel(P['형식'])||'영상', date:P['발행일']?.date?.start||'', axis:txt(P['축']), title:ttl(P['주제']),
         refs:txt(P['레퍼런스']), body:txt(P['내용']), done:!!P['완료']?.checkbox}); }
       if(kind==='actions'){ Object.assign(rec,{brandId:brandByName(sel(P['브랜드'])), ym:txt(P['월']),
