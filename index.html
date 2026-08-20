@@ -1513,12 +1513,13 @@ function planModalWith(p,isNew){
   modal({
     title:(isNew?'추가':'편집')+' — '+(p.kind||'영상'),
     body:`
-      <div class="row2">
-        <label class="f"><span>형식</span><select id="p_kind">${opt(PLAN_KINDS, p.kind||'영상')}</select></label>
-        ${(p.kind||'영상')==='텍스트'
-          ? `<label class="f"><span>발행일</span><input type="date" id="p_date" value="${p.date||''}" /></label>`
-          : `<label class="f"><span>주차</span><select id="p_week">${opt(WEEKS,p.week)}</select></label>`}
-      </div>
+      ${(p.kind||'영상')==='텍스트'
+        ? `<input type="hidden" id="p_kind" value="텍스트" />
+           <label class="f"><span>발행일</span><input type="date" id="p_date" value="${p.date||''}" /></label>`
+        : `<div class="row2">
+            <label class="f"><span>형식</span><select id="p_kind">${opt(PLAN_KINDS.filter(k=>k!=='텍스트'), p.kind||'영상')}</select></label>
+            <label class="f"><span>주차</span><select id="p_week">${opt(WEEKS,p.week)}</select></label>
+          </div>`}
 
       <label class="f"><span>${(p.kind||'영상')==='텍스트'?'업로드할 글':'기획 내용'}</span>
         <textarea id="p_body" rows="${(p.kind||'영상')==='텍스트'?12:9}" placeholder="${(p.kind||'영상')==='텍스트'?'스레드에 올릴 글을 그대로 씁니다':'초반 후킹 · 장면 구성 · 마무리'}">${esc(p.body)}</textarea></label>
@@ -1591,7 +1592,7 @@ function planModalWith(p,isNew){
   const fill=()=>fillPlanFromPaste();
   if($('#p_fill')) $('#p_fill').onclick=fill;
   if($('#p_paste')) $('#p_paste').addEventListener('paste',()=>setTimeout(fill,50));
-  $('#p_kind').onchange=()=>{
+  if($('#p_kind') && $('#p_kind').tagName==='SELECT') $('#p_kind').onchange=()=>{
     p.kind=$('#p_kind').value;
     p.title=$('#p_title').value; p.body=$('#p_body').value;
     if($('#p_axis')) p.axis=$('#p_axis').value;
