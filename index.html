@@ -566,6 +566,10 @@ h1,h2,h3{font-weight:700}
 #view table:has(input.num) thead th:nth-child(3),
 #view table:has(input.num) tfoot th:nth-child(2),
 #view table:has(input.num) tfoot th:nth-child(3){padding-right:18px}
+
+/* --- 입력칸 오른쪽 붙임 (v9) --- */
+#view tbody td:has(input.num){text-align:right}
+#view td input.num{display:block !important;margin-left:auto !important;margin-right:0 !important;float:none}
 </style>
 </head>
 <body>
