@@ -1525,6 +1525,11 @@ function planModalWith(p,isNew){
             <label class="f"><span>주차</span><select id="p_week">${opt(WEEKS,p.week)}</select></label>
           </div>`}
 
+      <details class="pastebox"><summary>슬랙·노션 글 붙여넣어 자동 채우기</summary>
+        <textarea id="p_paste" rows="5" placeholder="오브서울 8월 기획안&#10;8월2주차&#10;트래픽&#10;주제: ...&#10;레퍼런스&#10;instagram.com/reel/..."></textarea>
+        <button type="button" class="btn btn--sm" id="p_fill">정리해서 채우기</button>
+      </details>
+
       <label class="f"><span>${(p.kind||'영상')==='텍스트'?'제목 (콘텐츠 첫 줄)':'주제'}</span><input type="text" id="p_title" value="${esc(p.title)}" placeholder="${(p.kind||'영상')==='텍스트'?'글의 첫 줄을 그대로 적습니다':'중국 공장·시장 방문 + 대표의 셀렉/제작 과정'}" /></label>
 
       <label class="f"><span>${(p.kind||'영상')==='텍스트'?'본문':'기획 내용'}</span>
@@ -1551,10 +1556,6 @@ function planModalWith(p,isNew){
 
       ${(p.kind||'영상')==='텍스트' ? '' : `<label class="f"><span>레퍼런스 (한 줄에 하나)</span><textarea id="p_refs" rows="3" placeholder="instagram.com/reel/...">${esc(p.refs)}</textarea></label>`}
 
-      <details class="pastebox"><summary>슬랙·노션 글 붙여넣어 자동 채우기</summary>
-        <textarea id="p_paste" rows="5" placeholder="오브서울 8월 기획안&#10;8월2주차&#10;트래픽&#10;주제: ...&#10;레퍼런스&#10;instagram.com/reel/..."></textarea>
-        <button type="button" class="btn btn--sm" id="p_fill">정리해서 채우기</button>
-      </details>
 
       <label class="chk"><input type="checkbox" id="p_done" ${p.done?'checked':''} /> ${(p.kind||'영상')==='텍스트'?'발행 완료':'완료'}</label>`,
     onSave:()=>{
