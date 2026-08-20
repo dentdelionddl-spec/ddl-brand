@@ -369,6 +369,13 @@ h1,h2,h3{font-weight:700}
   .btab--me{margin-left:0}
   .blogo{padding:8px 10px}
 }
+
+.assetbox{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-top:10px;padding:8px 10px;border-top:1px dashed var(--line);background:#FAFAFE;border-radius:0 0 8px 8px}
+.assetbox__k{font-size:10px;font-weight:700;letter-spacing:.08em;color:#9299AB}
+.assetbox__v{font-size:11.5px;font-weight:700;color:var(--accent);background:rgba(109,90,230,.10);padding:3px 9px;border-radius:999px}
+.assetbox__n{font-size:11.5px;color:#5F6779}
+.post{padding-bottom:0}
+.post .assetbox{margin-left:-10px;margin-right:-10px}
 </style>
 </head>
 <body>
@@ -1327,7 +1334,7 @@ function threadsView(b,ym,all){
         ${items.length? items.map(it=>`<div class="post" data-edit-plan="${it.id}">
             <div class="post__m">${it.axis?`<span class="tag">${esc(it.axis)}</span>`:''}${it.done?'<span class="tag tag--ok">발행</span>':''}</div>
             <div class="thr__t">${esc((it.body||it.title||'').slice(0,300))}</div>
-            ${(it.asset||it.assetNote)?`<div class="eyebrow" style="margin-top:6px">소재 <b style="color:var(--ink)">${esc(it.asset||'미정')}</b>${it.assetNote?` · ${esc(it.assetNote)}`:''}</div>`:''}
+            ${(it.asset||it.assetNote)?`<div class="assetbox"><span class="assetbox__k">소재</span><span class="assetbox__v">${esc(it.asset||'미정')}</span>${it.assetNote?`<span class="assetbox__n">${esc(it.assetNote)}</span>`:''}</div>`:''}
           </div>`).join('')
         : '<div class="eyebrow">비어 있음</div>'}
       </div>
@@ -2299,7 +2306,7 @@ function act(a){
 }
 
 /* 새로 접속하면 항상 홈 화면부터 */
-if(!EMBED){ UI.brand='__home'; UI.ym=ymOf(today); saveUI(); }
+if(!EMBED){ UI.brand='__home'; UI.ym=ymOf(today); UI.thrPast=false; saveUI(); }
 render();
 bootSync();
 /* 자동 갱신 */
