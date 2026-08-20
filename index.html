@@ -2470,7 +2470,16 @@ async function pullAll(quiet){
   const txt=p=>p?.rich_text?.[0]?.plain_text||'';
   const sel=p=>p?.select?.name||'';
   const ttl=p=>p?.title?.[0]?.plain_text||'';
-  const brandByName=nm=>DB.brands.find(b=>b.name===nm)?.id||DB.brands[0]?.id;
+  const normName=s=>String(s||'').toLowerCase().replace(/[\s\-_.]/g,'').replace(/\(.*?\)/g,'').replace(/[()（）]/g,'');
+const brandByName=nm=>{
+  const raw=String(nm||'').trim(); if(!raw) return (DB.brands[0]||{}).id;
+  let b=DB.brands.find(x=>x.name===raw); if(b) return b.id;
+  const n=normName(raw);
+  b=DB.brands.find(x=>normName(x.name)===n || normName(x.ko||'')===n); if(b) return b.id;
+  b=DB.brands.find(x=>{ const bn=normName(x.name); return bn && (n.startsWith(bn)||bn.startsWith(n)); }); if(b) return b.id;
+  b=DB.brands.find(x=>(x.aliases||[]).some(a=>normName(a)===n)); if(b) return b.id;
+  return (DB.brands[0]||{}).id;
+};
   for(const kind of Object.keys(KIND)){
     const dbId=s.db[KIND[kind].db]; if(!dbId) continue;
     let res; try{ res=await api({action:'query', database_id:dbId}); }catch(e){ continue; }
