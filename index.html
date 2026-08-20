@@ -552,6 +552,14 @@ h1,h2,h3{font-weight:700}
 #view tfoot th:first-child{font-family:var(--sans);text-align:left;font-size:13px;font-weight:700;color:var(--ink);letter-spacing:0}
 #view table:has(input.num) tfoot th:nth-child(2),
 #view table:has(input.num) tfoot th:nth-child(3){padding-right:29px}
+
+/* --- 패널 정렬 마무리 (v7) --- */
+#view .card__hd{height:52px;padding:0 18px;box-sizing:border-box}
+#view .card__hd > *{margin-top:0;margin-bottom:0}
+.gauge:last-of-type{border-bottom:0}
+.legend{margin:0 -18px;padding:14px 18px 0;border-top:1px solid var(--line);height:auto}
+#view td input.num{width:190px;max-width:100%}
+#view .card__bd > .eyebrow:last-child{margin-top:14px}
 </style>
 </head>
 <body>
