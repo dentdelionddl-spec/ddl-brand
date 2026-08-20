@@ -461,6 +461,24 @@ h1,h2,h3{font-weight:700}
 .cell{transition:background .12s}
 .cell:hover{background:#FBFCFF}
 .ev{border-radius:8px;font-weight:600}
+
+/* --- 편집창 정리 --- */
+.fgroup{border:1px solid var(--line);border-radius:12px;padding:14px;margin-bottom:14px;background:#FCFDFF}
+.fgroup__t{font-size:11px;font-weight:700;letter-spacing:.08em;color:#8D94A6;margin-bottom:10px}
+.fgroup .f:last-child{margin-bottom:0}
+.pastebox{border:1px dashed var(--line);border-radius:12px;padding:10px 12px;margin-bottom:14px;background:#FAFBFE}
+.pastebox summary{cursor:pointer;font-size:12px;font-weight:600;color:#5F6779;list-style:none}
+.pastebox summary::-webkit-details-marker{display:none}
+.pastebox summary::before{content:'＋ ';color:var(--accent)}
+.pastebox[open] summary::before{content:'－ '}
+.pastebox textarea{margin-top:10px;width:100%}
+.pastebox .btn{margin-top:8px}
+.chk{display:flex;align-items:center;gap:8px;font-size:13px;font-weight:600}
+.chk input{width:16px;height:16px;accent-color:var(--accent)}
+.modal__bd .f{margin-bottom:14px}
+.modal__bd textarea{line-height:1.7}
+#p_atts:empty{display:none}
+#p_atts{margin-top:10px}
 </style>
 </head>
 <body>
@@ -1494,33 +1512,45 @@ function planModalWith(p,isNew){
   const id=isNew?null:p.id;
   modal({
     title:(isNew?'추가':'편집')+' — '+(p.kind||'영상'),
-    body:`<label class="f"><span>붙여넣기 (슬랙·노션 글을 그대로 붙이고 아래 버튼)</span>
-        <textarea id="p_paste" rows="4" placeholder="오브서울 8월 기획안&#10;8월2주차&#10;트래픽&#10;주제: 중국 공장/시장 방문+대표의 셀렉&제작 과정&#10;레퍼런스&#10;instagram.com/reel/..."></textarea></label>
-      <button class="btn btn--sm" id="p_fill" style="margin:-4px 0 12px">정리해서 채우기</button>
+    body:`
       <div class="row2">
-        <label class="f"><span>형식</span><select id="p_kind">${opt(PLAN_KINDS,p.kind||'영상')}</select></label>
+        <label class="f"><span>형식</span><select id="p_kind">${opt(PLAN_KINDS, p.kind||'영상')}</select></label>
         ${(p.kind||'영상')==='텍스트'
           ? `<label class="f"><span>발행일</span><input type="date" id="p_date" value="${p.date||''}" /></label>`
           : `<label class="f"><span>주차</span><select id="p_week">${opt(WEEKS,p.week)}</select></label>`}
       </div>
-      <div class="row3">
-        <label class="f"><span>목적</span><select id="p_purpose"><option value="">미지정</option>${opt(['트래픽','브릿지','인지·고려'], p.purpose||'')}</select></label>
-        <label class="f"><span>축 (기둥)</span><select id="p_axis"><option value="">미지정</option>${opt([...new Set(['대화','지식','공장','신상',...(p.axis?[p.axis]:[])])], p.axis||'')}</select></label>
-        <label class="f"><span>훅 유형</span><select id="p_hook"><option value="">미지정</option>${opt(['고백','반전','질문','수치','비교','선언'], p.hook||'')}</select></label>
+
+      <label class="f"><span>${(p.kind||'영상')==='텍스트'?'업로드할 글':'기획 내용'}</span>
+        <textarea id="p_body" rows="${(p.kind||'영상')==='텍스트'?12:9}" placeholder="${(p.kind||'영상')==='텍스트'?'스레드에 올릴 글을 그대로 씁니다':'초반 후킹 · 장면 구성 · 마무리'}">${esc(p.body)}</textarea></label>
+
+      <div class="fgroup"><div class="fgroup__t">분류</div>
+        <div class="row3">
+          <label class="f"><span>목적</span><select id="p_purpose"><option value="">미지정</option>${opt(['트래픽','브릿지','인지·고려'], p.purpose||'')}</select></label>
+          <label class="f"><span>축 (기둥)</span><select id="p_axis"><option value="">미지정</option>${opt([...new Set(['대화','지식','공장','신상',...(p.axis?[p.axis]:[])])], p.axis||'')}</select></label>
+          <label class="f"><span>훅 유형</span><select id="p_hook"><option value="">미지정</option>${opt(['고백','반전','질문','수치','비교','선언'], p.hook||'')}</select></label>
+        </div>
       </div>
-        <datalist id="axisSuggest">${[...new Set(DB.plans.map(x=>x.axis).filter(Boolean))].map(a=>`<option value="${esc(a)}"></option>`).join('')}</datalist></label>
-      <label class="f"><span>${(p.kind||'영상')==='텍스트'?'제목 (선택 · 목록 정리용)':'주제'}</span><input type="text" id="p_title" value="${esc(p.title)}" placeholder="${(p.kind||'영상')==='텍스트'?'8/16 스레드':'중국 공장·시장 방문 + 대표의 셀렉/제작 과정'}" /></label>
+
+      <div class="fgroup"><div class="fgroup__t">함께 올릴 소재</div>
+        ${(p.kind||'영상')==='텍스트'? `<div class="row2">
+          <label class="f"><span>소재 종류</span><select id="p_asset">${opt(['없음 (텍스트만)','이미지','영상','이미지+영상'], (p.asset==='텍스트만'||p.asset==='필요 없음'||!p.asset)?'없음 (텍스트만)':p.asset)}</select></label>
+          <label class="f"><span>준비 메모</span><input type="text" id="p_assetnote" value="${esc(p.assetNote||'')}" placeholder="예: 공장 클로즈업 3컷 · 착용컷 1" /></label>
+        </div>` : ''}
+        <label class="f"><span>파일 첨부 (이미지는 자동 압축)</span>
+          <input type="file" id="p_file" accept="image/*,video/*" multiple />
+        </label>
+        <div id="p_atts">${attChips(p.att||[], true)}</div>
+      </div>
+
       ${(p.kind||'영상')==='텍스트' ? '' : `<label class="f"><span>레퍼런스 (한 줄에 하나)</span><textarea id="p_refs" rows="3" placeholder="instagram.com/reel/...">${esc(p.refs)}</textarea></label>`}
-      <label class="f"><span>첨부 (이미지·영상 · 이미지는 자동 압축)</span>
-        <input type="file" id="p_file" accept="image/*,video/*" multiple />
-      </label>
-      <div id="p_atts" style="margin:-6px 0 12px">${attChips(p.att, true)}</div>
-      ${(p.kind||'영상')==='텍스트'? `<div class="row2">
-        <label class="f"><span>소재 준비</span><select id="p_asset">${opt(['텍스트만','이미지','영상','이미지+영상'], (p.asset==='필요 없음'?'텍스트만':(p.asset||'텍스트만')))}</select></label>
-        <label class="f"><span>준비할 소재 메모</span><input type="text" id="p_assetnote" value="${esc(p.assetNote||'')}" placeholder="예: 공장 클로즈업 3컷 · 착용컷 1" /></label>
-      </div>` : ''}
-      <label class="f"><span>${(p.kind||'영상')==='텍스트'?'업로드할 글':'기획 내용'}</span><textarea id="p_body" rows="10" placeholder="초반 2-3초 중국 현장, 공장 등 전문적인 느낌으로 후킹&#10;- 여러 니트/우븐 제품을 직접 만져보고 비교하는 모습&#10;- 왜 이건 안되고 이건 괜찮은지 대표 기준 설명">${esc(p.body)}</textarea></label>
-      <label style="display:flex;gap:8px;align-items:center"><input type="checkbox" id="p_done" ${p.done?'checked':''} style="width:16px;height:16px;accent-color:var(--ink)" /> ${(p.kind||'영상')==='텍스트'?'발행 완료':'완료'}</label>`,
+      <label class="f"><span>${(p.kind||'영상')==='텍스트'?'제목 (선택 · 목록 정리용)':'주제'}</span><input type="text" id="p_title" value="${esc(p.title)}" placeholder="${(p.kind||'영상')==='텍스트'?'8/16 스레드':'중국 공장·시장 방문 + 대표의 셀렉/제작 과정'}" /></label>
+
+      <details class="pastebox"><summary>슬랙·노션 글 붙여넣어 자동 채우기</summary>
+        <textarea id="p_paste" rows="5" placeholder="오브서울 8월 기획안&#10;8월2주차&#10;트래픽&#10;주제: ...&#10;레퍼런스&#10;instagram.com/reel/..."></textarea>
+        <button type="button" class="btn btn--sm" id="p_fill">정리해서 채우기</button>
+      </details>
+
+      <label class="chk"><input type="checkbox" id="p_done" ${p.done?'checked':''} /> ${(p.kind||'영상')==='텍스트'?'발행 완료':'완료'}</label>`,
     onSave:()=>{
       const kd=$('#p_kind').value;
       if(kd!=='텍스트' && !$('#p_title').value.trim() && $('#p_paste')?.value.trim()){ fillPlanFromPaste(); }
@@ -1537,7 +1567,7 @@ function planModalWith(p,isNew){
       }
       p.kind=kd; p.body=bodyV; p.done=$('#p_done').checked;
       p.purpose=$('#p_purpose')?.value||''; p.hook=$('#p_hook')?.value||'';
-      if(kd==='텍스트'){ p.asset=$('#p_asset')?.value||''; p.assetNote=$('#p_assetnote')?.value.trim()||''; }
+      if(kd==='텍스트'){ const av=$('#p_asset')?.value||''; p.asset=(av==='없음 (텍스트만)'?'텍스트만':av); p.assetNote=$('#p_assetnote')?.value.trim()||''; }
       p.att=(window.__attDraft||[]).slice();
       p.ym=UI.ym; p.dirty=true; if(isNew) DB.plans.push(p);
     },
