@@ -539,6 +539,13 @@ h1,h2,h3{font-weight:700}
 #view table:has(input.num) tr.sumrow td:nth-child(3){padding-right:29px}
 #view table:has(input.num) thead th:nth-child(2),
 #view table:has(input.num) thead th:nth-child(3){padding-right:29px}
+
+/* --- 합계(tfoot) 정렬 (v5) --- */
+#view tfoot td{height:48px;padding:0 18px;border-top:1px solid var(--line);border-bottom:0;background:#FAFBFE;font-family:var(--mono);font-variant-numeric:tabular-nums;font-size:13px;font-weight:700;color:var(--ink);text-align:right;letter-spacing:0}
+#view tfoot td:first-child{font-family:var(--sans);text-align:left;font-size:13px;font-weight:700;color:var(--ink)}
+#view table:has(input.num) tfoot td:nth-child(2),
+#view table:has(input.num) tfoot td:nth-child(3){padding-right:29px}
+#view tfoot td.num{font-size:13px;font-weight:700}
 </style>
 </head>
 <body>
