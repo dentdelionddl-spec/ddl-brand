@@ -530,6 +530,15 @@ h1,h2,h3{font-weight:700}
 .gauge:last-of-type{border-bottom:0}
 .gauge__hd{margin:0}
 .legend{margin:12px 0 0;padding-top:12px;border-top:1px solid var(--line);}
+
+/* --- 합계 행 정렬 통일 (v4) --- */
+#view td input.num{display:block;margin-left:auto}
+#view tr.sumrow td{font-family:var(--mono);font-variant-numeric:tabular-nums;font-size:13px;font-weight:700;color:var(--ink);letter-spacing:0}
+#view tr.sumrow td:first-child{font-family:var(--sans);font-size:13px;font-weight:700;color:var(--ink);letter-spacing:0;text-align:left}
+#view table:has(input.num) tr.sumrow td:nth-child(2),
+#view table:has(input.num) tr.sumrow td:nth-child(3){padding-right:29px}
+#view table:has(input.num) thead th:nth-child(2),
+#view table:has(input.num) thead th:nth-child(3){padding-right:29px}
 </style>
 </head>
 <body>
