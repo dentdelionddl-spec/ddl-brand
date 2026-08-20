@@ -1316,7 +1316,9 @@ function threadsView(b,ym,all){
   const total=list.filter(x=>x.date).length;
   const days=[];
   for(let d=1; d<=dim; d++){
+  const showPast = UI.thrPast===true;
     const ds=`${ym}-${pad(d)}`;
+    if(!showPast && `${ym}-${pad(d)}` < TODAY) continue;
     const dow=['일','월','화','수','목','금','토'][new Date(y,m-1,d).getDay()];
     const items=(byDate[ds]||[]).sort((a,c)=>(a.axis||'').localeCompare(c.axis||''));
     days.push(`<div class="thr ${items.length?'':'thr--empty'} ${ds===TODAY?'thr--today':''}">
@@ -1325,6 +1327,7 @@ function threadsView(b,ym,all){
         ${items.length? items.map(it=>`<div class="post" data-edit-plan="${it.id}">
             <div class="post__m">${it.axis?`<span class="tag">${esc(it.axis)}</span>`:''}${it.done?'<span class="tag tag--ok">발행</span>':''}</div>
             <div class="thr__t">${esc((it.body||it.title||'').slice(0,300))}</div>
+            ${(it.asset||it.assetNote)?`<div class="eyebrow" style="margin-top:6px">소재 <b style="color:var(--ink)">${esc(it.asset||'미정')}</b>${it.assetNote?` · ${esc(it.assetNote)}`:''}</div>`:''}
           </div>`).join('')
         : '<div class="eyebrow">비어 있음</div>'}
       </div>
@@ -1334,6 +1337,7 @@ function threadsView(b,ym,all){
   const noDate=list.filter(x=>!x.date);
   return `<div style="display:flex;align-items:center;gap:10px;margin-bottom:12px;flex-wrap:wrap">
       <div class="eyebrow">${ymLabel(ym)} 스레드 ${total}편 · ${filled}/${dim}일</div>
+      <button class="btn btn--sm" data-act="thr-past" style="border-radius:999px;${UI.thrPast?'background:var(--ink);border-color:var(--ink);color:#fff':''}">지난 날짜 ${UI.thrPast?'숨기기':'보기'}</button>
       <div class="track" style="flex:1;max-width:240px"><i style="width:${Math.round(filled/dim*100)}%;background:${hueBg(b.hue,58)}"></i></div>
       <div class="spacer" style="flex:1"></div>
       <button class="btn btn--primary btn--sm" data-newthread="${ym}-${pad(Math.min(today.getDate(),dim))}">글 추가</button>
@@ -1409,6 +1413,10 @@ function planModalWith(p,isNew){
         <input type="file" id="p_file" accept="image/*,video/*" multiple />
       </label>
       <div id="p_atts" style="margin:-6px 0 12px">${attChips(p.att, true)}</div>
+      ${(p.kind||'영상')==='텍스트'? `<div class="row2">
+        <label class="f"><span>소재 준비</span><select id="p_asset">${opt(['필요 없음','텍스트만','이미지','영상','이미지+영상'], p.asset||'텍스트만')}</select></label>
+        <label class="f"><span>준비할 소재 메모</span><input type="text" id="p_assetnote" value="${esc(p.assetNote||'')}" placeholder="예: 공장 클로즈업 3컷 · 착용컷 1" /></label>
+      </div>` : ''}
       <label class="f"><span>${(p.kind||'영상')==='텍스트'?'업로드할 글':'기획 내용'}</span><textarea id="p_body" rows="10" placeholder="초반 2-3초 중국 현장, 공장 등 전문적인 느낌으로 후킹&#10;- 여러 니트/우븐 제품을 직접 만져보고 비교하는 모습&#10;- 왜 이건 안되고 이건 괜찮은지 대표 기준 설명">${esc(p.body)}</textarea></label>
       <label style="display:flex;gap:8px;align-items:center"><input type="checkbox" id="p_done" ${p.done?'checked':''} style="width:16px;height:16px;accent-color:var(--ink)" /> ${(p.kind||'영상')==='텍스트'?'발행 완료':'완료'}</label>`,
     onSave:()=>{
@@ -1426,6 +1434,7 @@ function planModalWith(p,isNew){
         p.title=v; p.week=$('#p_week').value; p.axis=$('#p_axis').value.trim(); p.refs=$('#p_refs').value.trim(); p.date='';
       }
       p.kind=kd; p.body=bodyV; p.done=$('#p_done').checked;
+      if(kd==='텍스트'){ p.asset=$('#p_asset')?.value||''; p.assetNote=$('#p_assetnote')?.value.trim()||''; }
       p.att=(window.__attDraft||[]).slice();
       p.ym=UI.ym; p.dirty=true; if(isNew) DB.plans.push(p);
     },
@@ -1981,6 +1990,8 @@ const KIND={
       ...(p.refs?{'레퍼런스':{rich_text:[{text:{content:p.refs.slice(0,1900)}}]}}:{}),
       ...(p.body?{'내용':{rich_text:[{text:{content:p.body.slice(0,1900)}}]}}:{}),
       '형식':{select:{name:p.kind||'영상'}},
+      ...(p.asset?{'소재':{select:{name:p.asset}}}:{}),
+      ...(p.assetNote?{'소재 메모':{rich_text:[{text:{content:p.assetNote.slice(0,1900)}}]}}:{}),
       ...((p.att||[]).length && p.att.every(a=>a.id)?{'첨부':{files:p.att.map(a=>({type:'file_upload', file_upload:{id:a.id}, name:a.name}))}}:{}),
       ...(p.date?{'발행일':{date:{start:p.date}}}:{}),
       '완료':{checkbox:!!p.done}, '로컬ID':{rich_text:[{text:{content:p.id}}]} }) },
@@ -2136,6 +2147,7 @@ async function pullAll(quiet){
         channel:sel(P['채널']), goal:P['목표']?.number||0, actual:P['실적']?.number||0}); }
       if(kind==='plans'){ Object.assign(rec,{brandId:brandByName(sel(P['브랜드'])), ym:txt(P['월']),
         att:(P['첨부']?.files||[]).map(f=>({name:f.name, url:f.file?.url||f.external?.url||'', mime:(/\.(mp4|mov|webm)$/i.test(f.name||'')?'video/mp4':'image/jpeg'), id:(rec.att||[]).find(a=>a.name===f.name)?.id })),
+        asset:sel(P['소재'])||'', assetNote:txt(P['소재 메모']),
         week:sel(P['주차'])||'1주차', kind:sel(P['형식'])||'영상', date:P['발행일']?.date?.start||'', axis:txt(P['축']), title:ttl(P['주제']),
         refs:txt(P['레퍼런스']), body:txt(P['내용']), done:!!P['완료']?.checkbox}); }
       if(kind==='actions'){ Object.assign(rec,{brandId:brandByName(sel(P['브랜드'])), ym:txt(P['월']),
@@ -2248,6 +2260,7 @@ function act(a){
   if(a==='plan-new') return planModal(null);
   if(a==='ref-new') return refModal(null);
   if(a==='ref-bulk') return bulkRefModal();
+  if(a==='thr-past'){ UI.thrPast=!UI.thrPast; saveUI(); render(); return; }
   if(a==='ref-select'){ refMode=true; refSel.clear(); render(); return; }
   if(a==='ref-selcancel'){ refMode=false; refSel.clear(); render(); return; }
   if(a==='ref-del') return deleteSelectedRefs();
