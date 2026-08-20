@@ -411,6 +411,56 @@ h1,h2,h3{font-weight:700}
 .areahd h3{font-size:12.5px;color:#4A5163}
 .tk{border-radius:12px}
 .eyebrow{font-size:10.5px;letter-spacing:.06em}
+
+/* --- 마감 정리 (v2) --- */
+.post{border-radius:12px;overflow:hidden;padding:0;margin-bottom:10px;box-shadow:0 1px 1px rgba(16,24,40,.02)}
+.post:last-child{margin-bottom:0}
+.post:hover{border-color:#CBDCFA;background:#FCFDFF}
+.post .thr__t{padding:12px 14px 0}
+.post .post__m{padding:0 14px}
+.post .post__m:not(:empty){padding-top:8px}
+.metabox{padding:9px 14px;border-bottom:1px solid var(--line2);background:#FAFBFE;border-radius:12px 12px 0 0}
+.assetbox{margin:12px 0 0;padding:9px 14px;border-top:1px solid var(--line2);border-radius:0 0 12px 12px;background:#F7FAFF}
+.thr{padding:14px 16px;border-bottom:1px solid var(--line2);transition:background .12s}
+.thr:hover{background:#FCFDFF}
+.thr--empty{background:transparent}
+.thr--empty .thr__b{opacity:.55}
+.thr--today{box-shadow:inset 3px 0 0 #2E6BE6;background:#FBFCFF}
+.thr__d b{font-size:16px;letter-spacing:-.02em}
+.thr__a .btn{min-width:34px;justify-content:center}
+
+/* 표면·타이포 통일 */
+.card{border-radius:16px}
+.card__hd{gap:8px;align-items:center}
+.card__hd h3{font-size:14px;font-weight:700;letter-spacing:-.015em}
+.eyebrow{color:#8D94A6}
+.tag{border-radius:8px;padding:3px 8px;font-weight:600}
+.mchip{border-radius:8px}
+.assetbox__v{border-radius:8px}
+.btn{border-radius:10px;font-size:12.5px}
+.btn:active{transform:translateY(.5px)}
+.btn:focus-visible,.tab:focus-visible,.btab:focus-visible{outline:2px solid #2E6BE6;outline-offset:2px}
+.f input,.f select,.f textarea{border-radius:10px;font-size:13px}
+.track{height:8px}
+.dot{border-radius:3px}
+
+/* 스크롤바·선택 */
+*{scrollbar-width:thin;scrollbar-color:#D7DAE4 transparent}
+*::-webkit-scrollbar{width:10px;height:10px}
+*::-webkit-scrollbar-thumb{background:#D7DAE4;border-radius:99px;border:3px solid transparent;background-clip:content-box}
+*::-webkit-scrollbar-thumb:hover{background:#C2C7D6;background-clip:content-box}
+::selection{background:rgba(46,107,230,.18)}
+
+/* 빈 상태 */
+.empty{color:#8D94A6}
+.empty b{color:var(--ink2)}
+
+/* 캘린더 마감 */
+.cal{border-radius:14px;overflow:hidden}
+.cal__dow{font-weight:700;color:#8D94A6;background:#FAFBFE}
+.cell{transition:background .12s}
+.cell:hover{background:#FBFCFF}
+.ev{border-radius:8px;font-weight:600}
 </style>
 </head>
 <body>
