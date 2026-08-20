@@ -1258,7 +1258,8 @@ function actionModal(id){
     onDelete:isNew?null:()=>{ notionDrop(DB.actions.find(x=>x.id===id)); DB.actions=DB.actions.filter(x=>x.id!==id); }
   });
 }
-function linkTaskModal(actionId){
+function linkTaskModal(actionId, keepDone){
+  if(!keepDone) UI.linkDone=false;
   const a=DB.actions.find(x=>x.id===actionId); if(!a) return;
   const showDone = UI.linkDone===true;
   const cand=tasksOf(a.brandId).filter(t=>!(a.taskIds||[]).includes(t.id))
@@ -1279,7 +1280,7 @@ function linkTaskModal(actionId){
       a.taskIds=[...(a.taskIds||[]), ...picked]; a.dirty=true;
     }
   });
-  const tg=$('#lk_done'); if(tg) tg.onclick=()=>{ UI.linkDone=!UI.linkDone; saveUI(); $('#layer').innerHTML=''; linkTaskModal(actionId); };
+  const tg=$('#lk_done'); if(tg) tg.onclick=()=>{ UI.linkDone=!UI.linkDone; saveUI(); $('#layer').innerHTML=''; linkTaskModal(actionId, true); };
 }
 
 /* ---------- 콘텐츠 기획안 ---------- */
@@ -2684,7 +2685,7 @@ function act(a){
 }
 
 /* 새로 접속하면 항상 홈 화면부터 */
-if(!EMBED){ UI.brand='__home'; UI.ym=ymOf(today); UI.thrPast=false; saveUI(); }
+if(!EMBED){ UI.brand='__home'; UI.ym=ymOf(today); UI.thrPast=false; UI.linkDone=false; saveUI(); }
 render();
 bootSync();
 /* 자동 갱신 */
