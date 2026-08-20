@@ -575,6 +575,12 @@ h1,h2,h3{font-weight:700}
 .gauge{display:flex;flex-direction:column;justify-content:center;gap:7px;height:52px;padding:0 18px;margin:0 -18px}
 .gauge .track{margin:0}
 .gauge__hd{margin:0;line-height:1.2}
+
+.rank{display:flex;flex-direction:column}
+.rank__r{display:flex;align-items:center;gap:10px;height:40px;border-bottom:1px solid var(--line2);margin:0 -18px;padding:0 18px}
+.rank__r:last-child{border-bottom:0}
+.rank__k{font-size:13px;font-weight:600;color:var(--ink)}
+.rank__r b{margin-left:auto;font-size:13px;font-variant-numeric:tabular-nums}
 </style>
 </head>
 <body>
@@ -639,7 +645,8 @@ const NOTION_DB={
   costs:'e33ee267da7d43fd86f72c28fa888114',
   actions:'21f72c37590f48dba49455f0c705b4ab',
   config:'46b8ab2d1ddc47f7b5f8c0bfa4748ab9',
-  refs:'ae4c78c3a8324090b2617774d9ae3f01'
+  refs:'ae4c78c3a8324090b2617774d9ae3f01',
+  stats:'691bda8c1aec4253964f2adda0e18c05'
 };
 const NOTION_HUB='https://app.notion.com/p/3bd4f7cd6b86816cbc56ef161bf47379';
 const PROXY_URL='https://ddl-brand.vercel.app/api/notion';
@@ -648,12 +655,12 @@ const blank = () => ({
   v:1,
   settings:{ workerUrl:PROXY_URL, db:{...NOTION_DB}, lastSync:null },
   brands: JSON.parse(JSON.stringify(SEED_BRANDS)),
-  contents:[], tasks:[], sales:[], products:[], plans:[], costs:[], actions:[], refs:[]
+  contents:[], tasks:[], sales:[], products:[], plans:[], costs:[], actions:[], refs:[], stats:[]
 });
 
 let DB;
 try{ DB = JSON.parse(store.get(KEY)) || blank(); }catch(e){ DB = blank(); }
-for(const k of ['contents','tasks','sales','products','plans','costs','actions','refs']) if(!Array.isArray(DB[k])) DB[k]=[];
+for(const k of ['contents','tasks','sales','products','plans','costs','actions','refs','stats']) if(!Array.isArray(DB[k])) DB[k]=[];
 if(!DB.settings) DB.settings=blank().settings;
 if(!DB.settings.db) DB.settings.db={...NOTION_DB};
 if(DB.settings.dbv!==3){ DB.settings.db={...DB.settings.db, ...NOTION_DB}; DB.settings.dbv=3; }
@@ -1320,6 +1327,7 @@ function uploadPlanView(){
 function plansView(){
   const ptab=UI.planTab||'plan';
   if(ptab==='ref') return contentTabs(ptab)+refsView();
+  if(ptab==='stat') return contentTabs(ptab)+statsView();
   if(ptab==='upload'){
     const b=brandOf(UI.brand);
     const utab = EMBED? 'media' : (UI.upTab||'media');
@@ -1457,10 +1465,109 @@ function refModal(id){
   });
   const ue=$('#r_url'); if(ue) ue.addEventListener('change',()=>{ const g=guessRefCat(ue.value); const s=$('#r_cat'); if(s&&g) s.value=g; });
 }
+const HOOKS=['질문형','단정형','장면형','숫자형','반전형'];
+const SOURCES=['고객대화','공장현장','제품스펙','개인일상','업계관점'];
+const VOICES=['나 중심','독자 중심'];
+const SLOTS=['새벽 0-6','오전 6-11','점심 11-14','오후 14-18','저녁 18-22','밤 22-24'];
+function statRows(bid){ return (DB.stats||[]).filter(s=>s.brandId===bid).sort((a,b)=>(b.date||'').localeCompare(a.date||'')); }
+function avgBy(list,key,metric){
+  const g={};
+  list.forEach(s=>{ const k=s[key]||'미지정'; (g[k]=g[k]||[]).push(Number(s[metric]||0)); });
+  return Object.entries(g).map(([k,v])=>({k, n:v.length, avg: Math.round(v.reduce((a,b)=>a+b,0)/v.length)})).sort((a,b)=>b.avg-a.avg);
+}
+function statsView(){
+  const b=brandOf(UI.brand);
+  const all=statRows(b.id);
+  const ym=UI.ym;
+  const rows=all.filter(s=>(s.date||'').startsWith(ym));
+  const metric=UI.statMetric||'views';
+  const mLabel={views:'조회수',likes:'좋아요',replies:'댓글',saves:'저장',profile:'프로필 유입',follows:'팔로우 전환'};
+  const rank=(key,label)=>{
+    const r=avgBy(rows,key,metric);
+    if(!r.length) return `<div class="eyebrow">${label} 데이터 없음</div>`;
+    return `<div class="rank">${r.map(x=>`<div class="rank__r"><span class="rank__k">${esc(x.k)}</span><span class="eyebrow">${x.n}편</span><b class="mono">${x.avg.toLocaleString()}</b></div>`).join('')}</div>`;
+  };
+  const sum=k=>rows.reduce((a,s)=>a+Number(s[k]||0),0);
+  return `
+    <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin-bottom:14px">
+      <span class="eyebrow">기준 지표</span>
+      ${Object.entries(mLabel).map(([k,l])=>`<button class="btn btn--sm" data-statmetric="${k}" style="border-radius:999px;${metric===k?'background:var(--ink);border-color:var(--ink);color:#fff':''}">${l}</button>`).join('')}
+      <div class="spacer" style="flex:1"></div>
+      <button class="btn btn--primary btn--sm" data-act="stat-new">기록 추가</button>
+    </div>
+    <div class="ustat">
+      <div class="ustat__c"><div class="ustat__n">${rows.length}</div><div class="ustat__l">이 달 발행</div></div>
+      <div class="ustat__c"><div class="ustat__n">${sum('views').toLocaleString()}</div><div class="ustat__l">조회수 합</div></div>
+      <div class="ustat__c"><div class="ustat__n">${sum('saves').toLocaleString()}</div><div class="ustat__l">저장 합</div></div>
+      <div class="ustat__c"><div class="ustat__n">${sum('profile').toLocaleString()}</div><div class="ustat__l">프로필 유입 합</div></div>
+    </div>
+    <div class="grid g2">
+      <section class="card"><div class="card__hd"><h3>훅유형별 평균 ${mLabel[metric]}</h3></div><div class="card__bd">${rank('hook','훅유형')}</div></section>
+      <section class="card"><div class="card__hd"><h3>소재출처별 평균 ${mLabel[metric]}</h3></div><div class="card__bd">${rank('source','소재출처')}</div></section>
+      <section class="card"><div class="card__hd"><h3>목적태그별 평균 ${mLabel[metric]}</h3></div><div class="card__bd">${rank('purpose','목적태그')}</div></section>
+      <section class="card"><div class="card__hd"><h3>화자위치별 평균 ${mLabel[metric]}</h3></div><div class="card__bd">${rank('voice','화자위치')}</div></section>
+    </div>
+    <div class="areahd"><h3>${ymLabel(ym)} 기록</h3><span class="line"></span><span class="eyebrow">${rows.length}편</span></div>
+    ${rows.length? rows.map(s=>`<div class="tk tk--click" data-edit-stat="${s.id}">
+      <div class="tk__t">
+        <div class="tk__title">${esc(s.title||'(제목 없음)')}</div>
+        <div class="tk__meta">
+          <span class="eyebrow">${(s.date||'').slice(5)}</span>
+          ${s.purpose?`<span class="mchip mchip--p">${esc(s.purpose)}</span>`:''}
+          ${s.hook?`<span class="mchip mchip--h">${esc(s.hook)}</span>`:''}
+          ${s.source?`<span class="mchip mchip--a">${esc(s.source)}</span>`:''}
+          <span class="eyebrow mono">조회 ${Number(s.views||0).toLocaleString()} · 저장 ${Number(s.saves||0).toLocaleString()} · 유입 ${Number(s.profile||0).toLocaleString()}</span>
+        </div>
+      </div>
+    </div>`).join('')
+    : `<div class="card"><div class="empty"><b>이 달 기록이 없습니다</b>발행한 글의 성과와 속성을 넣으면 위 순위가 자동으로 계산됩니다.</div></div>`}`;
+}
+function statModal(id){
+  const isNew=!id;
+  const s=isNew? {id:uid(),brandId:UI.brand,channel:'스레드',date:TODAY,title:'',url:'',views:0,likes:0,replies:0,saves:0,follows:0,profile:0,purpose:'',hook:'',source:'',voice:'',chars:0,hasImg:false,slot:'',body:''}
+               : (DB.stats||[]).find(x=>x.id===id);
+  const numF=(k,l)=>`<label class="f"><span>${l}</span><input type="number" id="s_${k}" value="${Number(s[k]||0)}" /></label>`;
+  modal({
+    title:isNew?'성과 기록 추가':'성과 기록',
+    body:`<div class="row2">
+        <label class="f"><span>발행일</span><input type="date" id="s_date" value="${s.date||''}" /></label>
+        <label class="f"><span>발행 시간대</span><select id="s_slot"><option value="">미지정</option>${opt(SLOTS,s.slot||'')}</select></label>
+      </div>
+      <label class="f"><span>제목 (콘텐츠 첫 줄)</span><input type="text" id="s_title" value="${esc(s.title||'')}" /></label>
+      <label class="f"><span>본문</span><textarea id="s_body" rows="6">${esc(s.body||'')}</textarea></label>
+      <label class="f"><span>URL</span><input type="url" id="s_url" value="${esc(s.url||'')}" placeholder="https://www.threads.com/@..." /></label>
+      <div class="fgroup"><div class="fgroup__t">성과</div>
+        <div class="row3">${numF('views','조회수')}${numF('likes','좋아요')}${numF('replies','댓글')}</div>
+        <div class="row3">${numF('saves','저장')}${numF('follows','팔로우 전환')}${numF('profile','프로필 유입')}</div>
+      </div>
+      <div class="fgroup"><div class="fgroup__t">속성 코드</div>
+        <div class="row3">
+          <label class="f"><span>목적태그</span><select id="s_purpose"><option value="">미지정</option>${opt(['트래픽','브릿지','인지·고려'],s.purpose||'')}</select></label>
+          <label class="f"><span>훅유형</span><select id="s_hook"><option value="">미지정</option>${opt(HOOKS,s.hook||'')}</select></label>
+          <label class="f"><span>소재출처</span><select id="s_source"><option value="">미지정</option>${opt(SOURCES,s.source||'')}</select></label>
+        </div>
+        <div class="row2">
+          <label class="f"><span>화자위치</span><select id="s_voice"><option value="">미지정</option>${opt(VOICES,s.voice||'')}</select></label>
+          <label class="chk" style="align-self:end;padding-bottom:12px"><input type="checkbox" id="s_img" ${s.hasImg?'checked':''} /> 이미지·영상 함께 올림</label>
+        </div>
+      </div>`,
+    onSave:()=>{
+      s.date=$('#s_date').value; s.slot=$('#s_slot').value;
+      s.title=$('#s_title').value.trim(); s.body=$('#s_body').value; s.url=$('#s_url').value.trim();
+      ['views','likes','replies','saves','follows','profile'].forEach(k=>{ s[k]=Number($('#s_'+k).value||0); });
+      s.purpose=$('#s_purpose').value; s.hook=$('#s_hook').value; s.source=$('#s_source').value; s.voice=$('#s_voice').value;
+      s.hasImg=$('#s_img').checked; s.chars=(s.body||'').length;
+      if(!s.title) s.title=(s.body||'').split('\n')[0].slice(0,40)||'(제목 없음)';
+      s.dirty=true;
+      if(isNew){ DB.stats=DB.stats||[]; DB.stats.push(s); }
+    },
+    onDelete:isNew?null:()=>{ notionDrop((DB.stats||[]).find(x=>x.id===id)); DB.stats=(DB.stats||[]).filter(x=>x.id!==id); }
+  });
+}
 function contentTabs(ptab){
   if(EMBED) return '';
   const chip=(v,l,on)=>`<button class="btn btn--sm" data-ptab="${v}" style="border-radius:999px;${on?'background:var(--ink);border-color:var(--ink);color:#fff':''}">${l}</button>`;
-  return `<div style="display:flex;gap:6px;margin-bottom:12px">${chip('plan','기획',ptab==='plan')}${chip('upload','업로드 계획',ptab==='upload')}${chip('ref','레퍼런스',ptab==='ref')}</div>`;
+  return `<div style="display:flex;gap:6px;margin-bottom:12px">${chip('ref','레퍼런스',ptab==='ref')}${chip('plan','기획',ptab==='plan')}${chip('upload','업로드 계획',ptab==='upload')}${chip('stat','분석',ptab==='stat')}</div>`;
 }
 function plansPlanView(){
   const b=brandOf(UI.brand), ym=UI.ym;
@@ -2236,6 +2343,23 @@ const KIND={
       ...(a.memo?{'메모':{rich_text:[{text:{content:a.memo.slice(0,1900)}}]}}:{}),
       '연결업무':{rich_text:[{text:{content:(a.taskIds||[]).join(',').slice(0,1900)}}]},
       '로컬ID':{rich_text:[{text:{content:a.id}}]} }) },
+  stats:{ db:'stats',
+    props:s=>({ '제목':{title:[{text:{content:s.title||''}}]},
+      ...(s.date?{'발행일':{date:{start:s.date}}}:{}),
+      '브랜드':{select:{name:brandOf(s.brandId)?.name||''}},
+      '채널':{select:{name:s.channel||'스레드'}},
+      ...(s.url?{'URL':{url:s.url}}:{}),
+      ...['조회수','좋아요','댓글','저장'].reduce((a,k)=>{ a[k]={number:Number(s[({'조회수':'views','좋아요':'likes','댓글':'replies','저장':'saves'})[k]]||0)}; return a; },{}),
+      '팔로우 전환':{number:Number(s.follows||0)}, '프로필 유입':{number:Number(s.profile||0)},
+      ...(s.purpose?{'목적태그':{select:{name:s.purpose}}}:{}),
+      ...(s.hook?{'훅유형':{select:{name:s.hook}}}:{}),
+      ...(s.source?{'소재출처':{select:{name:s.source}}}:{}),
+      ...(s.voice?{'화자위치':{select:{name:s.voice}}}:{}),
+      '글자수':{number:Number(s.chars|| (s.body||'').length)},
+      '이미지 유무':{checkbox:!!s.hasImg},
+      ...(s.slot?{'발행시간대':{select:{name:s.slot}}}:{}),
+      ...(s.body?{'본문':{rich_text:[{text:{content:s.body.slice(0,1900)}}]}}:{}),
+      '로컬ID':{rich_text:[{text:{content:s.id}}]} }) },
   refs:{ db:'refs',
     props:r=>({ '제목':{title:[{text:{content:r.title||''}}]}, '브랜드':{select:{name:brandOf(r.brandId)?.name||''}},
       '분류':{select:{name:r.cat||'릴스'}},
@@ -2387,6 +2511,12 @@ async function pullAll(quiet){
         title:ttl(P['액션플랜']), goal:P['목표치']?.number??'', cur:P['현재치']?.number??'',
         unit:txt(P['단위']), memo:txt(P['메모']),
         taskIds:txt(P['연결업무']).split(',').map(x=>x.trim()).filter(Boolean)}); }
+      if(kind==='stats'){ Object.assign(rec,{brandId:brandByName(sel(P['브랜드'])), title:ttl(P['제목']), date:P['발행일']?.date?.start||'',
+        channel:sel(P['채널'])||'스레드', url:P['URL']?.url||'',
+        views:P['조회수']?.number||0, likes:P['좋아요']?.number||0, replies:P['댓글']?.number||0, saves:P['저장']?.number||0,
+        follows:P['팔로우 전환']?.number||0, profile:P['프로필 유입']?.number||0,
+        purpose:sel(P['목적태그'])||'', hook:sel(P['훅유형'])||'', source:sel(P['소재출처'])||'', voice:sel(P['화자위치'])||'',
+        chars:P['글자수']?.number||0, hasImg:!!P['이미지 유무']?.checkbox, slot:sel(P['발행시간대'])||'', body:txt(P['본문'])}); }
       if(kind==='refs'){ Object.assign(rec,{brandId:brandByName(sel(P['브랜드'])), cat:sel(P['분류'])||'릴스',
         title:ttl(P['제목']), url:P['링크']?.url||'', memo:txt(P['메모'])}); }
       if(kind==='costs'){ Object.assign(rec,{brandId:brandByName(sel(P['브랜드'])), ym:txt(P['월']),
@@ -2424,6 +2554,8 @@ function bind(){
   document.querySelectorAll('[data-gobrand]').forEach(el=>el.onclick=()=>{ UI.brand=el.dataset.gobrand; UI.tab='summary'; saveUI(); render(); });
   document.querySelectorAll('[data-ptab]').forEach(el=>el.onclick=()=>{ UI.planTab=el.dataset.ptab; saveUI(); render(); });
   document.querySelectorAll('[data-refcat]').forEach(el=>el.onclick=()=>{ UI.refCat=el.dataset.refcat; saveUI(); render(); });
+  document.querySelectorAll('[data-statmetric]').forEach(el=>el.onclick=()=>{ UI.statMetric=el.dataset.statmetric; saveUI(); render(); });
+  document.querySelectorAll('[data-edit-stat]').forEach(el=>el.onclick=()=>statModal(el.dataset.editStat));
   document.querySelectorAll('[data-edit-ref]').forEach(el=>el.onclick=()=>refModal(el.dataset.editRef));
   bindRefSelect();
   document.querySelectorAll('[data-uptab]').forEach(el=>el.onclick=()=>{ UI.upTab=el.dataset.uptab; saveUI(); render(); });
@@ -2500,6 +2632,7 @@ function act(a){
   if(a==='plan-new') return planModal(null);
   if(a==='ref-new') return refModal(null);
   if(a==='ref-bulk') return bulkRefModal();
+  if(a==='stat-new') return statModal(null);
   if(a==='thr-past'){ UI.thrPast=!UI.thrPast; saveUI(); render(); return; }
   if(a==='ref-select'){ refMode=true; refSel.clear(); render(); return; }
   if(a==='ref-selcancel'){ refMode=false; refSel.clear(); render(); return; }
