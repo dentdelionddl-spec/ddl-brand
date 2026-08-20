@@ -570,6 +570,11 @@ h1,h2,h3{font-weight:700}
 /* --- 입력칸 오른쪽 붙임 (v9) --- */
 #view tbody td:has(input.num){text-align:right}
 #view td input.num{display:block !important;margin-left:auto !important;margin-right:0 !important;float:none}
+
+/* --- 추이 행 상하 여백 균등 (v10) --- */
+.gauge{display:flex;flex-direction:column;justify-content:center;gap:7px;height:52px;padding:0 18px;margin:0 -18px}
+.gauge .track{margin:0}
+.gauge__hd{margin:0;line-height:1.2}
 </style>
 </head>
 <body>
@@ -1016,11 +1021,7 @@ function summaryView(){
         <span class="tag ${goal&&actual/goal*100>=pacePct?'tag--ok':'tag--high'}">진도 ${pacePct}%</span>
       </div>
       ${gauges}
-      <div class="legend">
-        <span><i class="key" style="background:${hueBg(b.hue,58)}"></i>정상 페이스</span>
-        <span><i class="key" style="background:#C9A0A8"></i>페이스 미달</span>
-        <span><i class="key" style="background:var(--ink);width:2px;height:11px"></i>오늘 기준 진도선</span>
-      </div>
+      
     </div>
   </section>
 
@@ -1774,7 +1775,7 @@ function salesView(){
             <i style="width:${t.goal/max*100}%;background:#E8E8E1"></i>
             <i style="width:${t.actual/max*100}%;background:${hueBg(b.hue,58)}"></i>
           </div></div>`).join('')}
-        <div class="legend"><span><i class="key" style="background:#E8E8E1"></i>목표</span><span><i class="key" style="background:${hueBg(b.hue,58)}"></i>실적</span></div>
+        
       </div>
     </section>
   </div>
