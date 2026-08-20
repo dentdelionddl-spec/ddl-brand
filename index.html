@@ -479,6 +479,9 @@ h1,h2,h3{font-weight:700}
 .modal__bd textarea{line-height:1.7}
 #p_atts:empty{display:none}
 #p_atts{margin-top:10px}
+
+.thr__h{font-size:13.5px;font-weight:700;letter-spacing:-.01em;padding:12px 14px 0}
+.thr__h + .thr__t{padding-top:6px}
 </style>
 </head>
 <body>
@@ -1442,7 +1445,8 @@ function threadsView(b,ym,all){
               ${it.hook?`<span class="mchip mchip--h">${esc(it.hook)}</span>`:''}
             </div>`:''}
             <div class="post__m">${it.done?'<span class="tag tag--ok">\uBC1C\uD589</span>':''}</div>
-            <div class="thr__t">${esc((it.body||it.title||'').slice(0,300))}</div>
+            ${it.title?`<div class="thr__h">${esc(it.title)}</div>`:''}
+            <div class="thr__t">${esc((it.body||'').slice(0,300))}</div>
             ${(it.asset||it.assetNote)?`<div class="assetbox"><span class="assetbox__k">소재</span><span class="assetbox__v">${esc(it.asset||'미정')}</span>${it.assetNote?`<span class="assetbox__n">${esc(it.assetNote)}</span>`:''}</div>`:''}
           </div>`).join('')
         : '<div class="eyebrow">비어 있음</div>'}
@@ -1521,7 +1525,9 @@ function planModalWith(p,isNew){
             <label class="f"><span>주차</span><select id="p_week">${opt(WEEKS,p.week)}</select></label>
           </div>`}
 
-      <label class="f"><span>${(p.kind||'영상')==='텍스트'?'업로드할 글':'기획 내용'}</span>
+      <label class="f"><span>${(p.kind||'영상')==='텍스트'?'제목 (콘텐츠 첫 줄)':'주제'}</span><input type="text" id="p_title" value="${esc(p.title)}" placeholder="${(p.kind||'영상')==='텍스트'?'글의 첫 줄을 그대로 적습니다':'중국 공장·시장 방문 + 대표의 셀렉/제작 과정'}" /></label>
+
+      <label class="f"><span>${(p.kind||'영상')==='텍스트'?'본문':'기획 내용'}</span>
         <textarea id="p_body" rows="${(p.kind||'영상')==='텍스트'?12:9}" placeholder="${(p.kind||'영상')==='텍스트'?'스레드에 올릴 글을 그대로 씁니다':'초반 후킹 · 장면 구성 · 마무리'}">${esc(p.body)}</textarea></label>
 
       <div class="fgroup"><div class="fgroup__t">분류</div>
@@ -1544,7 +1550,6 @@ function planModalWith(p,isNew){
       </div>
 
       ${(p.kind||'영상')==='텍스트' ? '' : `<label class="f"><span>레퍼런스 (한 줄에 하나)</span><textarea id="p_refs" rows="3" placeholder="instagram.com/reel/...">${esc(p.refs)}</textarea></label>`}
-      <label class="f"><span>${(p.kind||'영상')==='텍스트'?'제목 (선택 · 목록 정리용)':'주제'}</span><input type="text" id="p_title" value="${esc(p.title)}" placeholder="${(p.kind||'영상')==='텍스트'?'8/16 스레드':'중국 공장·시장 방문 + 대표의 셀렉/제작 과정'}" /></label>
 
       <details class="pastebox"><summary>슬랙·노션 글 붙여넣어 자동 채우기</summary>
         <textarea id="p_paste" rows="5" placeholder="오브서울 8월 기획안&#10;8월2주차&#10;트래픽&#10;주제: ...&#10;레퍼런스&#10;instagram.com/reel/..."></textarea>
