@@ -485,8 +485,11 @@ h1,h2,h3{font-weight:700}
 
 /* 상단바: 브랜드별 색이 아니라 선택 시 포인트 컬러 */
 .brandbar .btab{border-bottom-color:transparent !important}
-.brandbar .btab[aria-current="true"]{color:#fff;border-bottom-color:#2E6BE6 !important;background:rgba(46,107,230,.14)}
-.brandbar .btab[aria-current="true"] .btab__p{color:#9FC0FA}
+.brandbar .btab[aria-current="true"]{color:#fff;border-bottom-color:transparent !important;background:#2E6BE6}
+.brandbar .btab[aria-current="true"]:hover{background:#2A61D6}
+.brandbar .btab{border-radius:9px;margin:6px 2px}
+.brandbar .btab[aria-current="true"] .btab__k{color:#fff}
+.brandbar .btab[aria-current="true"] .btab__p{color:#D8E6FF}
 .brandbar .btab{border-radius:8px 8px 0 0}
 .brandbar .btab:hover{background:rgba(255,255,255,.06)}
 </style>
