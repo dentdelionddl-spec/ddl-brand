@@ -1348,7 +1348,7 @@ function threadsView(b,ym,all){
               ${it.axis?`<span class="mchip mchip--a">${esc(it.axis)}</span>`:''}
               ${it.hook?`<span class="mchip mchip--h">${esc(it.hook)}</span>`:''}
             </div>`:''}
-            <div class="post__m">
+            <div class="post__m">${it.done?'<span class="tag tag--ok">\uBC1C\uD589</span>':''}</div>
             <div class="thr__t">${esc((it.body||it.title||'').slice(0,300))}</div>
             ${(it.asset||it.assetNote)?`<div class="assetbox"><span class="assetbox__k">소재</span><span class="assetbox__v">${esc(it.asset||'미정')}</span>${it.assetNote?`<span class="assetbox__n">${esc(it.assetNote)}</span>`:''}</div>`:''}
           </div>`).join('')
