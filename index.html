@@ -517,6 +517,19 @@ h1,h2,h3{font-weight:700}
 .legend{display:flex;gap:14px;margin-top:12px;font-size:10.5px;color:var(--mut);letter-spacing:.04em}
 .legend .key{display:inline-flex;align-items:center;gap:6px}
 #view .card__bd > .empty{padding:26px 0}
+
+/* --- 표·행 간격 완전 통일 (v3) --- */
+#view .card__bd > table{margin:0 -18px;width:calc(100% + 36px)}
+#view thead th{height:34px;padding:0 18px 0;line-height:34px;border-bottom:1px solid var(--line)}
+#view tbody td{height:48px;padding:0 18px;border-bottom:1px solid var(--line2)}
+#view tbody td input.num{height:34px;padding:0 11px;margin:0}
+#view tbody tr:last-child td{border-bottom:0}
+#view tr.sumrow td{height:44px;padding:0 18px;border-top:1px solid var(--line);border-bottom:0;background:#FAFBFE}
+/* 오른쪽 카드도 같은 리듬 */
+.gauge{padding:0;height:48px;display:flex;flex-direction:column;justify-content:center;gap:6px;border-bottom:1px solid var(--line2);margin:0 -18px;padding:0 18px}
+.gauge:last-of-type{border-bottom:0}
+.gauge__hd{margin:0}
+.legend{margin:12px 0 0;padding-top:12px;border-top:1px solid var(--line);}
 </style>
 </head>
 <body>
