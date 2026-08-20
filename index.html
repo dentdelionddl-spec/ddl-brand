@@ -475,6 +475,7 @@ for(const sb of SEED_BRANDS){
 for(const k of ['plans','costs','actions']) if(!Array.isArray(DB[k])) DB[k]=[];
 for(const c of DB.contents){ if(TYPE_ALIAS[c.type]){ c.type=TYPE_ALIAS[c.type]; c.dirty=true; } }
 for(const pl of DB.plans){ if(!pl.kind){ pl.kind='영상'; pl.dirty=true; } }
+for(const pl of DB.plans){ if(pl.asset==='필요 없음'){ pl.asset='텍스트만'; pl.dirty=true; } }
 for(const k of ['contents','tasks','sales','products','plans','costs','actions','refs']){
   const seen=new Set();
   DB[k]=(DB[k]||[]).filter(r=>{ if(!r.notionId) return true; if(seen.has(r.notionId)) return false; seen.add(r.notionId); return true; });
@@ -1421,7 +1422,7 @@ function planModalWith(p,isNew){
       </label>
       <div id="p_atts" style="margin:-6px 0 12px">${attChips(p.att, true)}</div>
       ${(p.kind||'영상')==='텍스트'? `<div class="row2">
-        <label class="f"><span>소재 준비</span><select id="p_asset">${opt(['필요 없음','텍스트만','이미지','영상','이미지+영상'], p.asset||'텍스트만')}</select></label>
+        <label class="f"><span>소재 준비</span><select id="p_asset">${opt(['텍스트만','이미지','영상','이미지+영상'], (p.asset==='필요 없음'?'텍스트만':(p.asset||'텍스트만')))}</select></label>
         <label class="f"><span>준비할 소재 메모</span><input type="text" id="p_assetnote" value="${esc(p.assetNote||'')}" placeholder="예: 공장 클로즈업 3컷 · 착용컷 1" /></label>
       </div>` : ''}
       <label class="f"><span>${(p.kind||'영상')==='텍스트'?'업로드할 글':'기획 내용'}</span><textarea id="p_body" rows="10" placeholder="초반 2-3초 중국 현장, 공장 등 전문적인 느낌으로 후킹&#10;- 여러 니트/우븐 제품을 직접 만져보고 비교하는 모습&#10;- 왜 이건 안되고 이건 괜찮은지 대표 기준 설명">${esc(p.body)}</textarea></label>
