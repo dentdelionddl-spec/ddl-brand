@@ -1738,9 +1738,9 @@ function salesView(){
             <td class="num">${r.goal?Math.round((r.actual||0)/r.goal*100)+'%':'—'}</td></tr>`).join('')}
           </tbody>
           <tfoot><tr>
-            <th>합계</th><th class="num" style="font-size:12px;color:var(--ink)">${won(goal)}</th>
-            <th class="num" style="font-size:12px;color:var(--ink)">${won(actual)}</th>
-            <th class="num" style="font-size:12px;color:var(--ink)">${goal?Math.round(actual/goal*100)+'%':'—'}</th>
+            <th>합계</th><th class="num" >${won(goal)}</th>
+            <th class="num" >${won(actual)}</th>
+            <th class="num" >${goal?Math.round(actual/goal*100)+'%':'—'}</th>
           </tr></tfoot>
         </table>
         <div class="eyebrow" style="margin-top:10px">채널 구성은 설정 · 동기화 화면에서 브랜드별로 바꿉니다</div>
