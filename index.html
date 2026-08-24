@@ -581,6 +581,15 @@ h1,h2,h3{font-weight:700}
 .rank__r:last-child{border-bottom:0}
 .rank__k{font-size:13px;font-weight:600;color:var(--ink)}
 .rank__r b{margin-left:auto;font-size:13px;font-variant-numeric:tabular-nums}
+
+.fn{display:flex;align-items:stretch;gap:0;flex-wrap:wrap}
+.fn__s{flex:1;min-width:110px;text-align:center;padding:10px 6px}
+.fn__n{font-size:20px;font-weight:700;letter-spacing:-.02em}
+.fn__l{font-size:11.5px;color:var(--mut);margin-top:3px;font-weight:600}
+.fn__a{flex:0 0 auto;display:flex;flex-direction:column;justify-content:center;align-items:center;padding:0 12px;border-left:1px dashed var(--line);border-right:1px dashed var(--line)}
+.fn__p{font-size:14px;font-weight:700;color:var(--accent)}
+.fn__a .eyebrow{font-size:9.5px;margin-top:2px;text-align:center;max-width:110px}
+@media(max-width:860px){.fn{flex-direction:column}.fn__a{flex-direction:row;gap:8px;border:0;border-top:1px dashed var(--line);border-bottom:1px dashed var(--line);padding:6px 0}}
 </style>
 </head>
 <body>
@@ -1479,6 +1488,77 @@ function avgBy(list,key,metric){
   list.forEach(s=>{ const k=s[key]||'미지정'; (g[k]=g[k]||[]).push(Number(s[metric]||0)); });
   return Object.entries(g).map(([k,v])=>({k, n:v.length, avg: Math.round(v.reduce((a,b)=>a+b,0)/v.length)})).sort((a,b)=>b.avg-a.avg);
 }
+const TRAFFIC_DB='22b96ecfb203408295a3f8755c6935b6';
+const TRAFFIC_BRAND='factory';
+async function pullTraffic(){
+  const s=DB.settings; if(!s.workerUrl) return;
+  try{
+    const res=await api({action:'query', database_id:TRAFFIC_DB});
+    DB.traffic=(res.results||[]).map(p=>{ const P=p.properties;
+      return { id:p.id, date:P['일자']?.date?.start || (P['날짜']?.title?.[0]?.plain_text||''),
+        visits:P['방문']?.number||0, uniq:P['순방문']?.number||0,
+        threads:P['스레드']?.number||0, insta:P['인스타']?.number||0,
+        direct:P['직접']?.number||0, etc:P['기타']?.number||0 };
+    });
+    store.set(KEY,JSON.stringify(DB));
+  }catch(e){}
+}
+function trafficOf(bid, ym, key){
+  if(bid!==TRAFFIC_BRAND) return null;
+  const rows=(DB.traffic||[]).filter(r=>String(r.date||'').startsWith(ym));
+  if(!rows.length) return null;
+  return rows.reduce((a,r)=>a+Number(r[key]||0),0);
+}
+function inqKey(bid,ym){ return bid+'|'+ym; }
+function getInq(bid,ym){ return Number((DB.settings.inq||{})[inqKey(bid,ym)]||0); }
+function setInq(bid,ym,v){ DB.settings.inq=DB.settings.inq||{}; DB.settings.inq[inqKey(bid,ym)]=Number(v||0); save(); pushConfig(); }
+async function pushConfig(){
+  const s=DB.settings; const dbId=s.db&&s.db.config; if(!s.workerUrl||!dbId) return;
+  try{
+    const res=await api({action:'query', database_id:dbId});
+    const row=(res.results||[]).find(p=>(p.properties['항목']?.title?.[0]?.plain_text||'')==='inquiries');
+    const props={ '항목':{title:[{text:{content:'inquiries'}}]},
+      '값':{rich_text:[{text:{content:JSON.stringify(s.inq||{}).slice(0,1900)}}]},
+      '수정시각':{rich_text:[{text:{content:new Date().toISOString()}}]} };
+    if(row) await api({action:'update', page_id:row.id, properties:props});
+    else await api({action:'create', database_id:dbId, properties:props});
+  }catch(e){}
+}
+async function pullConfig(){
+  const s=DB.settings; const dbId=s.db&&s.db.config; if(!s.workerUrl||!dbId) return;
+  try{
+    const res=await api({action:'query', database_id:dbId});
+    const row=(res.results||[]).find(p=>(p.properties['항목']?.title?.[0]?.plain_text||'')==='inquiries');
+    const raw=row&&row.properties['값']?.rich_text?.[0]?.plain_text;
+    if(raw){ DB.settings.inq=JSON.parse(raw); store.set(KEY,JSON.stringify(DB)); }
+  }catch(e){}
+}
+function funnelCard(bid, ym, rows){
+  const views=rows.reduce((a,s)=>a+Number(s.views||0),0);
+  const profile=rows.reduce((a,s)=>a+Number(s.profile||0),0);
+  const siteAuto=trafficOf(bid,ym,'threads');
+  const site=siteAuto===null? rows.reduce((a,s)=>a+Number(s.site||0),0) : siteAuto;
+  const inq=getInq(bid,ym);
+  const pct=(a,b)=> b? (Math.round(a/b*1000)/10)+'%' : '—';
+  const step=(l,v,sub)=>`<div class="fn__s"><div class="fn__n mono">${Number(v||0).toLocaleString()}</div><div class="fn__l">${l}</div>${sub?`<div class="eyebrow">${sub}</div>`:''}</div>`;
+  const arrow=(l,v)=>`<div class="fn__a"><div class="fn__p mono">${v}</div><div class="eyebrow">${l}</div></div>`;
+  return `<section class="card"><div class="card__hd"><h3>${ymLabel(ym)} 구간별 전환</h3>
+      <span class="eyebrow" style="margin-left:auto">${siteAuto===null?'사이트 유입은 직접 입력':'사이트 유입은 방문 통계 자동'}</span></div>
+    <div class="card__bd"><div class="fn">
+      ${step('조회수',views)}
+      ${arrow('프로필 유입 / 조회수', pct(profile,views))}
+      ${step('프로필 유입',profile)}
+      ${arrow('사이트 유입 / 프로필 유입', pct(site,profile))}
+      ${step('사이트 유입',site,'스레드 경유')}
+      ${arrow('문의 / 사이트 유입', pct(inq,site))}
+      ${step('문의 수',inq)}
+    </div>
+    <div style="display:flex;align-items:center;gap:10px;margin-top:14px">
+      <span class="eyebrow">이 달 문의 수</span>
+      <input type="number" class="num" id="inq_in" value="${inq}" style="width:120px" />
+      ${siteAuto===null?`<span class="eyebrow">사이트 유입 합</span><input type="number" class="num" id="site_in" value="${site}" style="width:140px" />`:''}
+    </div></div></section>`;
+}
 function statsView(){
   const b=brandOf(UI.brand);
   const all=statRows(b.id);
@@ -1505,6 +1585,7 @@ function statsView(){
       <div class="ustat__c"><div class="ustat__n">${sum('saves').toLocaleString()}</div><div class="ustat__l">저장 합</div></div>
       <div class="ustat__c"><div class="ustat__n">${sum('profile').toLocaleString()}</div><div class="ustat__l">프로필 유입 합</div></div>
     </div>
+    ${funnelCard(b.id, ym, rows)}
     <div class="grid g2">
       <section class="card"><div class="card__hd"><h3>훅유형별 평균 ${mLabel[metric]}</h3></div><div class="card__bd">${rank('hook','훅유형')}</div></section>
       <section class="card"><div class="card__hd"><h3>소재출처별 평균 ${mLabel[metric]}</h3></div><div class="card__bd">${rank('source','소재출처')}</div></section>
@@ -2467,7 +2548,7 @@ async function pullBrands(){
   }catch(e){}
 }
 async function pullAll(quiet){
-  await pullBrands();
+  await pullBrands(); await pullConfig(); await pullTraffic();
   const s=DB.settings; let n=0;
   const snap=()=>JSON.stringify(['contents','tasks','sales','products','plans','costs','actions','refs'].map(k=>DB[k]));
   const before=snap();
@@ -2567,6 +2648,10 @@ function bind(){
   document.querySelectorAll('[data-gobrand]').forEach(el=>el.onclick=()=>{ UI.brand=el.dataset.gobrand; UI.tab='summary'; saveUI(); render(); });
   document.querySelectorAll('[data-ptab]').forEach(el=>el.onclick=()=>{ UI.planTab=el.dataset.ptab; saveUI(); render(); });
   document.querySelectorAll('[data-refcat]').forEach(el=>el.onclick=()=>{ UI.refCat=el.dataset.refcat; saveUI(); render(); });
+  const inqEl=document.getElementById('inq_in');
+  if(inqEl) inqEl.onchange=()=>{ setInq(UI.brand, UI.ym, inqEl.value); render(); };
+  const siteEl=document.getElementById('site_in');
+  if(siteEl) siteEl.onchange=()=>{ const v=Number(siteEl.value||0); const rows=(DB.stats||[]).filter(s=>s.brandId===UI.brand && (s.date||'').startsWith(UI.ym)); if(rows[0]){ rows[0].site=v; rows[0].dirty=true; } else { DB.stats.push({id:uid(),brandId:UI.brand,date:UI.ym+'-01',title:'(사이트 유입 기록)',views:0,profile:0,site:v,dirty:true}); } save(); render(); };
   document.querySelectorAll('[data-statmetric]').forEach(el=>el.onclick=()=>{ UI.statMetric=el.dataset.statmetric; saveUI(); render(); });
   document.querySelectorAll('[data-edit-stat]').forEach(el=>el.onclick=()=>statModal(el.dataset.editStat));
   document.querySelectorAll('[data-edit-ref]').forEach(el=>el.onclick=()=>refModal(el.dataset.editRef));
