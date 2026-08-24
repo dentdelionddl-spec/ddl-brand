@@ -1488,6 +1488,25 @@ function avgBy(list,key,metric){
   list.forEach(s=>{ const k=s[key]||'미지정'; (g[k]=g[k]||[]).push(Number(s[metric]||0)); });
   return Object.entries(g).map(([k,v])=>({k, n:v.length, avg: Math.round(v.reduce((a,b)=>a+b,0)/v.length)})).sort((a,b)=>b.avg-a.avg);
 }
+const INQ_DB='b400cf41ae804765b1b15e3a4b004ba1';
+async function pullInquiries(){
+  const s=DB.settings; if(!s.workerUrl) return;
+  try{
+    const res=await api({action:'query', database_id:INQ_DB});
+    DB.inquiries=(res.results||[]).map(p=>{ const P=p.properties;
+      return { id:p.id, name:P['\uBE0C\uB79C\uB4DC\u00B7\uD68C\uC0AC\uBA85']?.title?.[0]?.plain_text||'',
+        at:(P['\uC811\uC218\uC77C\uC2DC']?.created_time||'').slice(0,10),
+        src:P['\uC720\uC785 \uACBD\uB85C']?.select?.name||'',
+        status:P['\uC9C4\uD589 \uC0C1\uD0DC']?.select?.name||'' };
+    });
+    store.set(KEY,JSON.stringify(DB));
+  }catch(e){}
+}
+function inqCount(bid, ym, onlyThreads){
+  if(bid!==TRAFFIC_BRAND) return null;
+  const rows=(DB.inquiries||[]).filter(r=>String(r.at||'').startsWith(ym));
+  return onlyThreads? rows.filter(r=>r.src==='\uC2A4\uB808\uB4DC').length : rows.length;
+}
 const TRAFFIC_DB='22b96ecfb203408295a3f8755c6935b6';
 const TRAFFIC_BRAND='factory';
 async function pullTraffic(){
@@ -1538,7 +1557,9 @@ function funnelCard(bid, ym, rows){
   const profile=rows.reduce((a,s)=>a+Number(s.profile||0),0);
   const siteAuto=trafficOf(bid,ym,'threads');
   const site=siteAuto===null? rows.reduce((a,s)=>a+Number(s.site||0),0) : siteAuto;
-  const inq=getInq(bid,ym);
+  const inqAuto=inqCount(bid,ym,true);
+  const inq=(inqAuto===null? getInq(bid,ym) : inqAuto);
+  const inqAll=inqCount(bid,ym,false);
   const pct=(a,b)=> b? (Math.round(a/b*1000)/10)+'%' : '—';
   const step=(l,v,sub)=>`<div class="fn__s"><div class="fn__n mono">${Number(v||0).toLocaleString()}</div><div class="fn__l">${l}</div>${sub?`<div class="eyebrow">${sub}</div>`:''}</div>`;
   const arrow=(l,v)=>`<div class="fn__a"><div class="fn__p mono">${v}</div><div class="eyebrow">${l}</div></div>`;
@@ -1551,11 +1572,11 @@ function funnelCard(bid, ym, rows){
       ${arrow('사이트 유입 / 프로필 유입', pct(site,profile))}
       ${step('사이트 유입',site,'스레드 경유')}
       ${arrow('문의 / 사이트 유입', pct(inq,site))}
-      ${step('문의 수',inq)}
+      ${step('문의 수',inq, inqAuto===null?'':'스레드 경유 · 전체 '+inqAll+'건')}
     </div>
     <div style="display:flex;align-items:center;gap:10px;margin-top:14px">
-      <span class="eyebrow">이 달 문의 수</span>
-      <input type="number" class="num" id="inq_in" value="${inq}" style="width:120px" />
+      ${inqAuto===null?`<span class="eyebrow">이 달 문의 수</span>`:'<span class="eyebrow">문의는 오더문의 DB에서 자동</span>'}
+      ${inqAuto===null?`<input type="number" class="num" id="inq_in" value="${inq}" style="width:120px" />`:''}
       ${siteAuto===null?`<span class="eyebrow">사이트 유입 합</span><input type="number" class="num" id="site_in" value="${site}" style="width:140px" />`:''}
     </div></div></section>`;
 }
@@ -2548,7 +2569,7 @@ async function pullBrands(){
   }catch(e){}
 }
 async function pullAll(quiet){
-  await pullBrands(); await pullConfig(); await pullTraffic();
+  await pullBrands(); await pullConfig(); await pullTraffic(); await pullInquiries();
   const s=DB.settings; let n=0;
   const snap=()=>JSON.stringify(['contents','tasks','sales','products','plans','costs','actions','refs'].map(k=>DB[k]));
   const before=snap();
