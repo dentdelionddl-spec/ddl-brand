@@ -1054,10 +1054,11 @@ function calendarView(){
   const [y,m]=ym.split('-').map(Number);
   const first=new Date(y,m-1,1), dim=new Date(y,m,0).getDate(), lead=first.getDay();
   const onlyContent = EMBED && EMBED.only==='content';
+  const noTasks = EMBED && (EMBED.only==='content' || EMBED.only==='plan');
   const cs=contentsSpanning(b.id,ym).filter(c=>!onlyContent || CONTENT_TYPES.includes(c.type));
   const calWho=(UI.taskOwner===undefined? (DB.settings.me||'') : UI.taskOwner)||'';
   const allDayTasks=tasksSpanning(b.id,ym);
-  const dayTasks=(EMBED&&EMBED.only==='content')? [] : allDayTasks.filter(t=>hasOwner(t,calWho));
+  const dayTasks=noTasks? [] : allDayTasks.filter(t=>hasOwner(t,calWho));
   const calOwners=[...new Set([...OWNERS, ...allDayTasks.flatMap(t=>ownersOf(t))])];
   const cells=[];
   for(let i=0;i<lead;i++) cells.push(`<div class="cell cell--out"></div>`);
