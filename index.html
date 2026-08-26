@@ -590,6 +590,9 @@ h1,h2,h3{font-weight:700}
 .fn__p{font-size:14px;font-weight:700;color:var(--accent)}
 .fn__a .eyebrow{font-size:9.5px;margin-top:2px;text-align:center;max-width:110px}
 @media(max-width:860px){.fn{flex-direction:column}.fn__a{flex-direction:row;gap:8px;border:0;border-top:1px dashed var(--line);border-bottom:1px dashed var(--line);padding:6px 0}}
+
+body.ro [data-newdate], body.ro [data-act], body.ro [data-toggle-content], body.ro [data-toggle-task-btn], body.ro .btn--primary{display:none !important}
+body.ro .ev, body.ro .tk, body.ro .cell{cursor:default}
 </style>
 </head>
 <body>
@@ -760,7 +763,7 @@ function ymLabel(ym){ const [y,m]=ym.split('-'); return `${y}년 ${Number(m)}월
    RENDER
    ========================================================= */
 const EMBED=(()=>{ const q=new URLSearchParams(location.search); if(!q.get('embed')) return null;
-  return { brand:(q.get('brand')||'').toLowerCase(), view:(q.get('view')||'calendar'), only:(q.get('only')||'') }; })();
+  return { brand:(q.get('brand')||'').toLowerCase(), view:(q.get('view')||'calendar'), only:(q.get('only')||''), ro:!!q.get('readonly') }; })();
 function applyEmbed(){
   if(!EMBED) return;
   const b=DB.brands.find(x=>x.id.toLowerCase()===EMBED.brand || (x.name||'').toLowerCase()===EMBED.brand);
@@ -770,6 +773,7 @@ function applyEmbed(){
 }
 function render(){
   applyEmbed();
+  if(EMBED&&EMBED.ro) document.body.classList.add('ro');
   if(UI.brand==='__all') UI.brand=DB.brands[0]?.id||'__set';
   const special = UI.brand==='__set' || UI.brand==='__home';
   if(!special){ const b=brandOf(UI.brand)||DB.brands[0]; UI.brand=b?.id||'__set'; }
@@ -1815,6 +1819,7 @@ function planModal(id){
   return planModalWith(p0,isNew);
 }
 function planModalWith(p,isNew){
+  if(EMBED&&EMBED.ro) return;
   const id=isNew?null:p.id;
   modal({
     title:(isNew?'추가':'편집')+' — '+(p.kind||'영상'),
@@ -2264,6 +2269,7 @@ function attChips(list, editable){
     <span class="tag" style="padding:5px 8px">${/^video\//.test(a.mime||'')?'🎬':'🖼'} ${esc(a.name||'파일')}${editable?` <b data-attdel="${i}" style="cursor:pointer;color:var(--alert);margin-left:4px">✕</b>`:''}</span>`).join('')}</div>`;
 }
 function contentModal(id,date,cat,end){
+  if(EMBED&&EMBED.ro) return;
   const isNew=!id;
   const c = isNew? {id:uid(),brandId:UI.brand,date:date||TODAY,end:(end&&end!==date?end:''),type:(cat==='콘텐츠'?'EGC':'온라인'),title:'',memo:'',done:false}
                  : DB.contents.find(x=>x.id===id);
