@@ -1056,7 +1056,7 @@ function calendarView(){
   const onlyContent = EMBED && EMBED.only==='content';
   const noTasks = EMBED && (EMBED.only==='content' || EMBED.only==='plan');
   const cs=contentsSpanning(b.id,ym).filter(c=>!onlyContent || CONTENT_TYPES.includes(c.type));
-  const calWho=(UI.taskOwner===undefined? (DB.settings.me||'') : UI.taskOwner)||'';
+  const calWho=EMBED? '' : ((UI.taskOwner===undefined? (DB.settings.me||'') : UI.taskOwner)||'');
   const allDayTasks=tasksSpanning(b.id,ym);
   const dayTasks=noTasks? [] : allDayTasks.filter(t=>hasOwner(t,calWho));
   const calOwners=[...new Set([...OWNERS, ...allDayTasks.flatMap(t=>ownersOf(t))])];
@@ -1078,7 +1078,7 @@ function calendarView(){
 
   const chip=(label,val,on)=>`<button class="btn btn--sm" data-taskowner="${esc(val)}" style="border-radius:999px;${on?'background:var(--ink);border-color:var(--ink);color:#fff':''}">${esc(label)}</button>`;
   if(EMBED) return `<section class="card">
-    <div class="card__hd"><h3>${ymLabel(ym)} 콘텐츠 캘린더</h3></div>
+    <div class="card__hd"><h3>${ymLabel(ym)} 캘린더</h3><div style="margin-left:auto">${monthNav()}</div></div>
     <div class="cal">
       ${['일','월','화','수','목','금','토'].map(d=>`<div class="cal__dow">${d}</div>`).join('')}
       ${cells.join('')}
