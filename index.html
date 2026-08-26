@@ -2205,6 +2205,11 @@ function paintSel(){
   });
 }
 function bindCalendar(){
+  if(EMBED&&EMBED.ro){
+    document.querySelectorAll('#view [draggable="true"]').forEach(el=>{ el.setAttribute('draggable','false'); el.style.cursor='default'; });
+    document.querySelectorAll('#view [data-newdate]').forEach(el=>el.remove());
+    return;
+  }
   document.querySelectorAll('[data-drag]').forEach(el=>{
     el.addEventListener('dragstart',e=>{ e.dataTransfer.setData('text/plain', el.dataset.drag); e.dataTransfer.effectAllowed='move'; });
   });
