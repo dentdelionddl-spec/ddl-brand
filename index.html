@@ -593,6 +593,12 @@ h1,h2,h3{font-weight:700}
 
 body.ro [data-newdate], body.ro [data-act], body.ro [data-toggle-content], body.ro [data-toggle-task-btn], body.ro .btn--primary{display:none !important}
 body.ro .ev, body.ro .tk, body.ro .cell{cursor:default}
+
+.thrgal{display:grid;grid-template-columns:repeat(5,1fr);gap:6px;margin:12px 14px 0}
+.thrgal img,.thrgal video{width:100%;aspect-ratio:1/1;object-fit:cover;border-radius:8px;border:1px solid var(--line);display:block;background:#F4F5F9}
+.thrgal a{display:block;line-height:0}
+.thrgal + .assetbox{margin-top:12px}
+@media(max-width:640px){.thrgal{grid-template-columns:repeat(3,1fr)}}
 </style>
 </head>
 <body>
@@ -1796,6 +1802,7 @@ function threadsView(b,ym,all){
             <div class="post__m">${it.done?'<span class="tag tag--ok">\uBC1C\uD589</span>':''}</div>
             ${it.title?`<div class="thr__h">${esc(it.title)}</div>`:''}
             <div class="thr__t">${esc((it.body||'').slice(0,300))}</div>
+            ${(it.att||[]).filter(a=>a.url).length?`<div class="thrgal">${(it.att||[]).filter(a=>a.url).map(a=>/video/i.test(a.mime||'')?`<video src="${a.url}" controls preload="metadata"></video>`:`<a href="${a.url}" target="_blank" rel="noopener"><img src="${a.url}" loading="lazy" alt="" /></a>`).join('')}</div>`:''}
             ${(it.asset||it.assetNote)?`<div class="assetbox"><span class="assetbox__k">소재</span><span class="assetbox__v">${esc(it.asset||'미정')}</span>${it.assetNote?`<span class="assetbox__n">${esc(it.assetNote)}</span>`:''}</div>`:''}
           </div>`).join('')
         : '<div class="eyebrow">비어 있음</div>'}
