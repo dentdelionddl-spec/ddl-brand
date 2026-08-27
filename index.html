@@ -1585,6 +1585,46 @@ function funnelCard(bid, ym, rows){
       ${siteAuto===null?`<span class="eyebrow">사이트 유입 합</span><input type="number" class="num" id="site_in" value="${site}" style="width:140px" />`:''}
     </div></div></section>`;
 }
+function csvCell(v){ const s=String(v==null?'':v); return /[",\n]/.test(s)? '"'+s.replace(/"/g,'""')+'"' : s; }
+function statsExport(scope){
+  const b=brandOf(UI.brand);
+  const all=statRows(b.id);
+  const rows=(scope==='all')? all : all.filter(s=>(s.date||'').startsWith(UI.ym));
+  const head=['발행일','브랜드','채널','제목','URL','조회수','좋아요','댓글','저장','팔로우 전환','프로필 유입','목적태그','훅유형','소재출처','화자위치','글자수','이미지 유무','발행시간대','본문'];
+  const lines=[head.map(csvCell).join(',')];
+  rows.forEach(s=>{ lines.push([s.date||'', b.name, s.channel||'스레드', s.title||'', s.url||'',
+    s.views||0, s.likes||0, s.replies||0, s.saves||0, s.follows||0, s.profile||0,
+    s.purpose||'', s.hook||'', s.source||'', s.voice||'', s.chars||(s.body||'').length, s.hasImg?'O':'X', s.slot||'', (s.body||'').replace(/\r?\n/g,' ⏎ ')].map(csvCell).join(',')); });
+  const metrics=[['views','조회수'],['likes','좋아요'],['replies','댓글'],['saves','저장'],['profile','프로필 유입'],['follows','팔로우 전환']];
+  const groups=[['hook','훅유형'],['source','소재출처'],['purpose','목적태그'],['voice','화자위치'],['slot','발행시간대']];
+  lines.push(''); lines.push(csvCell('속성별 평균 (건수 / '+metrics.map(m=>m[1]).join(' / ')+')'));
+  lines.push(['구분','값','편수',...metrics.map(m=>m[1])].map(csvCell).join(','));
+  groups.forEach(([key,label])=>{
+    const keys=[...new Set(rows.map(s=>s[key]||'미지정'))];
+    keys.forEach(k=>{ const sub=rows.filter(s=>(s[key]||'미지정')===k);
+      const avg=m=>sub.length? Math.round(sub.reduce((a,s)=>a+Number(s[m]||0),0)/sub.length) : 0;
+      lines.push([label,k,sub.length,...metrics.map(m=>avg(m[0]))].map(csvCell).join(',')); });
+  });
+  const sum=k=>rows.reduce((a,s)=>a+Number(s[k]||0),0);
+  const siteAuto=trafficOf(b.id, UI.ym, 'threads');
+  const site=siteAuto===null? rows.reduce((a,s)=>a+Number(s.site||0),0) : siteAuto;
+  const inqAuto=inqCount(b.id, UI.ym, true);
+  const inq=(inqAuto===null? getInq(b.id,UI.ym) : inqAuto);
+  const pct=(x,y)=> y? (Math.round(x/y*1000)/10)+'%' : '';
+  lines.push(''); lines.push(csvCell('구간별 전환'));
+  lines.push(['구간','값','전환율'].map(csvCell).join(','));
+  lines.push(['조회수',sum('views'),''].map(csvCell).join(','));
+  lines.push(['프로필 유입',sum('profile'),pct(sum('profile'),sum('views'))].map(csvCell).join(','));
+  lines.push(['사이트 유입',site,pct(site,sum('profile'))].map(csvCell).join(','));
+  lines.push(['문의 수',inq,pct(inq,site)].map(csvCell).join(','));
+  const csv='\uFEFF'+lines.join('\r\n');
+  const blob=new Blob([csv],{type:'text/csv;charset=utf-8;'});
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(blob);
+  a.download=(b.name||'brand').replace(/\s+/g,'')+'_스레드분석_'+(scope==='all'?'전체':UI.ym)+'.csv';
+  document.body.appendChild(a); a.click(); setTimeout(()=>{ URL.revokeObjectURL(a.href); a.remove(); },500);
+  toast(rows.length+'건 내려받았습니다',2000);
+}
 function statsView(){
   const b=brandOf(UI.brand);
   const all=statRows(b.id);
@@ -1603,6 +1643,8 @@ function statsView(){
       <span class="eyebrow">기준 지표</span>
       ${Object.entries(mLabel).map(([k,l])=>`<button class="btn btn--sm" data-statmetric="${k}" style="border-radius:999px;${metric===k?'background:var(--ink);border-color:var(--ink);color:#fff':''}">${l}</button>`).join('')}
       <div class="spacer" style="flex:1"></div>
+      <button class="btn btn--sm" data-act="stat-xls">이 달 엑셀</button>
+      <button class="btn btn--sm" data-act="stat-xls-all">전체 엑셀</button>
       <button class="btn btn--primary btn--sm" data-act="stat-new">기록 추가</button>
     </div>
     <div class="ustat">
@@ -2764,6 +2806,8 @@ function act(a){
   if(a==='ref-new') return refModal(null);
   if(a==='ref-bulk') return bulkRefModal();
   if(a==='stat-new') return statModal(null);
+  if(a==='stat-xls') return statsExport('month');
+  if(a==='stat-xls-all') return statsExport('all');
   if(a==='thr-past'){ UI.thrPast=!UI.thrPast; saveUI(); render(); return; }
   if(a==='ref-select'){ refMode=true; refSel.clear(); render(); return; }
   if(a==='ref-selcancel'){ refMode=false; refSel.clear(); render(); return; }
