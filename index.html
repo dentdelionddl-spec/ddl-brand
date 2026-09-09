@@ -704,6 +704,39 @@ h1,h2,h3{letter-spacing:-0.022em}
 /* 모달 */
 .modal{border-radius:20px;border:.5px solid var(--line);box-shadow:0 30px 80px -40px rgba(16,20,32,.55)}
 .modal__hd,.modal__ft{border-color:var(--line2)}
+
+/* ===== 격자 마감 (v18) ===== */
+/* 표·격자는 카드 안쪽에서 자기 테두리를 가진 사각형으로 */
+.calwrap{margin:0 20px 20px;border:.5px solid var(--line);border-radius:12px;overflow:auto;background:#fff}
+.cal{border:0}
+.cal__dow{background:#FBFBFD}
+.card__hd{border-bottom:0;background:transparent;backdrop-filter:none;height:60px}
+.cell{min-height:112px}
+.cell:hover{background:#FCFCFE}
+.cell--today:hover{background:rgba(10,108,255,.06)}
+
+/* 표도 같은 규칙 */
+#view .card__bd > table{margin:0;width:100%}
+#view thead th:first-child,#view tbody td:first-child,#view tfoot th:first-child{padding-left:2px}
+#view thead th:last-child,#view tbody td:last-child,#view tfoot th:last-child{padding-right:2px}
+
+/* 요약·목록 카드 안 여백 통일 */
+.card__bd{padding:16px 20px 20px}
+.areahd{margin:26px 0 12px}
+.areahd h3{font-size:12.5px;font-weight:650;letter-spacing:.01em;color:var(--ink2)}
+.areahd .line{background:var(--line2)}
+
+/* 항목 칩 */
+.ev{border-radius:6px;font-weight:550}
+.tag{border-radius:6px;font-size:10.5px;padding:2.5px 7px}
+
+/* 모달 내부 */
+.fgroup{border:.5px solid var(--line);border-radius:14px;background:#FCFCFE}
+.pastebox{border:.5px dashed var(--line);border-radius:14px}
+
+/* 전체 진행바 */
+.track{border-radius:99px;height:6px}
+.track i{border-radius:99px}
 </style>
 </head>
 <body>
