@@ -634,6 +634,12 @@ body.ro .cell--today{background:#F2F6FF}
 body.ro .cell--today .cell__d{color:#2E6BE6}
 body.ro .card{border-radius:0;border:0;box-shadow:none}
 body.ro .card__hd{height:56px}
+
+/* --- 임베드: 내부 스크롤 없애기 (v16) --- */
+body.ro{overflow:hidden}
+body.ro .calwrap{overflow-x:auto;overflow-y:hidden}
+body.ro .cal{min-width:0}
+@media(max-width:1100px){ body.ro .cal{min-width:960px} }
 </style>
 </head>
 <body>
