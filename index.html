@@ -799,6 +799,23 @@ h1,h2,h3{letter-spacing:-0.022em}
 .brandbar .btab{border-radius:5px !important}
 .modal button,.modal .btn{border-radius:5px !important}
 input[type="file"]::file-selector-button{border-radius:5px}
+
+/* ===== 탭 밑줄 정확히 구분선 위에 · 타이포 복구 (v22) ===== */
+.tab{margin-bottom:0;padding:18px 0 15px;border-bottom:0}
+.tab::after{content:"";position:absolute;left:0;right:0;bottom:-1px;height:2px;border-radius:2px 2px 0 0;background:transparent}
+.tab[aria-selected="true"]::after,.tab[aria-current="true"]::after{background:var(--ink)}
+.tabrow{height:55px}
+
+/* 프리텐다드 본래 비율로 */
+body{letter-spacing:normal}
+h1,h2,h3{letter-spacing:-0.015em}
+.tab{font-size:13.5px;font-weight:600;letter-spacing:normal}
+.btn{font-weight:600;letter-spacing:normal}
+.card__hd h3{font-weight:700;letter-spacing:-0.015em}
+.brandhd h1,.view h1{font-weight:800;letter-spacing:-0.025em}
+.ev{font-weight:500;letter-spacing:normal}
+.cell__d{font-weight:600}
+.tk__title{letter-spacing:normal}
 </style>
 </head>
 <body>
