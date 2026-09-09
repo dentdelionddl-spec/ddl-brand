@@ -599,6 +599,15 @@ body.ro .ev, body.ro .tk, body.ro .cell{cursor:default}
 .thrgal a{display:block;line-height:0}
 .thrgal + .assetbox{margin-top:12px}
 @media(max-width:640px){.thrgal{grid-template-columns:repeat(3,1fr)}}
+
+/* --- 캘린더 열 고정·폭 확보 (v11) --- */
+.cal{grid-template-columns:repeat(7,minmax(0,1fr)) !important;min-width:1050px}
+.calwrap{overflow-x:auto;overflow-y:visible;-webkit-overflow-scrolling:touch;margin:0 -18px;padding:0 18px}
+.cell{min-width:0}
+.ev{min-width:0;max-width:100%}
+.cell__d{font-variant-numeric:tabular-nums}
+body.calpage .shell,body.calpage .wrapmax{max-width:1680px}
+@media(max-width:1100px){.cal{min-width:960px}}
 </style>
 </head>
 <body>
@@ -1085,10 +1094,10 @@ function calendarView(){
   const chip=(label,val,on)=>`<button class="btn btn--sm" data-taskowner="${esc(val)}" style="border-radius:999px;${on?'background:var(--ink);border-color:var(--ink);color:#fff':''}">${esc(label)}</button>`;
   if(EMBED) return `<section class="card">
     <div class="card__hd"><h3>${ymLabel(ym)} 캘린더</h3><div style="margin-left:auto">${monthNav()}</div></div>
-    <div class="cal">
+    <div class="calwrap"><div class="cal">
       ${['일','월','화','수','목','금','토'].map(d=>`<div class="cal__dow">${d}</div>`).join('')}
       ${cells.join('')}
-    </div>
+    </div></div>
   </section>`;
   return `<div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin-bottom:12px">
       <span class="eyebrow">업무 담당</span>
@@ -1099,10 +1108,10 @@ function calendarView(){
   <section class="card">
     <div class="card__hd"><h3>${ymLabel(ym)} 운영 캘린더</h3>
       <span class="eyebrow" style="margin-left:auto">${calWho?esc(calWho)+' 업무만':'전체 업무'}</span></div>
-    <div class="cal">
+    <div class="calwrap"><div class="cal">
       ${['일','월','화','수','목','금','토'].map(d=>`<div class="cal__dow">${d}</div>`).join('')}
       ${cells.join('')}
-    </div>
+    </div></div>
   </section>`;
 }
 
