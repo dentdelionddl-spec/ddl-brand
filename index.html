@@ -776,6 +776,18 @@ h1,h2,h3{letter-spacing:-0.022em}
 /* 카드 그림자 · 계층 */
 .card{box-shadow:0 0 0 .5px rgba(16,20,32,.055), 0 1px 2px rgba(16,20,32,.04), 0 12px 32px -24px rgba(16,20,32,.35)}
 .grid{gap:18px}
+
+/* ===== 섹션 탭 줄 재정리 (v20) ===== */
+.tabrow{height:56px;align-items:center}
+.tabs{display:flex;gap:28px;align-items:center}
+.tab{padding:18px 0 16px;font-size:13.5px;font-weight:550;color:#6E7180;border-bottom:2px solid transparent;transition:color .14s ease,border-color .14s ease;background:transparent}
+.tab:hover{color:var(--ink2);background:transparent}
+.tab[aria-selected="true"],.tab[aria-current="true"]{color:var(--ink);font-weight:650;border-bottom-color:var(--ink)}
+
+/* 월 이동: 작고 단정하게 */
+.monthnav{height:32px;border-radius:8px;box-shadow:none;border-color:var(--line)}
+.monthnav button{width:30px;height:30px;font-size:13px;line-height:1}
+.monthnav .cur{padding:0 12px;font-size:12.5px;font-weight:600;line-height:30px;border-color:var(--line2)}
 </style>
 </head>
 <body>
