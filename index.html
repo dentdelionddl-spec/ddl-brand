@@ -640,6 +640,70 @@ body.ro{overflow:hidden}
 body.ro .calwrap{overflow-x:auto;overflow-y:hidden}
 body.ro .cal{min-width:0}
 @media(max-width:1100px){ body.ro .cal{min-width:960px} }
+
+/* ================= Apple-ish 마감 (v17) ================= */
+:root{
+  --line:rgba(16,20,32,.09);
+  --line2:rgba(16,20,32,.055);
+  --paper:#F5F5F7;
+  --ink:#0B0C10;
+  --ink2:#3C3F46;
+  --mut:#86868B;
+  --accent:#0A6CFF;
+  --sh:0 0 0 .5px rgba(16,20,32,.05), 0 8px 24px -16px rgba(16,20,32,.28);
+}
+body{background:var(--paper);-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;letter-spacing:-0.011em}
+h1,h2,h3{letter-spacing:-0.022em}
+
+/* 카드 */
+.card{border:.5px solid var(--line);border-radius:18px;box-shadow:var(--sh);overflow:hidden;background:#fff}
+.card__hd{height:56px;padding:0 20px;border-bottom:.5px solid var(--line2);background:rgba(255,255,255,.72);backdrop-filter:saturate(180%) blur(12px)}
+.card__hd h3{font-size:15px;font-weight:650}
+.card__bd{padding:18px 20px}
+
+/* 캘린더: 겹선 제거 */
+.calwrap{margin:0;padding:0}
+.cal{border:0;min-width:1080px}
+.cal__dow{font-family:var(--sans);font-size:11px;font-weight:600;letter-spacing:.02em;color:var(--mut);background:#FBFBFD;border:0;border-bottom:.5px solid var(--line);padding:11px 0}
+.cell{border:0;border-right:.5px solid var(--line2);border-bottom:.5px solid var(--line2)}
+.cell:nth-child(7n){border-right:0}
+.cal > .cell:nth-last-child(-n+7){border-bottom:0}
+.cell--today{background:rgba(10,108,255,.045)}
+.cell--today .cell__d{color:var(--accent);font-weight:700}
+.ev{border-radius:7px;font-size:11.5px;padding:4px 7px;border-left-width:2.5px;transition:transform .12s ease, box-shadow .12s ease}
+.ev:hover{transform:translateY(-.5px);box-shadow:0 4px 10px -6px rgba(16,20,32,.45)}
+
+/* 버튼 */
+.btn{border-radius:9px;border:.5px solid var(--line);background:#fff;font-weight:550;transition:background .14s ease, border-color .14s ease, transform .1s ease}
+.btn:hover{background:#FAFAFC}
+.btn:active{transform:scale(.985)}
+.btn--primary{background:var(--accent);border-color:transparent;color:#fff;box-shadow:0 6px 16px -10px rgba(10,108,255,.9)}
+.btn--primary:hover{background:#0961E6}
+
+/* 탭·칩 */
+.brandbar{background:#0B0C10;border-bottom:.5px solid rgba(255,255,255,.08)}
+.brandbar .btab[aria-current="true"]{background:var(--accent)}
+.tab{font-weight:550}
+.tab[aria-selected="true"],.tab[aria-current="true"]{color:var(--ink)}
+.tag,.mchip,.assetbox__v{border-radius:6px;font-weight:600}
+
+/* 입력 */
+.f input,.f select,.f textarea{border:.5px solid var(--line);border-radius:10px;background:#fff;transition:border-color .14s ease, box-shadow .14s ease}
+.f input:focus,.f select:focus,.f textarea:focus{border-color:var(--accent);box-shadow:0 0 0 3.5px rgba(10,108,255,.14)}
+
+/* 목록 행 */
+.tk{border:.5px solid var(--line);border-radius:12px;transition:background .14s ease, border-color .14s ease}
+.tk--click:hover{background:#FBFCFF;border-color:rgba(10,108,255,.28);box-shadow:none}
+.rank__r,.gauge{border-bottom:.5px solid var(--line2)}
+#view thead th{border-bottom:.5px solid var(--line)}
+#view tbody td{border-bottom:.5px solid var(--line2)}
+#view tfoot th{border-top:.5px solid var(--line)}
+.track{background:rgba(16,20,32,.07)}
+.track i{background:var(--accent) !important}
+
+/* 모달 */
+.modal{border-radius:20px;border:.5px solid var(--line);box-shadow:0 30px 80px -40px rgba(16,20,32,.55)}
+.modal__hd,.modal__ft{border-color:var(--line2)}
 </style>
 </head>
 <body>
