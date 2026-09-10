@@ -1253,6 +1253,20 @@ function applyEmbed(){
   if(EMBED.view==='upload'){ UI.tab='plans'; UI.planTab='upload'; }
   else { UI.tab='calendar'; }
 }
+let __todayScrollKey="";
+function scrollToToday(){
+  if(window.innerWidth>760) return;
+  if(UI.tab!=="calendar") { __todayScrollKey=""; return; }
+  const key=UI.brand+"|"+UI.ym+"|"+UI.tab;
+  if(__todayScrollKey===key) return;
+  __todayScrollKey=key;
+  const el=document.querySelector(".cell--today");
+  if(!el) return;
+  requestAnimationFrame(()=>{
+    const y=el.getBoundingClientRect().top + window.scrollY - 96;
+    window.scrollTo({top:Math.max(0,y), behavior:"smooth"});
+  });
+}
 function mobileLayout(){
   if(window.innerWidth>760) return;
   const head=document.querySelector(".tophead");
@@ -1263,6 +1277,7 @@ function mobileLayout(){
   const prim=ctrl && ctrl.querySelector(".btn--primary");
   if(hd && prim && prim.parentElement!==hd){ hd.appendChild(prim); prim.classList.add("hd-action"); }
   if(ctrl && !ctrl.querySelector("button")) ctrl.style.display="none";
+  scrollToToday();
 }
 function render(){
   applyEmbed();
