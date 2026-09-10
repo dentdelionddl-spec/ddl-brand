@@ -1019,6 +1019,14 @@ body.ro .ev:hover{transform:none;box-shadow:0 1px 2px rgba(16,20,32,.04)}
   .tophead--m .monthnav button{height:auto !important;align-self:stretch;display:flex;align-items:center;justify-content:center}
   .tophead--m .monthnav .cur{line-height:normal !important;display:flex;align-items:center}
 }
+
+/* ===== 월 버튼 = 브랜드명 높이 (v32) ===== */
+@media(max-width:760px){
+  .tophead--m{align-items:flex-start !important}
+  .tophead--m .monthnav{align-self:flex-start !important;height:28px !important;margin-top:0 !important}
+  .tophead--m .monthnav button{width:26px !important;height:26px !important;font-size:12px}
+  .tophead--m .monthnav .cur{padding:0 10px !important;font-size:12px !important;line-height:26px !important}
+}
 </style>
 </head>
 <body>
