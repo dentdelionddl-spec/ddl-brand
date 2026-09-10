@@ -1156,6 +1156,27 @@ body.ro .ev:hover{transform:none;box-shadow:0 1px 2px rgba(16,20,32,.04)}
   .cell__add{grid-column:2;display:none !important}
   .card__bd{padding:6px 16px 16px !important}
 }
+
+/* ===== 아젠다 마감 (v41) ===== */
+@media(max-width:760px){
+  .card{border:0 !important;box-shadow:0 0 0 .5px rgba(16,20,32,.05), 0 12px 30px -26px rgba(16,20,32,.4) !important;border-radius:18px !important}
+  .card__hd{padding:20px 18px 14px !important}
+  .card__hd h3{font-size:19px !important;font-weight:750 !important;letter-spacing:-.02em}
+  .card__bd{padding:0 18px 20px !important}
+
+  .cell{grid-template-columns:42px 1fr !important;column-gap:14px !important;padding:0 0 18px !important}
+  .cell__d{flex-direction:column-reverse !important;gap:2px !important;padding-top:14px !important;font-size:17px !important;font-weight:750 !important;color:#12141A !important;line-height:1.1}
+  .cell__w{font-size:11px !important;font-weight:600;color:#9AA0AC;letter-spacing:.04em;line-height:1}
+  .cell--today .cell__d{color:var(--accent) !important}
+
+  .ev{display:flex !important;flex-direction:column;gap:3px;padding:13px 15px !important;margin:0 0 8px !important;border-radius:12px !important;border:0 !important;box-shadow:none !important}
+  .ev:first-of-type{margin-top:10px !important}
+  .ev__t{font-size:14px;font-weight:600;color:#181A20;line-height:1.35;letter-spacing:-.01em}
+  .ev__m{font-size:12px;font-weight:500;color:#7C818E;line-height:1.2}
+  .ev--done .ev__t{text-decoration:line-through;color:#9AA0AC}
+  .ev--done .ev__m{color:#B4B8C2}
+  .ev--done{opacity:.85}
+}
 </style>
 </head>
 <body>
@@ -1377,6 +1398,24 @@ function mobileAgenda(){
     ev.style.borderLeftColor="transparent";
   });
 }
+function mobileAgenda2(){
+  if(window.innerWidth>760) return;
+  document.querySelectorAll("#view .ev").forEach(ev=>{
+    if(ev.dataset.agenda) return;
+    ev.dataset.agenda="1";
+    const raw=(ev.textContent||"").replace(/^\s*[\u2713\u2714\u25A1\u25B6]\s*/,"").trim();
+    let meta="", title=raw;
+    const p=raw.split(" · ");
+    if(p.length>1 && p[0].length<=8){ meta=p[0]; title=p.slice(1).join(" · "); }
+    const col=ev.style.borderLeftColor || getComputedStyle(ev).borderLeftColor;
+    ev.innerHTML = `<span class="ev__t">${esc(title)}</span>` + (meta?`<span class="ev__m">${esc(meta)}</span>`:"");
+    if(col){
+      ev.style.background = `color-mix(in srgb, ${col} 20%, #fff)`;
+      ev.style.setProperty("--evc", col);
+    }
+    ev.style.borderLeftColor="transparent";
+  });
+}
 function mobileLayout(){
   if(window.innerWidth>760) return;
   const head=document.querySelector(".tophead");
@@ -1388,6 +1427,7 @@ function mobileLayout(){
   if(hd && prim && prim.parentElement!==hd){ hd.appendChild(prim); prim.classList.add("hd-action"); }
   if(ctrl && !ctrl.querySelector("button")) ctrl.style.display="none";
   mobileAgenda();
+  mobileAgenda2();
   scrollToToday();
 }
 function render(){
