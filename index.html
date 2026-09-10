@@ -1092,6 +1092,21 @@ body.ro .ev:hover{transform:none;box-shadow:0 1px 2px rgba(16,20,32,.04)}
   .card__bd{padding:0 16px 14px !important}
   .card__hd{padding:16px 16px 10px !important}
 }
+
+/* ===== 세그먼트 컨트롤 분리 (v37) ===== */
+#view .tabs{display:inline-flex;gap:2px;padding:2px;height:30px;align-items:center;border-radius:999px;overflow:hidden;flex:0 0 auto}
+#view .tabs .tab{all:unset;box-sizing:border-box;display:flex;align-items:center;justify-content:center;height:26px;padding:0 12px;border-radius:999px;font-size:12px;font-weight:600;color:var(--mut);cursor:pointer;white-space:nowrap;transition:background .14s ease,color .14s ease}
+#view .tabs .tab::after{display:none !important}
+#view .tabs .tab:hover{color:var(--ink2)}
+#view .tabs .tab[aria-selected="true"],#view .tabs .tab[aria-current="true"]{background:var(--ink);color:#fff}
+@media(max-width:760px){
+  #view > div:first-child{gap:8px !important}
+  #view .tabs{height:28px}
+  #view .tabs .tab{height:24px;padding:0 10px;font-size:11.5px}
+  #view > div:first-child .mono{font-size:11px !important;white-space:nowrap}
+  #view > div:first-child .track{max-width:56px !important;flex:0 0 56px !important}
+  #view > div:first-child .spacer{display:none}
+}
 </style>
 </head>
 <body>
@@ -1284,7 +1299,9 @@ function scrollToToday(){
   setTimeout(()=>{
     const t=document.querySelector(".cell--today");
     if(!t) return;
-    const y=t.getBoundingClientRect().top + window.scrollY - 92;
+    const bar=document.querySelector(".topbar");
+    const off=(bar?bar.offsetHeight:96)+10;
+    const y=t.getBoundingClientRect().top + window.scrollY - off;
     window.scrollTo(0, Math.max(0,y));
   }, 120);
 }
