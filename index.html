@@ -939,6 +939,60 @@ body.ro .ev:hover{transform:none;box-shadow:0 1px 2px rgba(16,20,32,.04)}
   #view > div{margin-bottom:10px}
   .tabrow{padding:0 14px}
 }
+
+/* ===== 모바일 간격 스케일 (v28) — 20 / 16 / 12 / 8 ===== */
+@media(max-width:760px){
+  /* 헤더 */
+  .brandbar{height:56px !important;padding:0 20px !important;gap:12px}
+  .brandsel{max-width:200px;padding:9px 16px !important;font-size:14px !important;background:rgba(255,255,255,.14) !important}
+  .brandbar .btab--me{padding:8px 12px !important;font-size:12.5px}
+
+  /* 제목 · 월 이동 */
+  .topbar{padding:0 !important}
+  .tophead--m{padding:22px 20px 0 !important;align-items:flex-start}
+  .view h1,.brandhd h1,.brandtitle{font-size:26px !important;line-height:1.15;margin:0 0 3px !important;font-weight:800}
+  .tophead--m .monthnav{margin-top:4px;height:34px}
+  .tophead--m .monthnav .cur{line-height:32px;font-size:12.5px;padding:0 12px}
+  .tophead--m .monthnav button{width:32px;height:32px}
+
+  /* 탭 줄 */
+  .tabrow{padding:18px 20px 0 !important;height:auto !important}
+  .tabs{gap:22px !important}
+  .tab{font-size:14px !important;padding:0 0 14px !important}
+  .tab::after{bottom:0 !important}
+
+  /* 칩 줄 */
+  #view > div{margin:16px 0 14px !important;gap:8px !important;padding:0 4px}
+  #view > div > .btn{padding:8px 14px !important;font-size:12.5px}
+
+  /* 본문 영역 */
+  .view{padding:0 20px 64px !important}
+
+  /* 카드 */
+  .card{border-radius:16px !important}
+  .card__hd{padding:18px 18px 14px !important;min-height:0 !important}
+  .card__hd h3{font-size:16.5px !important;font-weight:750}
+  .card__hd .hd-action{padding:8px 14px !important;font-size:12.5px}
+  .card__bd{padding:0 18px 18px !important}
+
+  /* 날짜 목록 패널 */
+  .calwrap{margin:0 !important;border:.5px solid var(--line);border-radius:12px;background:#fff}
+  .cell{padding:16px 16px 18px !important;border-bottom:.5px solid var(--line2) !important}
+  .cell:last-child{border-bottom:0 !important}
+  .cell__d{font-size:13px !important;font-weight:700 !important;color:#6E7180 !important;margin-bottom:10px !important;display:block}
+  .cell--today .cell__d{display:inline-flex;color:#fff !important}
+  .ev{font-size:13.5px !important;padding:12px 14px !important;margin-top:8px !important;border-radius:10px !important;line-height:1.4}
+  .ev:first-of-type{margin-top:0 !important}
+
+  /* 리스트·폼 */
+  .tk{padding:14px 16px}
+  .f{margin-bottom:16px}
+  .modal__bd{padding:18px 18px 8px}
+}
+@media(max-width:420px){
+  .view h1,.brandhd h1,.brandtitle{font-size:23px !important}
+  .brandsel{max-width:160px}
+}
 </style>
 </head>
 <body>
