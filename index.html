@@ -1281,6 +1281,15 @@ body.ro .ev:hover{transform:none;box-shadow:0 1px 2px rgba(16,20,32,.04)}
   .view:has(.calwrap) > .card > .card__hd{padding:0 0 12px !important}
   .view:has(.calwrap) > .card > .card__bd{padding:0 !important}
 }
+
+/* ===== 요일 상단 정렬 확정 (v50) ===== */
+@media(max-width:760px){
+  .cell{align-items:start !important}
+  .cell .cell__d,
+  .view > .card:has(.calwrap) .cell__d{padding:0 !important;margin:0 !important;display:flex !important;flex-direction:column !important;justify-content:flex-start !important;align-items:flex-start !important}
+  .cell__w{order:-1;display:block !important;margin:0 0 2px !important}
+  .cell .ev:first-of-type{margin-top:0 !important}
+}
 </style>
 </head>
 <body>
