@@ -1211,6 +1211,21 @@ body.ro .ev:hover{transform:none;box-shadow:0 1px 2px rgba(16,20,32,.04)}
   .tk.brow .tk__title{font-size:13px !important}
   .tk.brow .tk__title span{font-size:11.5px !important}
 }
+
+/* ===== 아젠다 타이포 (v44) ===== */
+@media(max-width:760px){
+  .card__hd h3{font-size:18px !important;font-weight:750 !important}
+  .card__bd{padding:2px 18px 20px !important}
+  .cell{grid-template-columns:44px 1fr !important;column-gap:12px !important;padding:0 0 16px !important}
+  .cell__d{padding-top:12px !important;font-size:18px !important;font-weight:700 !important;color:#15171D !important}
+  .cell__w{font-size:11.5px !important;color:#9AA0AC !important;font-weight:500 !important}
+  .ev{padding:13px 16px !important;margin:0 0 8px !important;border-radius:9px !important;gap:2px !important}
+  .ev:first-of-type{margin-top:8px !important}
+  .ev__t{font-size:14.5px !important;font-weight:600 !important;color:#1A1C22 !important;line-height:1.3}
+  .ev__m{font-size:12.5px !important;font-weight:500 !important;line-height:1.25}
+  .ev--done .ev__t{color:#A2A7B2 !important;text-decoration:line-through}
+  .ev--done{opacity:.9}
+}
 </style>
 </head>
 <body>
@@ -1424,25 +1439,29 @@ function mobileAgenda(){
     }
   });
 }
+const AG_PAL={
+  "EGC":["#EAF1FF","#3B6FD4"],
+  "UGC":["#F3ECFD","#7B4FD0"],
+  "제품 입고":["#FFF4DF","#B07F26"],
+  "이벤트":["#FDE9F0","#C4467C"],
+  "온라인":["#E9F6EF","#2E8B62"],
+  "오프라인":["#FFF0E8","#C2603A"]
+};
 function mobileAgenda2(){
   if(window.innerWidth>760) return;
-  const PAL={"EGC":"#5B7CC9","UGC":"#7A5BC9"};
   document.querySelectorAll("#view .ev").forEach(ev=>{
     if(ev.dataset.agenda) return;
-    let col = ev.dataset.col || ev.style.borderLeftColor || getComputedStyle(ev).borderLeftColor || "";
-    const rgb = (col.match(/\d+(\.\d+)?/g)||[]).map(Number);
-    if(rgb.length>=3){ const L=(0.299*rgb[0]+0.587*rgb[1]+0.114*rgb[2])/255; if(L>0.82) col=""; }
-    if(col==="transparent") col="";
     const span = ev.querySelector("span") || ev;
     const raw = (span.textContent||"").trim();
     let meta="", title=raw;
     const p = raw.split(" · ");
     if(p.length>1 && p[0].length<=8){ meta=p[0]; title=p.slice(1).join(" · "); }
-    if(!col) col = PAL[meta] || (ev.classList.contains("ev--task") ? "#7C8598" : "#5B7CC9");
-    ev.dataset.agenda="1"; ev.dataset.col=col;
+    const pal = AG_PAL[meta] || (ev.classList.contains("ev--task") ? ["#F2F3F7","#6E7280"] : ["#EEF1F6","#5A6070"]);
+    ev.dataset.agenda="1";
     ev.innerHTML = `<span class="ev__t">${esc(title)}</span>` + (meta?`<span class="ev__m">${esc(meta)}</span>`:"");
-    ev.style.background = `color-mix(in srgb, ${col} 15%, #fff)`;
+    ev.style.background = pal[0];
     ev.style.borderLeftColor = "transparent";
+    const m = ev.querySelector(".ev__m"); if(m) m.style.color = pal[1];
   });
 }
 function mobileLayout(){
