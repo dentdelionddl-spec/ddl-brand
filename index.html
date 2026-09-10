@@ -1075,6 +1075,23 @@ body.ro .ev:hover{transform:none;box-shadow:0 1px 2px rgba(16,20,32,.04)}
   .tophead--m .monthnav button{width:28px !important;height:100% !important;font-size:13px}
   .tophead--m .monthnav .cur{padding:0 11px !important;font-size:12px !important;line-height:1 !important;height:100%}
 }
+
+/* ===== 카드 제목 · 모바일 격자 정리 (v36) ===== */
+.hd-short{display:none}
+@media(max-width:760px){
+  .hd-long{display:none}
+  .hd-short{display:inline}
+  .card__hd h3{font-size:14px !important;font-weight:700}
+  .card__hd .hd-action{height:24px !important;padding:0 10px !important;font-size:11.5px !important}
+  /* 격자 이중선 제거: 패널 테두리 없애고 행 구분선만 */
+  .calwrap{border:0 !important;border-radius:0 !important;background:transparent !important;margin:0 !important}
+  .cal{background:transparent}
+  .cell{background:transparent;padding:14px 2px 16px !important;border-bottom:.5px solid var(--line2) !important}
+  .cell:first-child{padding-top:2px !important}
+  .cell:last-child{border-bottom:0 !important;padding-bottom:2px !important}
+  .card__bd{padding:0 16px 14px !important}
+  .card__hd{padding:16px 16px 10px !important}
+}
 </style>
 </head>
 <body>
@@ -1240,6 +1257,8 @@ function paceRatio(ym){
 }
 function ymShift(ym,n){ const [y,m]=ym.split('-').map(Number); const d=new Date(y,m-1+n,1); return ymOf(d); }
 function ymLabel(ym){ const [y,m]=ym.split('-'); return `${y}년 ${Number(m)}월`; }
+function ymLabelShort(ym){ const [y,m]=ym.split('-'); return `${String(y).slice(2)}년 ${Number(m)}월`; }
+
 
 /* =========================================================
    RENDER
@@ -1603,7 +1622,7 @@ function calendarView(){
       <button class="btn btn--sm btn--primary" data-newdate="${ym}-${pad(Math.min(today.getDate(),dim))}">항목 추가</button>
     </div>
   <section class="card">
-    <div class="card__hd"><h3>${ymLabel(ym)} 운영 캘린더</h3>
+    <div class="card__hd"><h3><span class="hd-long">${ymLabel(ym)}</span><span class="hd-short">${ymLabelShort(ym)}</span> 운영 캘린더</h3>
       <span class="eyebrow" style="margin-left:auto">${calWho?esc(calWho)+' 업무만':'전체 업무'}</span></div>
     <div class="calwrap"><div class="cal">
       ${['일','월','화','수','목','금','토'].map(d=>`<div class="cal__dow">${d}</div>`).join('')}
