@@ -1127,6 +1127,19 @@ body.ro .ev:hover{transform:none;box-shadow:0 1px 2px rgba(16,20,32,.04)}
   .ev{display:block;width:100%;box-sizing:border-box;margin:0 0 6px !important;padding:11px 12px !important;font-size:13px !important;border-radius:10px !important;background:#fff;border:.5px solid var(--line) !important;border-left-width:2.5px !important;box-shadow:none}
   .ev:last-child{margin-bottom:0 !important}
 }
+
+/* ===== 세그먼트 간격 재정의 (v39) ===== */
+#view .tabs{gap:2px !important;overflow:visible !important;width:auto !important;flex:0 0 auto !important;padding:3px !important}
+#view .tabs .tab{flex:0 0 auto !important;padding:0 12px !important;margin:0 !important;min-width:0}
+@media(max-width:760px){
+  #view > div:first-child{overflow:visible !important;flex-wrap:nowrap !important;gap:10px !important}
+  #view .tabs{height:30px !important;padding:3px !important}
+  #view .tabs .tab{height:24px !important;font-size:11.5px !important;padding:0 11px !important}
+  #view > div:first-child .mono{flex:0 0 auto}
+}
+@media(max-width:400px){
+  #view > div:first-child .mono{display:none}
+}
 </style>
 </head>
 <body>
