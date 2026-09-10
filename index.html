@@ -1063,6 +1063,18 @@ body.ro .ev:hover{transform:none;box-shadow:0 1px 2px rgba(16,20,32,.04)}
   .tk__meta .dday{font-size:11px;font-weight:700;margin-right:2px}
   .tk__meta .eyebrow,.tk__meta .mono{font-size:10.5px;color:var(--mut)}
 }
+
+/* ===== 월 컨트롤 정밀 정렬 (v35) ===== */
+.monthnav{display:inline-flex;align-items:stretch;height:30px;padding:0;overflow:hidden}
+.monthnav button{all:unset;box-sizing:border-box;width:30px;height:100%;display:flex;align-items:center;justify-content:center;cursor:pointer;color:#8A8F9C;font-size:14px;line-height:1;padding:0;margin:0;transition:background .14s ease,color .14s ease}
+.monthnav button:hover{background:#F3F4F7;color:var(--ink)}
+.monthnav button:active{background:#ECEDF1}
+.monthnav .cur{display:flex;align-items:center;justify-content:center;height:100%;padding:0 12px;font-size:12.5px;font-weight:650;color:var(--ink);font-variant-numeric:tabular-nums;border-left:.5px solid var(--line2);border-right:.5px solid var(--line2);white-space:nowrap}
+@media(max-width:760px){
+  .tophead--m .monthnav{height:28px !important}
+  .tophead--m .monthnav button{width:28px !important;height:100% !important;font-size:13px}
+  .tophead--m .monthnav .cur{padding:0 11px !important;font-size:12px !important;line-height:1 !important;height:100%}
+}
 </style>
 </head>
 <body>
