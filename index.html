@@ -1262,10 +1262,12 @@ function scrollToToday(){
   __todayScrollKey=key;
   const el=document.querySelector(".cell--today");
   if(!el) return;
-  requestAnimationFrame(()=>{
-    const y=el.getBoundingClientRect().top + window.scrollY - 96;
-    window.scrollTo({top:Math.max(0,y), behavior:"smooth"});
-  });
+  setTimeout(()=>{
+    const t=document.querySelector(".cell--today");
+    if(!t) return;
+    const y=t.getBoundingClientRect().top + window.scrollY - 92;
+    window.scrollTo(0, Math.max(0,y));
+  }, 120);
 }
 function mobileLayout(){
   if(window.innerWidth>760) return;
