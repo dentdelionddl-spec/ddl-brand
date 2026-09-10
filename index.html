@@ -1628,7 +1628,7 @@ function homeView(){
   return `
 
   <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin:16px 0 8px">
-    <span class="eyebrow">업무 담당</span>
+    
     ${[['','전체'],...owners.map(o=>[o,o])].map(([v,l])=>`<button class="btn btn--sm" data-taskowner="${esc(v)}" style="border-radius:999px;${who===v?'background:var(--ink);border-color:var(--ink);color:#fff':''}">${esc(l)}</button>`).join('')}
   </div>
   <div class="grid g2">
@@ -1711,7 +1711,7 @@ function summaryView(){
 
   return `
   <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin:16px 0 8px">
-    <span class="eyebrow">업무 담당</span>
+    
     ${[['','전체'],...sumOwners.map(o=>[o,o])].map(([v,l])=>`<button class="btn btn--sm" data-taskowner="${esc(v)}" style="border-radius:999px;${sumWho===v?'background:var(--ink);border-color:var(--ink);color:#fff':''}">${esc(l)}</button>`).join('')}
   </div>
   <div class="grid g2">
@@ -1803,7 +1803,7 @@ function calendarView(){
     </div></div>
   </section>`;
   return `<div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin-bottom:12px">
-      <span class="eyebrow">업무 담당</span>
+      
       ${chip('전체','',!calWho)}${calOwners.map(o=>chip(o,o,calWho===o)).join('')}
       <div class="spacer" style="flex:1"></div>
       <button class="btn btn--sm btn--primary" data-newdate="${ym}-${pad(Math.min(today.getDate(),dim))}">항목 추가</button>
