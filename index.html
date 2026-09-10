@@ -1389,31 +1389,23 @@ function mobileAgenda(){
       d.appendChild(w);
     }
   });
-  document.querySelectorAll("#view .ev").forEach(ev=>{
-    if(ev.dataset.tinted) return;
-    const c=ev.style.borderLeftColor || getComputedStyle(ev).borderLeftColor;
-    if(!c) return;
-    ev.dataset.tinted="1";
-    ev.style.background=`color-mix(in srgb, ${c} 14%, #fff)`;
-    ev.style.borderLeftColor="transparent";
-  });
 }
 function mobileAgenda2(){
   if(window.innerWidth>760) return;
   document.querySelectorAll("#view .ev").forEach(ev=>{
     if(ev.dataset.agenda) return;
-    ev.dataset.agenda="1";
-    const raw=(ev.textContent||"").replace(/^\s*[\u2713\u2714\u25A1\u25B6]\s*/,"").trim();
+    const col = ev.dataset.col || ev.style.borderLeftColor || "";
+    if(col && col!=="transparent") ev.dataset.col = col;
+    const span = ev.querySelector("span") || ev;
+    const raw = (span.textContent||"").trim();
     let meta="", title=raw;
-    const p=raw.split(" · ");
+    const p = raw.split(" · ");
     if(p.length>1 && p[0].length<=8){ meta=p[0]; title=p.slice(1).join(" · "); }
-    const col=ev.style.borderLeftColor || getComputedStyle(ev).borderLeftColor;
+    ev.dataset.agenda="1";
     ev.innerHTML = `<span class="ev__t">${esc(title)}</span>` + (meta?`<span class="ev__m">${esc(meta)}</span>`:"");
-    if(col){
-      ev.style.background = `color-mix(in srgb, ${col} 20%, #fff)`;
-      ev.style.setProperty("--evc", col);
-    }
-    ev.style.borderLeftColor="transparent";
+    const c = ev.dataset.col;
+    if(c){ ev.style.background = `color-mix(in srgb, ${c} 18%, #fff)`; }
+    ev.style.borderLeftColor = "transparent";
   });
 }
 function mobileLayout(){
