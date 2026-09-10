@@ -893,6 +893,15 @@ h1,h2,h3{letter-spacing:-0.015em}
   .ev{font-size:12.5px;padding:7px 10px;margin-top:5px;border-radius:6px}
   .cell [data-newdate]{display:none}
 }
+
+/* ===== 모바일 행 구성 고정 (v25) ===== */
+@media(max-width:760px){
+  .tabrow{flex-wrap:nowrap !important}
+  .monthnav{margin-left:auto !important;flex:0 0 auto}
+  .view > div[style*="flex-wrap:wrap"] > *{flex:0 0 auto;white-space:nowrap}
+  .view > div[style*="flex-wrap:wrap"] > .btn{padding:7px 12px}
+  .brandsel{flex:0 1 auto;width:auto}
+}
 </style>
 </head>
 <body>
