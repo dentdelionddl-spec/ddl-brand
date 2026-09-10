@@ -902,6 +902,33 @@ h1,h2,h3{letter-spacing:-0.015em}
   .view > div[style*="flex-wrap:wrap"] > .btn{padding:7px 12px}
   .brandsel{flex:0 1 auto;width:auto}
 }
+
+/* ===== 클라이언트 공유 화면 마감 (v26) ===== */
+body.ro .card{border:0;box-shadow:none;border-radius:0}
+body.ro .card__hd{padding:0 4px 14px;height:auto;min-height:0}
+body.ro .card__hd h3{font-size:17px;font-weight:750}
+body.ro .calwrap{margin:0;border:.5px solid var(--line);border-radius:14px;background:#fff;box-shadow:0 0 0 .5px rgba(16,20,32,.03), 0 10px 30px -24px rgba(16,20,32,.35)}
+body.ro .cal__dow{padding:14px 0;font-size:11.5px;color:#6E7180;background:#fff}
+body.ro .cell{min-height:132px;padding:10px 10px 12px}
+body.ro .cell__d{font-size:12.5px;color:#6E7180;font-weight:600}
+body.ro .cell--today .cell__d{background:var(--accent);color:#fff;border-radius:999px}
+body.ro .cell--today{background:rgba(10,108,255,.04)}
+body.ro .cell--out{background:#FCFCFD}
+body.ro .ev{font-size:12px;line-height:1.45;padding:7px 9px;margin-top:6px;border-radius:7px;background:#fff;border:.5px solid var(--line);border-left-width:3px;box-shadow:0 1px 2px rgba(16,20,32,.04);white-space:normal;cursor:default}
+body.ro .ev:hover{transform:none;box-shadow:0 1px 2px rgba(16,20,32,.04)}
+
+@media(max-width:760px){
+  body.ro .cal{min-width:0;display:block}
+  body.ro .cell{min-height:0;padding:11px 12px 12px;border:0;border-bottom:.5px solid var(--line2)}
+  body.ro .cell--out{display:none}
+  body.ro .cal__dow{display:none}
+  body.ro .calwrap{border-radius:12px;margin:0}
+  body.ro .card__hd{padding:0 2px 12px}
+  body.ro .card__hd h3{font-size:15px}
+  body.ro .ev{font-size:13px;padding:9px 11px}
+  body.ro .cell__d{font-size:12.5px;margin-bottom:2px}
+  body.ro .monthnav{height:32px}
+}
 </style>
 </head>
 <body>
