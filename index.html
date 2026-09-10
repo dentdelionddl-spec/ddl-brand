@@ -1140,6 +1140,22 @@ body.ro .ev:hover{transform:none;box-shadow:0 1px 2px rgba(16,20,32,.04)}
 @media(max-width:400px){
   #view > div:first-child .mono{display:none}
 }
+
+/* ===== 모바일 아젠다 형 캘린더 (v40) ===== */
+@media(max-width:760px){
+  .cell{display:grid !important;grid-template-columns:38px 1fr;column-gap:12px;align-items:start;padding:0 0 14px !important;margin:0 !important;border:0 !important}
+  .cell--out{display:none !important}
+  .cell__d{grid-column:1;display:flex !important;flex-direction:column;align-items:flex-start;gap:1px;font-size:16px !important;font-weight:700 !important;color:var(--ink) !important;margin:0 !important;padding-top:12px}
+  .cell__w{font-size:10.5px;font-weight:600;color:#9AA0AC;letter-spacing:.02em}
+  .cell--today .cell__d{background:transparent !important;color:var(--accent) !important;width:auto;height:auto;border-radius:0}
+  .cell--today .cell__w{color:var(--accent)}
+  .ev{grid-column:2;display:block;width:100%;box-sizing:border-box;border:0 !important;border-left:0 !important;border-radius:10px !important;padding:12px 14px !important;margin:0 0 6px !important;font-size:13.5px !important;font-weight:550;line-height:1.35;color:var(--ink) !important;box-shadow:none !important}
+  .ev:first-of-type{margin-top:8px}
+  .ev--done{opacity:1}
+  .ev--done b,.ev--done span{text-decoration:line-through;color:#9AA0AC}
+  .cell__add{grid-column:2;display:none !important}
+  .card__bd{padding:6px 16px 16px !important}
+}
 </style>
 </head>
 <body>
@@ -1338,6 +1354,29 @@ function scrollToToday(){
     window.scrollTo(0, Math.max(0,y));
   }, 120);
 }
+const WD_KO=["일","월","화","수","목","금","토"];
+function mobileAgenda(){
+  if(window.innerWidth>760) return;
+  document.querySelectorAll("#view .cell[data-date]").forEach(c=>{
+    const ds=c.dataset.date; if(!ds) return;
+    const dt=new Date(ds+"T00:00:00");
+    const d=c.querySelector(".cell__d"); if(!d) return;
+    if(!d.querySelector(".cell__w")){
+      const w=document.createElement("span");
+      w.className="cell__w";
+      w.textContent=WD_KO[dt.getDay()];
+      d.appendChild(w);
+    }
+  });
+  document.querySelectorAll("#view .ev").forEach(ev=>{
+    if(ev.dataset.tinted) return;
+    const c=ev.style.borderLeftColor || getComputedStyle(ev).borderLeftColor;
+    if(!c) return;
+    ev.dataset.tinted="1";
+    ev.style.background=`color-mix(in srgb, ${c} 14%, #fff)`;
+    ev.style.borderLeftColor="transparent";
+  });
+}
 function mobileLayout(){
   if(window.innerWidth>760) return;
   const head=document.querySelector(".tophead");
@@ -1348,6 +1387,7 @@ function mobileLayout(){
   const prim=ctrl && ctrl.querySelector(".btn--primary");
   if(hd && prim && prim.parentElement!==hd){ hd.appendChild(prim); prim.classList.add("hd-action"); }
   if(ctrl && !ctrl.querySelector("button")) ctrl.style.display="none";
+  mobileAgenda();
   scrollToToday();
 }
 function render(){
