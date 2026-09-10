@@ -993,6 +993,17 @@ body.ro .ev:hover{transform:none;box-shadow:0 1px 2px rgba(16,20,32,.04)}
   .view h1,.brandhd h1,.brandtitle{font-size:23px !important}
   .brandsel{max-width:160px}
 }
+
+/* ===== 칩 줄 비중 조정 (v29) ===== */
+@media(max-width:760px){
+  /* 탭 줄과 칩 줄 사이 숫을 틀기 */
+  #view > div{margin:22px 0 16px !important;gap:6px !important;align-items:center}
+  /* 담당자 칩은 보조 정보 — 작게 */
+  #view > div > .btn{padding:6px 11px !important;font-size:12px !important;font-weight:600;border-radius:5px !important;line-height:1.35}
+  #view > div > .eyebrow,#view > div > span{font-size:11px !important;color:var(--mut)}
+  /* 카드 헤더 안 주요 버튼은 그대로 */
+  .card__hd .hd-action{padding:8px 14px !important;font-size:12.5px !important}
+}
 </style>
 </head>
 <body>
