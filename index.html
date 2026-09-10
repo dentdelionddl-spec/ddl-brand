@@ -1245,6 +1245,19 @@ body.ro .ev:hover{transform:none;box-shadow:0 1px 2px rgba(16,20,32,.04)}
   .view > .card:has(.calwrap) .cell{padding:0 0 18px !important}
   .view > .card:has(.calwrap) .cell__d{padding-top:12px !important}
 }
+
+/* ===== 캘린더 배경 흰색 · 잘림 방지 (v47) ===== */
+@media(max-width:760px){
+  /* 둘러싸는 모든 컨테이너에서 잘림 제거 */
+  .view > .card:has(.calwrap),
+  .view > .card:has(.calwrap) .card__bd,
+  .calwrap, .cal, .cell{overflow:visible !important;border-radius:0 !important;clip-path:none !important}
+
+  /* 담당자 버튼 줄 아래는 흰색 바탕 */
+  body:has(.calwrap){background:var(--paper)}
+  .view:has(.calwrap){background:#fff;padding-top:14px !important;border-top:.5px solid var(--line2);min-height:calc(100vh - 200px)}
+  .view:has(.calwrap) > .card{background:transparent !important}
+}
 </style>
 </head>
 <body>
