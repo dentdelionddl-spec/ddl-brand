@@ -1273,6 +1273,14 @@ body.ro .ev:hover{transform:none;box-shadow:0 1px 2px rgba(16,20,32,.04)}
   .ev__m{font-size:10px !important;font-weight:400 !important;line-height:1.25 !important}
   .ev{padding:11px 13px !important;border-radius:8px !important}
 }
+
+/* ===== 흰색은 칩 줄 아래부터 (v49) ===== */
+@media(max-width:760px){
+  .view:has(.calwrap){background:transparent !important;padding-top:0 !important;border-top:0 !important;min-height:0 !important}
+  .view:has(.calwrap) > .card{background:#fff !important;margin:0 -20px !important;padding:16px 20px 64px !important;border-top:.5px solid var(--line2) !important;min-height:calc(100vh - 230px)}
+  .view:has(.calwrap) > .card > .card__hd{padding:0 0 12px !important}
+  .view:has(.calwrap) > .card > .card__bd{padding:0 !important}
+}
 </style>
 </head>
 <body>
