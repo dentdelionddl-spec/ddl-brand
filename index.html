@@ -1177,6 +1177,30 @@ body.ro .ev:hover{transform:none;box-shadow:0 1px 2px rgba(16,20,32,.04)}
   .ev--done .ev__m{color:#B4B8C2}
   .ev--done{opacity:.85}
 }
+
+/* ===== 설정 화면 모바일 (v42) ===== */
+@media(max-width:760px){
+  /* 제목이 잘리지 않게 */
+  .tophead--m{padding:22px 20px 0 !important;overflow:visible}
+  .brandtitle{font-size:22px !important;line-height:1.25 !important;overflow:visible;white-space:normal}
+
+  /* 브랜드 행 = 한 줄 그리드 */
+  .tk.brow{display:grid !important;grid-template-columns:14px 8px 1fr auto;align-items:center;column-gap:10px;padding:12px 14px !important;border-radius:12px !important;margin-bottom:8px}
+  .tk.brow .grip{font-size:13px;color:#C3C7D0;line-height:1}
+  .tk.brow .dot{width:8px;height:8px;border-radius:999px}
+  .tk.brow .tk__t{min-width:0}
+  .tk.brow .tk__title{font-size:13.5px !important;font-weight:650 !important;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin:0 0 3px !important;line-height:1.3}
+  .tk.brow .tk__title span{font-size:12px !important;font-weight:500;color:#8A8F9C;margin-left:5px}
+  .tk.brow .tk__meta{display:block !important;font-size:11px !important;color:#9AA0AC;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin:0 !important}
+  .tk.brow .tk__meta .eyebrow{font-size:11px !important}
+  .tk.brow .btn{height:26px !important;padding:0 10px !important;font-size:11.5px !important;display:inline-flex;align-items:center;flex:0 0 auto}
+  .tk.brow .btn + .btn{margin-left:6px}
+
+  /* 설정 카드 공통 */
+  #view .card + .card{margin-top:14px}
+  #view .card__hd .btn{height:26px !important;padding:0 11px !important;font-size:11.5px !important}
+  #view .card__bd > .eyebrow{font-size:11px;line-height:1.5;margin-bottom:10px;display:block}
+}
 </style>
 </head>
 <body>
