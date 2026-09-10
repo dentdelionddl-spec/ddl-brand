@@ -1258,6 +1258,21 @@ body.ro .ev:hover{transform:none;box-shadow:0 1px 2px rgba(16,20,32,.04)}
   .view:has(.calwrap){background:#fff;padding-top:14px !important;border-top:.5px solid var(--line2);min-height:calc(100vh - 200px)}
   .view:has(.calwrap) > .card{background:transparent !important}
 }
+
+/* ===== 아젠다 타이포 확정 (v48) ===== */
+@media(max-width:760px){
+  /* 요일을 첫 블록 상단에 맞춤 */
+  .cell{align-items:start !important}
+  .cell__d{padding-top:0 !important;margin-top:0 !important;justify-content:flex-start !important}
+  .ev:first-of-type{margin-top:0 !important}
+  .cell{padding:0 0 20px !important}
+
+  .cell__w{font-size:11px !important;font-weight:500 !important;line-height:1.2 !important;margin-bottom:1px}
+  .cell__d{font-size:15px !important;font-weight:700 !important;line-height:1.25 !important}
+  .ev__t{font-size:12px !important;font-weight:500 !important;line-height:1.35 !important}
+  .ev__m{font-size:10px !important;font-weight:400 !important;line-height:1.25 !important}
+  .ev{padding:11px 13px !important;border-radius:8px !important}
+}
 </style>
 </head>
 <body>
