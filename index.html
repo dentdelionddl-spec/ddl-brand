@@ -1392,19 +1392,22 @@ function mobileAgenda(){
 }
 function mobileAgenda2(){
   if(window.innerWidth>760) return;
+  const PAL={"EGC":"#5B7CC9","UGC":"#7A5BC9"};
   document.querySelectorAll("#view .ev").forEach(ev=>{
     if(ev.dataset.agenda) return;
-    const col = ev.dataset.col || ev.style.borderLeftColor || "";
-    if(col && col!=="transparent") ev.dataset.col = col;
+    let col = ev.dataset.col || ev.style.borderLeftColor || getComputedStyle(ev).borderLeftColor || "";
+    const rgb = (col.match(/\d+(\.\d+)?/g)||[]).map(Number);
+    if(rgb.length>=3){ const L=(0.299*rgb[0]+0.587*rgb[1]+0.114*rgb[2])/255; if(L>0.82) col=""; }
+    if(col==="transparent") col="";
     const span = ev.querySelector("span") || ev;
     const raw = (span.textContent||"").trim();
     let meta="", title=raw;
     const p = raw.split(" · ");
     if(p.length>1 && p[0].length<=8){ meta=p[0]; title=p.slice(1).join(" · "); }
-    ev.dataset.agenda="1";
+    if(!col) col = PAL[meta] || (ev.classList.contains("ev--task") ? "#7C8598" : "#5B7CC9");
+    ev.dataset.agenda="1"; ev.dataset.col=col;
     ev.innerHTML = `<span class="ev__t">${esc(title)}</span>` + (meta?`<span class="ev__m">${esc(meta)}</span>`:"");
-    const c = ev.dataset.col;
-    if(c){ ev.style.background = `color-mix(in srgb, ${c} 18%, #fff)`; }
+    ev.style.background = `color-mix(in srgb, ${col} 15%, #fff)`;
     ev.style.borderLeftColor = "transparent";
   });
 }
