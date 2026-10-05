@@ -1317,7 +1317,7 @@ function areasIn(bid){
 }
 function allAreas(){ return areasIn(null); }
 const PRIOS = ['긴급','높음','보통','낮음'];
-const OWNERS = ['승호','산들','효정','재욱','정모'];
+const OWNERS = ['승호','산들','효정'];
 const PSTATUS = ['기획','발주','생산중','입고','업로드','판매중','드랍'];
 const WEEKS = ['1주차','2주차','3주차','4주차','5주차'];
 const PLAN_KINDS = ['영상','이미지','텍스트'];
@@ -1670,8 +1670,8 @@ function homeView(){
   const pacePct=Math.round(paceRatio(ym)*100);
   const sum=brands.reduce((a,b)=>{ const t=totals(b.id,ym); return {goal:a.goal+t.goal, actual:a.actual+t.actual}; },{goal:0,actual:0});
 
-  const who=(UI.taskOwner===undefined? (DB.settings.me||'') : UI.taskOwner)||'';
-  const owners=[...new Set([...OWNERS, ...DB.tasks.flatMap(t=>ownersOf(t))])];
+  const who=ownerFilter(UI.taskOwner===undefined? (DB.settings.me||'') : UI.taskOwner);
+  const owners=OWNERS;
   const openAll=DB.tasks.filter(t=>!t.done && hasOwner(t,who));
   const todayTasks=openAll.filter(t=>t.due===TODAY || (t.start&&t.due&&t.start<=TODAY&&TODAY<=t.due))
     .sort((x,y)=>PRIOS.indexOf(x.priority)-PRIOS.indexOf(y.priority));
@@ -1744,8 +1744,8 @@ function summaryView(){
   const pacePct=Math.round(paceRatio(ym)*100);
   const cs=contentsOf(b.id,ym);
   const counts=TYPES.map(t=>[t,cs.filter(c=>c.type===t).length]);
-  const sumWho=(UI.taskOwner===undefined? (DB.settings.me||'') : UI.taskOwner)||'';
-  const sumOwners=[...new Set([...OWNERS, ...tasksOf(b.id).flatMap(t=>ownersOf(t))])];
+  const sumWho=ownerFilter(UI.taskOwner===undefined? (DB.settings.me||'') : UI.taskOwner);
+  const sumOwners=OWNERS;
   const openTasks=tasksOf(b.id).filter(t=>!t.done && (!sumWho || hasOwner(t,sumWho)));
   const todayTasks=openTasks.filter(t=>t.due===TODAY || (t.start&&t.due&&t.start<=TODAY&&TODAY<=t.due))
     .sort((x,y)=>PRIOS.indexOf(x.priority)-PRIOS.indexOf(y.priority));
@@ -1829,10 +1829,10 @@ function calendarView(){
   const onlyContent = EMBED && EMBED.only==='content';
   const noTasks = EMBED && (EMBED.only==='content' || EMBED.only==='plan');
   const cs=contentsSpanning(b.id,ym).filter(c=>!onlyContent || CONTENT_TYPES.includes(c.type));
-  const calWho=EMBED? '' : ((UI.taskOwner===undefined? (DB.settings.me||'') : UI.taskOwner)||'');
+  const calWho=EMBED? '' : (ownerFilter(UI.taskOwner===undefined? (DB.settings.me||'') : UI.taskOwner));
   const allDayTasks=tasksSpanning(b.id,ym);
   const dayTasks=noTasks? [] : allDayTasks.filter(t=>hasOwner(t,calWho));
-  const calOwners=[...new Set([...OWNERS, ...allDayTasks.flatMap(t=>ownersOf(t))])];
+  const calOwners=OWNERS;
   const cells=[];
   for(let i=0;i<lead;i++) cells.push(`<div class="cell cell--out"></div>`);
   for(let d=1;d<=dim;d++){
@@ -1875,9 +1875,10 @@ function calendarView(){
 
 /* ---------- 업무 ---------- */
 function ownersOf(t){ return (Array.isArray(t.owners)&&t.owners.length)? t.owners : (t.owner? [t.owner] : []); }
+function ownerFilter(w){ return OWNERS.includes(w)? w : ''; }
 function hasOwner(t,who){ return !who || ownersOf(t).includes(who); }
 function ownerPicker(sel){
-  const names=[...new Set([...OWNERS, ...(sel||[])])];
+  const names=OWNERS;
   return `<div class="f"><span>담당 (여러 명 선택 가능)</span>
     <div id="t_owners" style="display:flex;gap:6px;flex-wrap:wrap;padding-top:2px">
       ${names.map(n=>`<label class="btn btn--sm" style="display:inline-flex;align-items:center;gap:6px;border-radius:999px;cursor:pointer">
@@ -1917,9 +1918,9 @@ function weekKey(w){
 function tasksView(){
   const b=brandOf(UI.brand);
   const all=tasksOf(b.id);
-  const owners=[...new Set([...OWNERS, ...all.flatMap(t=>ownersOf(t))])];
+  const owners=OWNERS;
   const me=DB.settings.me||'';
-  const who=(UI.taskOwner===undefined? me : UI.taskOwner)||'';
+  const who=ownerFilter(UI.taskOwner===undefined? me : UI.taskOwner);
   const scoped = who? all.filter(t=>hasOwner(t,who)) : all;
   const open=scoped.filter(t=>!t.done), done=scoped.filter(t=>t.done);
   const showDone = UI.taskDone===true;
@@ -2013,7 +2014,7 @@ function actionCard(a,b){
 }
 function meModal(){
   const cur=DB.settings.me||'';
-  const names=[...new Set([...OWNERS, ...DB.tasks.map(t=>t.owner).filter(Boolean)])];
+  const names=OWNERS;
   modal({
     title:'내 이름',
     body:`<p style="margin:0 0 12px;color:var(--mut);font-size:13px">이 브라우저에서 나로 기억할 이름입니다. 업무 탭이 처음부터 내 것만 보이도록 맞춰집니다.</p>
