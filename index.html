@@ -2088,7 +2088,7 @@ function uploadCard(bid, showBrand){
           </div>
         </div>
       </div>`).join('')
-      : `<div class="empty"><b>오늘 올릴 콘텐츠가 없습니다</b>캘린더에서 콘텐츠를 등록하면 그날 여기에 뚜니다.</div>`}
+      : `<div class="empty"><b>오늘 올릴 콘텐츠가 없습니다</b>캘린더에서 콘텐츠를 등록하면 그날 여기에 나와요.</div>`}
     </div>
   </section>`;
 }
@@ -2115,7 +2115,7 @@ function homeView(){
       <div class="card__hd"><h3>오늘 해야 할 업무</h3><span class="eyebrow">전 브랜드 ${todayTasks.length}건</span></div>
       <div class="card__bd">
         ${todayTasks.length? todayTasks.map(t=>taskRow(t,true,true)).join('')
-          : `<div class="empty"><b>오늘 마감인 업무가 없습니다</b>브랜드별 업무 탭에서 마감일을 넣으면 그날 여기에 모입니다.</div>`}
+          : `<div class="empty"><b>오늘 마감인 업무가 없습니다</b>브랜드별 업무 탭에서 마감일을 넣으면 그날 여기에 모여요.</div>`}
       </div>
     </section>
     <section class="card">
@@ -2196,7 +2196,7 @@ function summaryView(){
         </div>
       <div class="card__bd">
         ${todayTasks.length? todayTasks.map(t=>taskRow(t,true)).join('')
-          : `<div class="empty"><b>오늘 마감인 업무가 없습니다</b>업무 탭에서 마감일을 넣으면 그날 여기에 망니다.</div>`}
+          : `<div class="empty"><b>오늘 마감인 업무가 없습니다</b>업무 탭에서 마감일을 넣으면 그날 여기에 모여요.</div>`}
       </div>
     </section>
 
