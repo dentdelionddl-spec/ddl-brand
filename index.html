@@ -1458,10 +1458,16 @@ html body .tag,html body .mchip,html body .dday--today,html body .ev,html body m
   .app--side > .main > .view{flex:1 1 auto;min-height:0;overflow-y:auto;overscroll-behavior:contain;
     max-width:none !important;margin:0 -16px !important;padding:18px 16px 16px !important;width:auto}
   .app--side > .main > .view > *:last-child{margin-bottom:0 !important}
-  /* 탭 줄 아래 여백: 스크롤되는 내용이 탭에 붙지 않게 16px 띄우고 경계는 살짝 흐리게 */
-  .app--side > .main > .topbar{padding-bottom:16px !important}
-  .app--side > .main > .view{padding-top:4px !important;
-    -webkit-mask-image:linear-gradient(to bottom,transparent 0,#000 14px);mask-image:linear-gradient(to bottom,transparent 0,#000 14px)}
+  /* 헤더는 내용 위에 겹쳐 두고, 스크롤을 시작하면 유리 + 아래로 흐려지는 띠가 나타난다.
+     스크롤 전에는 아무 효과 없이 깔끔하게. */
+  .app--side > .main{position:relative}
+  .app--side > .main > .topbar{position:absolute !important;top:0;left:0;right:0;z-index:20;padding-bottom:16px !important}
+  .app--side > .main > .topbar::before{content:"";position:absolute;z-index:-1;left:-16px;right:-16px;top:-16px;bottom:-22px;
+    background:rgba(231,232,234,.55);-webkit-backdrop-filter:blur(16px) saturate(160%);backdrop-filter:blur(16px) saturate(160%);
+    -webkit-mask-image:linear-gradient(to bottom,#000 calc(100% - 30px),transparent);mask-image:linear-gradient(to bottom,#000 calc(100% - 30px),transparent);
+    opacity:0;transition:opacity .18s ease;pointer-events:none}
+  .app--side > .main.is-scrolled > .topbar::before{opacity:1}
+  .app--side > .main > .view{padding-top:calc(var(--hh,120px) + 4px) !important}
 }
 </style>
 </head>
@@ -1743,7 +1749,18 @@ function render(){
   if(bb) bb.addEventListener('scroll',()=>{ window.__barScroll=bb.scrollLeft; });
   if(bb&&tb) tb.style.top=(bb.offsetParent?bb.offsetHeight:0)+'px';
   if(!window.__stickFix){ window.__stickFix=1; window.addEventListener('resize',()=>{ const b=document.querySelector('.brandbar'), t=document.querySelector('.topbar'); if(b&&t) t.style.top=(b.offsetParent?b.offsetHeight:0)+'px'; }); }
+  headerGlass();
   bind();
+}
+/* 데스크톱 고정 헤더: 내용 시작 위치(--hh)를 헤더 높이에 맞추고, 스크롤하면 유리 효과 켜기 */
+function headerGlass(){
+  const main=document.querySelector('.app--side > .main'), v=document.getElementById('view'), tb=main&&main.querySelector('.topbar');
+  if(!main||!v||!tb) return;
+  const fit=()=>main.style.setProperty('--hh', tb.offsetHeight+'px');
+  const mark=()=>main.classList.toggle('is-scrolled', v.scrollTop>2);
+  fit(); mark();
+  v.addEventListener('scroll', mark, {passive:true});
+  if(!window.__hhFix){ window.__hhFix=1; window.addEventListener('resize',()=>{ const m=document.querySelector('.app--side > .main'), t=m&&m.querySelector('.topbar'); if(t) m.style.setProperty('--hh', t.offsetHeight+'px'); }); }
 }
 
 const ICON={
