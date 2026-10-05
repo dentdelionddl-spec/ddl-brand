@@ -1662,12 +1662,8 @@ html body .modal .f input,html body .modal .f select,html body .modal .f textare
 .evchk{flex:0 0 auto;width:15px;height:15px;border-radius:50%;border:1.5px solid hsl(var(--h,214) 35% 68%);background:#fff;display:inline-grid;place-items:center;cursor:pointer;margin-right:6px;padding:0 !important}
 .evchk svg{width:9px;height:9px;fill:none;stroke:#fff;stroke-width:3;stroke-linecap:round;stroke-linejoin:round}
 .evchk[aria-pressed="true"]{background:hsl(var(--h,214) 45% 45%);border-color:hsl(var(--h,214) 45% 45%)}
-.clegend{display:inline-flex;align-items:center;gap:6px;font-size:12px;color:var(--ink2);margin-left:12px}
-.clegend i{width:8px;height:8px;border-radius:50%;background:hsl(var(--h) 62% 58%);display:inline-block;margin-left:8px}
-.clegend i:first-child{margin-left:0}
-@media(max-width:760px){.calx .clegend{display:none}}
 @media(min-width:761px){
-  .calx .card__hd h3{font-size:20px !important;font-weight:700;letter-spacing:-.02em}
+  .calx .card__hd h3{font-size:15px !important;font-weight:650;letter-spacing:-.01em}
   .calx .calwrap{padding:0 12px 12px}
   .calx .cal{border:0 !important;min-width:0 !important;gap:0}
   .calx .cal__dow{background:transparent !important;border:0 !important;font-size:12px !important;font-weight:500 !important;color:var(--mut) !important;text-align:left;padding:12px 10px 8px !important}
@@ -2243,7 +2239,6 @@ function calendarView(){
     </div>
   <section class="card calx">
     <div class="card__hd"><h3><span class="hd-long">${ymLabel(ym)}</span><span class="hd-short">${ymLabelShort(ym)}</span></h3>
-      <span class="clegend"><i style="--h:262"></i>콘텐츠 ${cs.length}<i style="--h:214"></i>업무 ${dayTasks.length}</span>
       <span class="eyebrow" style="margin-left:auto">${calWho?esc(calWho)+'님 업무만':'카드를 끌어 다른 날로 옮길 수 있어요'}</span></div>
     <div class="calwrap"><div class="cal">
       ${['일','월','화','수','목','금','토'].map(d=>`<div class="cal__dow">${d}</div>`).join('')}
