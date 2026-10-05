@@ -1690,6 +1690,71 @@ html body .modal .f input,html body .modal .f select,html body .modal .f textare
   .calx .cell__add{position:absolute;top:6px;right:6px;width:26px;height:26px;border-radius:8px;border:0;background:rgba(255,255,255,.9);color:var(--ink2);font-size:15px;line-height:1;opacity:0;transition:opacity .12s;box-shadow:0 0 0 1px var(--line) inset}
   .calx .cell:hover .cell__add{opacity:1}
 }
+
+/* ===== 5단계: 팝업 세부 ===== */
+/* 날짜 추가 선택 카드 */
+.picks{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin-bottom:8px}
+.pick{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;padding:18px 10px 16px;border:0;border-radius:var(--r-lg);background:rgba(255,255,255,.9);box-shadow:0 0 0 1px var(--line) inset;cursor:pointer;text-align:center;font-family:var(--sans);transition:box-shadow .12s,transform .12s}
+.pick:hover{transform:translateY(-1px);box-shadow:0 0 0 1.5px var(--accent) inset,0 10px 20px -14px rgba(46,107,230,.6)}
+.pick__i{width:36px;height:36px;border-radius:10px;display:grid;place-items:center;background:var(--accent-bg);color:var(--accent);margin-bottom:6px}
+.pick__i svg{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.pick b{font-size:14px;font-weight:700;color:var(--ink)}
+.pick > span:last-child{font-size:12px;color:var(--mut);line-height:1.4}
+html body .modal:not(:has(.modal__ft)) .modal__bd{padding-bottom:20px !important}
+/* 체크 한 줄(완료 등) */
+html body .modal__bd > label:has(> input[type=checkbox]){display:flex !important;align-items:center;gap:8px;height:var(--h);font-size:13px;font-weight:500;color:var(--ink);cursor:pointer;margin:0 !important}
+/* 첨부: 점선 상자 + 파일 선택 버튼 */
+html body .modal .f input[type=file]{width:100%;height:auto !important;min-height:var(--h);padding:8px !important;font:500 12px/1.4 var(--sans);color:var(--mut);
+  background:rgba(255,255,255,.6) !important;border:1px dashed rgba(17,18,20,.18) !important;border-radius:var(--r-md) !important;cursor:pointer}
+html body .modal .f input[type=file]::file-selector-button{height:28px;margin-right:10px;padding:0 12px;border:0;border-radius:var(--r-sm);background:#fff;box-shadow:0 0 0 1px var(--line) inset;font:600 12px var(--sans);color:var(--ink);cursor:pointer}
+.atts:empty{display:none}
+.atts{margin-top:-6px}
+/* 캘린더 안 카드 글자 세로 가운데 */
+@media(min-width:761px){
+  html body .calx .ev{align-items:center !important;line-height:18px !important;padding-top:4px !important;padding-bottom:4px !important}
+  html body .calx .ev > span{display:block;line-height:18px !important;padding:0 !important;margin:0 !important}
+  html body .calx .ev .evchk{margin-top:0 !important;align-self:center}
+}
+
+/* ===== 5단계: 모바일 ===== */
+@media(max-width:760px){
+  /* 상단 바: 검정 → 밝은 유리, 검정 로고 */
+  html body .brandbar{background:rgba(236,237,239,.78) !important;-webkit-backdrop-filter:blur(20px) saturate(160%);backdrop-filter:blur(20px) saturate(160%);
+    border-bottom:1px solid var(--line) !important;box-shadow:none !important;height:56px !important;padding:0 16px !important;gap:10px !important}
+  html body .brandbar .blogo{padding:0 !important;border:0 !important;margin:0 !important;background:transparent !important}
+  html body .brandbar .blogo img{filter:brightness(0);height:17px !important}
+  html body .brandsel{flex:1;max-width:none !important;height:var(--h) !important;padding:0 32px 0 14px !important;border-radius:var(--r-md) !important;
+    background:rgba(255,255,255,.9) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M1 1l4 4 4-4' fill='none' stroke='%238E9198' stroke-width='1.5'/%3E%3C/svg%3E") no-repeat right 12px center !important;
+    color:var(--ink) !important;font:650 14px var(--sans) !important;box-shadow:0 0 0 1px var(--line) inset !important;text-align:left}
+  html body .brandbar .btab--me{height:var(--h) !important;padding:0 12px !important;border-radius:var(--r-md) !important;background:rgba(255,255,255,.9) !important;color:var(--ink2) !important;box-shadow:0 0 0 1px var(--line) inset !important;font-size:12px !important}
+  html body .brandbar .btab--me .btab__n{font-weight:600 !important;font-size:12px !important}
+  /* 화면 여백: 좌우 16px로 통일, 카드끼리 폭 동일 */
+  html body .topbar{padding:14px 16px 12px !important;background:rgba(231,232,234,.86) !important;-webkit-backdrop-filter:blur(18px) saturate(160%) !important;backdrop-filter:blur(18px) saturate(160%) !important;border:0 !important;z-index:25}
+  html body .view{padding:14px 16px 40px !important}
+  html body #view .card,html body #view .grid > .card,html body #view .grid.g2 > *{margin-left:0 !important;margin-right:0 !important;width:auto !important}
+  html body #view .grid{gap:12px !important;padding:0 !important;margin-top:12px !important;margin-bottom:0 !important}
+  html body #view > .grid:first-child{margin-top:0 !important}
+  html body .app .topbar{border-bottom:0 !important}
+  html body #view > * + *{margin-top:12px}
+  html body .topbar{position:static !important;background:transparent !important;-webkit-backdrop-filter:none !important;backdrop-filter:none !important;padding:16px 16px 0 !important}
+  html body .tophead,html body .tophead--m{display:flex !important;flex-wrap:nowrap !important;align-items:center !important;gap:10px !important;min-height:var(--h)}
+  html body .tophead > div:first-child{min-width:0;flex:1}
+  html body .tophead .monthnav{margin:0 0 0 auto !important;flex:0 0 auto}
+  html body .tophead .spacer{display:none}
+  .brandtitle{font-size:20px !important;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .brandko{display:none}
+  /* 모바일 캘린더 목록: 일정 있는 날 + 오늘만, 카드는 파스텔 */
+  html body .calx .cell:not(:has(.ev)):not(.cell--today){display:none !important}
+  html body .calx .cell{border-top:1px solid var(--line2) !important;padding:10px 0 !important;background:transparent !important}
+  html body .calx .cell .ev{display:flex !important;align-items:center;gap:0;min-height:34px;padding:7px 10px 7px 8px !important;margin:0 0 6px !important;border:0 !important;border-radius:var(--r-md) !important;
+    background:hsl(var(--h,214) 70% 95%) !important;box-shadow:0 0 0 1px hsl(var(--h,214) 50% 88%) inset;color:hsl(var(--h,214) 45% 28%) !important;font-size:13px !important;font-weight:600}
+  html body .calx .cell .ev{flex-direction:column !important;align-items:flex-start !important;justify-content:center !important;text-align:left !important}
+  html body .calx .cell .ev *{text-align:left !important}
+  html body .calx .cell .ev .ev__m{color:hsl(var(--h,214) 20% 45%) !important}
+  html body .calx .cell--today .cell__d{color:var(--accent) !important}
+  html body .tabrow{padding:0 !important;margin-top:12px}
+  html body .tabrow .tabs{gap:2px !important}
+}
 </style>
 </head>
 <body>
@@ -2027,7 +2092,12 @@ function brandBar(){
   const tab=(id,label,meta,color,on)=>`<button class="btab ${id==='__set'?'btab--util':''}" data-brand="${id}" aria-current="${on}"
       style="border-bottom-color:${on?color:'transparent'}">
       <span class="btab__n">${esc(label)}</span>${meta?`<span class="btab__p">${esc(meta)}</span>`:''}</button>`;
-  const mobileSel = `<select class="brandsel" aria-label="브랜드 선택">${DB.brands.filter(br=>!br.hidden).map(br=>`<option value="${br.id}" ${UI.brand===br.id?'selected':''}>${esc(br.name)}</option>`).join('')}<option value="__home" ${UI.brand==='__home'?'selected':''}>홈 · 전체 브랜드</option><option value="__set" ${UI.brand==='__set'?'selected':''}>설정</option></select>`;
+  /* 모바일 메뉴: 사이드바와 같은 순서 */
+  const o=(v,l)=>`<option value="${v}" ${UI.brand===v?'selected':''}>${esc(l)}</option>`;
+  const mobileSel = `<select class="brandsel" aria-label="메뉴">
+    ${brandOf('ddl')&&!brandOf('ddl').hidden?o('ddl','DDL'):''}${o('__tasks','업무')}
+    <optgroup label="브랜드">${o('__home','전체')}${DB.brands.filter(br=>!br.hidden&&br.id!=='ddl').map(br=>o(br.id,br.name)).join('')}</optgroup>
+    ${o('__set','설정')}</select>`;
   return `<nav class="brandbar" aria-label="브랜드">
     ${mobileSel}
     <button class="blogo" data-act="home" title="홈으로"><img src="${LOGO_SRC}" alt="DDL" /><span>BRAND OPS</span></button>
@@ -3092,7 +3162,7 @@ function planModalWith(p,isNew){
   if(EMBED&&EMBED.ro) return;
   const id=isNew?null:p.id;
   modal({
-    title:(isNew?'추가':'편집')+' — '+(p.kind||'영상'),
+    title:(p.kind||'영상')+' 기획'+(isNew?' 추가':' 편집'),
     body:`
       ${(p.kind||'영상')==='텍스트'
         ? `<input type="hidden" id="p_kind" value="텍스트" />
@@ -3401,23 +3471,23 @@ function settingsView(){
 /* =========================================================
    MODALS
    ========================================================= */
-function modal({title, body, onSave, onDelete, saveLabel='저장'}){
+function modal({title, body, onSave, onDelete, saveLabel='저장', footer=true}){
   $('#layer').innerHTML=`<div class="ov" data-ov>
     <div class="modal" role="dialog" aria-modal="true" aria-label="${esc(title)}">
       <div class="modal__hd"><h3>${esc(title)}</h3>
         <button class="mclose" data-close aria-label="닫기"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg></button></div>
       <div class="modal__bd">${body}</div>
-      <div class="modal__ft">
+      ${footer?`<div class="modal__ft">
         ${onDelete?`<button class="btn btn--sm btn--del" data-del>삭제</button>`:''}
         <div class="spacer" style="flex:1"></div>
         <button class="btn btn--sm" data-close>취소</button>
         <button class="btn btn--primary btn--sm" data-save>${esc(saveLabel)}</button>
-      </div>
+      </div>`:''}
     </div></div>`;
   const close=()=>{$('#layer').innerHTML='';};
   $('#layer').querySelectorAll('[data-close]').forEach(b=>b.onclick=close);
   $('#layer').querySelector('[data-ov]').onclick=e=>{if(e.target.hasAttribute('data-ov'))close();};
-  $('#layer').querySelector('[data-save]').onclick=()=>{ if(onSave()!==false){ save(); close(); render(); } };
+  const sv=$('#layer').querySelector('[data-save]'); if(sv) sv.onclick=()=>{ if(onSave()!==false){ save(); close(); render(); } };
   const d=$('#layer').querySelector('[data-del]');
   if(d) d.onclick=()=>{ if(confirm('삭제할까요? 되돌릴 수 없습니다.')){ onDelete(); save(); close(); render(); } };
   const first=$('#layer').querySelector('input,select,textarea'); if(first) first.focus();
@@ -3479,14 +3549,16 @@ function bindCalendar(){
   }
 }
 function addOnDate(date,end){
-  modal({ title:`${end&&end!==date?date+' ~ '+end:date} 추가`, saveLabel:'닫기',
-    body:`<p style="margin:0 0 12px;color:var(--mut);font-size:13px">${end&&end!==date?`${date} ~ ${end}`:'이 날짜'}에 무엇을 넣을까요?</p>
-      <div style="display:flex;gap:8px">
-        <button class="btn" id="addOps" style="flex:1;padding:16px 8px">운영</button>
-        <button class="btn" id="addContent" style="flex:1;padding:16px 8px">콘텐츠</button>
-        <button class="btn" id="addTask" style="flex:1;padding:16px 8px">업무</button>
-      </div>`,
-    onSave:()=>{} });
+  const lab=ds=>{ const d=new Date(ds+'T00:00:00'); return `${d.getMonth()+1}월 ${d.getDate()}일 (${WD_KO[d.getDay()]})`; };
+  const span=end&&end!==date;
+  const opt=(id,icon,t,d)=>`<button class="pick" id="${id}"><span class="pick__i">${icon}</span><b>${t}</b><span>${d}</span></button>`;
+  modal({ title: span? `${lab(date)} ~ ${lab(end)}` : lab(date), footer:false,
+    body:`<p>무엇을 추가할까요?</p>
+      <div class="picks">
+        ${opt('addOps','<svg viewBox="0 0 24 24"><path d="M4 20V8l8-4 8 4v12"/><path d="M9 20v-6h6v6"/></svg>','운영','행사·입고·업로드 일정')}
+        ${opt('addContent','<svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M10 9.5v5l4-2.5z"/></svg>','콘텐츠','EGC·UGC 발행')}
+        ${opt('addTask','<svg viewBox="0 0 24 24"><rect x="4" y="4" width="16" height="16" rx="3"/><path d="M8.5 12.5l2.5 2.5 4.5-5"/></svg>','업무','담당자·마감 있는 할 일')}
+      </div>` });
   $('#addOps').onclick=()=>{ $('#layer').innerHTML=''; contentModal(null,date,'운영',end); };
   $('#addContent').onclick=()=>{ $('#layer').innerHTML=''; contentModal(null,date,'콘텐츠',end); };
   $('#addTask').onclick=()=>{ $('#layer').innerHTML=''; taskModal(null,(end||date),null,date); };
@@ -3517,7 +3589,7 @@ async function uploadAttachment(file){
   return { id:r.id, name:file.name, mime:(payload.type||file.type||''), size:payload.size, note };
 }
 function attChips(list, editable){
-  if(!list||!list.length) return '<div class="eyebrow">첨부 없음</div>';
+  if(!list||!list.length) return editable? '' : '<div class="eyebrow">첨부 없음</div>';
   return `<div style="display:flex;gap:6px;flex-wrap:wrap">${list.map((a,i)=>`
     <span class="tag" style="padding:5px 8px">${/^video\//.test(a.mime||'')?'🎬':'🖼'} ${esc(a.name||'파일')}${editable?` <b data-attdel="${i}" style="cursor:pointer;color:var(--alert);margin-left:4px">✕</b>`:''}</span>`).join('')}</div>`;
 }
@@ -3529,7 +3601,7 @@ function contentModal(id,date,cat,end){
   const kind = cat || catOf(c.type);
   const typeOptions = kind==='콘텐츠' ? CONTENT_TYPES : OPS_TYPES;
   modal({
-    title: (isNew?'추가':'편집')+' — '+kind,
+    title: kind+(isNew?' 추가':' 편집'),
     body:`<div class="row2">
         <label class="f"><span>시작일</span><input type="date" id="c_date" value="${c.date}" /></label>
         <label class="f"><span>마감일 (하루면 비워두세요)</span><input type="date" id="c_end" value="${c.end||''}" /></label>
@@ -3540,7 +3612,7 @@ function contentModal(id,date,cat,end){
       <label class="f"><span>첨부 (이미지·영상 · 이미지는 자동 압축)</span>
         <input type="file" id="c_file" accept="image/*,video/*" multiple />
       </label>
-      <div id="c_atts" style="margin:-6px 0 12px">${attChips(c.att, true)}</div>
+      <div id="c_atts" class="atts">${attChips(c.att, true)}</div>
       <label style="display:flex;gap:8px;align-items:center"><input type="checkbox" id="c_done" ${c.done?'checked':''} style="width:16px;height:16px;accent-color:var(--ink)" /> 완료</label>`,
     onSave:()=>{
       c.date=$('#c_date').value||TODAY;
@@ -3963,7 +4035,7 @@ function bind(){
   document.querySelectorAll('[data-edit-brand]').forEach(el=>el.onclick=()=>brandModal(el.dataset.editBrand));
   mobileLayout();
   const bsel=document.querySelector('.brandsel');
-  if(bsel) bsel.onchange=()=>{ UI.brand=bsel.value; if(UI.brand!=='__set'&&UI.brand!=='__home') UI.tab='calendar'; saveUI(); render(); window.scrollTo(0,0); };
+  if(bsel) bsel.onchange=()=>{ UI.brand=bsel.value; if(!['__set','__home','__tasks'].includes(UI.brand)) UI.tab='calendar'; saveUI(); render(); window.scrollTo(0,0); };
   document.querySelectorAll('[data-hide-brand]').forEach(el=>el.onclick=()=>{
     const b=DB.brands.find(x=>x.id===el.dataset.hideBrand); if(!b) return;
     b.hidden=!b.hidden;
