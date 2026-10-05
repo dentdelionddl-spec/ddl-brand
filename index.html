@@ -1534,8 +1534,36 @@ html body .btn--sm,html body .mine{display:inline-flex;align-items:center;justif
 .bdot,.snav__dot,.brandtitle .dot,.gauge__hd .dot,.brow .dot{display:none !important}
 
 /* 사이드바 오른쪽 끝: 업무 개수(형광)와 브랜드 화살표가 같은 20px 칸의 가운데에 오도록 */
-html body .snav__m{flex:0 0 auto;min-width:20px;height:20px;padding:0 6px;display:inline-flex;align-items:center;justify-content:center;border-radius:999px;background:var(--neon);color:var(--neon-ink);font-size:11px;font-weight:700;font-variant-numeric:tabular-nums}
+html body .snav__m{font-size:11px;color:var(--mut);font-variant-numeric:tabular-nums}
+html body .snav__m--n{flex:0 0 auto;min-width:20px;height:20px;padding:0 6px;display:inline-flex;align-items:center;justify-content:center;border-radius:999px;background:var(--neon);color:var(--neon-ink);font-size:11px;font-weight:700;font-variant-numeric:tabular-nums}
 html body .snav__chev{flex:0 0 20px;width:20px !important;height:14px !important;padding:0 3px;box-sizing:border-box}
+
+/* ===== 4단계: 공통 업무 행 (요약·전체·브랜드 업무·액션플랜) ===== */
+.trw{display:grid;grid-template-columns:16px minmax(0,1fr) auto 84px;gap:12px;align-items:center;padding:11px 2px;border-top:1px solid var(--line2);cursor:pointer;transition:background .12s}
+.trw:first-child,.tlist__g + .trw{border-top:0}
+.trw:hover{background:rgba(255,255,255,.6)}
+.trw input{width:16px;height:16px;margin:0;accent-color:var(--ink);cursor:pointer}
+.trw__m{min-width:0}
+.trw__m .tt{font-size:13px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.trw__d{font-size:12px;color:var(--ink2);font-variant-numeric:tabular-nums}
+.trw .st{justify-self:start}
+.trw.is-done .tt{color:var(--mut);text-decoration:line-through}
+.card__bd > .trw:first-child{padding-top:2px}
+.card__bd > .trw:last-child{padding-bottom:2px}
+.tlist{padding:4px 18px 8px}
+.tlist__g{padding:14px 2px 6px;font-size:12px;color:var(--mut);border-top:1px solid var(--line)}
+.tlist__g:first-child{border-top:0}
+.tlist__g b{color:var(--ink);font-weight:700;margin-right:6px}
+.tprog{display:inline-flex;align-items:center;gap:10px;font-size:12px;color:var(--mut);margin-left:6px}
+.tprog .track{width:160px;height:6px;border-radius:999px;background:rgba(17,18,20,.08);overflow:hidden;display:block}
+.tprog .track i{display:block;height:100%;background:var(--accent);border-radius:999px}
+/* 숫자 타일 묶음(분석 등)도 업무 페이지 숫자 띠와 같은 모양 */
+html body .ustat{display:grid;gap:0;padding:16px 4px;background:var(--card);-webkit-backdrop-filter:var(--glass);backdrop-filter:var(--glass);box-shadow:var(--sh);border-radius:var(--r-lg)}
+html body .ustat__c{background:transparent !important;box-shadow:none !important;border:0 !important;border-left:1px solid var(--line) !important;border-radius:0 !important;text-align:left;padding:0 20px}
+html body .ustat__c:first-child{border-left:0 !important}
+html body .ustat__n{font-size:24px;font-weight:700}
+html body .ustat__l{font-size:12px;color:var(--ink2);margin-top:4px}
+@media(max-width:760px){.trw{grid-template-columns:16px minmax(0,1fr) auto}.trw__d{display:none}.tprog{display:none}html body .ustat__c:nth-child(odd){border-left:0 !important}html body .ustat{row-gap:14px}}
 </style>
 </head>
 <body>
@@ -1784,7 +1812,8 @@ function mobileLayout(){
   const ctrl=document.querySelector("#view > div");
   const prim=ctrl && ctrl.querySelector(".btn--primary");
   if(hd && prim && prim.parentElement!==hd){ hd.appendChild(prim); prim.classList.add("hd-action"); }
-  if(ctrl && !ctrl.querySelector("button")) ctrl.style.display="none";
+  /* 버튼 없는 빈 도구 줄만 숨김 (카드 묶음은 숨기지 않음) */
+  if(ctrl && !ctrl.querySelector("button") && !ctrl.querySelector(".card")) ctrl.style.display="none";
   mobileAgenda();
   mobileAgenda2();
   scrollToToday();
@@ -1839,13 +1868,13 @@ const ICON={
   gear:'<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M10.33 4.32c.43-1.76 2.92-1.76 3.35 0a1.72 1.72 0 0 0 2.57 1.07c1.54-.94 3.31.83 2.37 2.37a1.72 1.72 0 0 0 1.07 2.57c1.76.43 1.76 2.92 0 3.35a1.72 1.72 0 0 0-1.07 2.57c.94 1.54-.83 3.31-2.37 2.37a1.72 1.72 0 0 0-2.57 1.07c-.43 1.76-2.92 1.76-3.35 0a1.72 1.72 0 0 0-2.57-1.07c-1.54.94-3.31-.83-2.37-2.37a1.72 1.72 0 0 0-1.07-2.57c-1.76-.43-1.76-2.92 0-3.35a1.72 1.72 0 0 0 1.07-2.57c-.94-1.54.83-3.31 2.37-2.37 1 .61 2.3.07 2.57-1.07z"/><circle cx="12" cy="12" r="3"/></svg>'
 };
 function sideNav(){
-  const item=(attr,label,icon,on,meta='')=>`<button class="snav__i" ${attr} aria-current="${on}">${icon||''}<span class="snav__l">${esc(label)}</span>${meta?`<span class="snav__m">${esc(meta)}</span>`:''}</button>`;
+  const item=(attr,label,icon,on,meta='',neon=false)=>`<button class="snav__i" ${attr} aria-current="${on}">${icon||''}<span class="snav__l">${esc(label)}</span>${meta?`<span class="snav__m ${neon?'snav__m--n':''}">${esc(meta)}</span>`:''}</button>`;
   const s=DB.settings;
   const sync = !s.workerUrl ? '로컬 저장' : (s.auto===false ? '수동 동기화' : '노션 자동 동기화');
   return `<aside class="snav" aria-label="메뉴">
     <button class="snav__logo" data-act="home" title="홈으로"><img src="${LOGO_SRC}" alt="DDL" /></button>
     ${brandOf('ddl')&&!brandOf('ddl').hidden ? item('data-brand="ddl"','DDL',ICON.home,UI.brand==='ddl') : ''}
-    ${item('data-brand="__tasks"','업무',ICON.check,UI.brand==='__tasks', String(DB.tasks.filter(t=>!t.done&&brandOf(t.brandId)&&!brandOf(t.brandId).hidden).length))}
+    ${item('data-brand="__tasks"','업무',ICON.check,UI.brand==='__tasks', String(DB.tasks.filter(t=>!t.done&&brandOf(t.brandId)&&!brandOf(t.brandId).hidden).length), true)}
     ${(()=>{
       const list=DB.brands.filter(br=>!br.hidden && br.id!=='ddl');
       const open = UI.navBrands!==false;
@@ -2186,22 +2215,13 @@ function ownerPicker(sel){
 }
 function readOwners(){ return [...document.querySelectorAll('.ownchk:checked')].map(el=>el.value); }
 function taskRow(t,compact,showBrand){
-  const d = t.due? daysBetween(TODAY,t.due) : null;
-  const dd = d===null? '' : (d<0? `<span class="dday dday--over">D+${-d}</span>` : d===0? `<span class="dday dday--today">D-DAY</span>` : `<span class="dday ${d<=3?'dday--soon':''}">D-${d}</span>`);
-  const pcls = t.priority==='긴급'?'tag--urgent':t.priority==='높음'?'tag--high':'';
-  return `<div class="tk tk--click ${t.done?'tk--done':''}" data-edit-task="${t.id}">
+  const st=taskState(t), b=brandOf(t.brandId), ow=ownersOf(t);
+  const meta=[showBrand&&b?b.name:'', ow.length>2?ow.slice(0,2).join(', ')+' 외 '+(ow.length-2):ow.join(', '), t.area||''].filter(Boolean).map(esc).join(' · ');
+  return `<div class="trw ${t.done?'is-done':''}" data-edit-task="${t.id}">
     <input type="checkbox" data-toggle-task="${t.id}" ${t.done?'checked':''} onclick="event.stopPropagation()" aria-label="완료 표시" />
-    <div class="tk__t">
-      <div class="tk__title">${esc(t.title)}</div>
-      <div class="tk__meta">
-        ${dd}
-        ${showBrand?`<span class="tag">${esc(brandOf(t.brandId)?.name||'')}</span>`:''}
-        <span class="tag ${pcls}">${esc(t.priority||'보통')}</span>
-        ${t.week?`<span class="tag">${esc(t.week)}</span>`:''}
-        ${ownersOf(t).map(n=>`<span class="tag">${esc(n)}</span>`).join('')}
-        ${t.due?`<span class="eyebrow">${t.due.slice(5)}</span>`:''}
-      </div>
-    </div>
+    <div class="trw__m"><div class="tt">${t.priority==='긴급'?'<span class="pr">긴급</span>':''}${esc(t.title)}</div>${meta?`<div class="ta">${meta}</div>`:''}</div>
+    <div class="trw__d">${t.due?t.due.slice(5).replace('-','/'):''}</div>
+    <span class="st ${st.cls}">${st.l}</span>
   </div>`;
 }
 
@@ -2233,23 +2253,22 @@ function tasksView(){
   });
   const pct = (open.length+done.length)? Math.round(done.length/(open.length+done.length)*100):0;
   const chip=(label,val,on)=>`<button class="btn btn--sm" data-taskowner="${esc(val)}" style="border-radius:999px;${on?'background:var(--ink);border-color:var(--ink);color:#fff':''}">${esc(label)}</button>`;
-  return `<div style="display:flex;align-items:center;gap:12px;margin-bottom:10px;flex-wrap:wrap">
-      <div class="tabs" style="margin:0;border:1px solid var(--line);border-radius:999px;padding:2px;background:var(--card)">
-        <button class="tab" data-taskview="todo" aria-selected="${!showDone}" style="border:0;border-radius:999px;padding:6px 14px">할 일 ${open.length}</button>
-        <button class="tab" data-taskview="done" aria-selected="${showDone}" style="border:0;border-radius:999px;padding:6px 14px">${Number(UI.ym.slice(5))}월 완료 ${done.length}</button>
+  return `<div class="ttool">
+      <div class="tabs">
+        <button class="tab" data-taskview="todo" aria-selected="${!showDone}">할 일 ${open.length}</button>
+        <button class="tab" data-taskview="done" aria-selected="${showDone}">${Number(UI.ym.slice(5))}월 완료 ${done.length}</button>
       </div>
-      <div class="mono" style="font-size:12.5px;color:var(--mut)">진행률 ${pct}%</div>
-      <div class="track" style="flex:1;max-width:220px"><i style="width:${pct}%;background:${hueBg(b.hue,58)}"></i></div>
+      <span class="tprog"><span>진행률 ${pct}%</span><span class="track"><i style="width:${pct}%"></i></span></span>
       <div class="spacer" style="flex:1"></div>
       ${mineBtn()}
       <button class="btn btn--primary btn--sm" data-act="task-new">업무 추가</button>
     </div>
     ${!list.length? `<div class="card"><div class="empty"><b>${showDone?'완료한 업무가 없습니다':'할 일이 없습니다'}</b>${who?`담당 ${esc(who)} 기준입니다.`:'업무를 추가하거나 노션 주간 플랜에서 내려받으세요.'}</div></div>`
-    : areas.map(a=>{
+    : `<section class="card tlist">${areas.map(a=>{
       const rows=list.filter(t=>areaOf(t)===a).sort((x,y)=>(x.due||'9999-99-99').localeCompare(y.due||'9999-99-99')||PRIOS.indexOf(x.priority)-PRIOS.indexOf(y.priority));
-      return `<div class="areahd"><h3>${esc(a)}</h3><span class="line"></span><span class="eyebrow">${rows.length}건</span></div>
+      return `<div class="tlist__g"><b>${esc(a)}</b><span>${rows.length}</span></div>
         ${rows.map(t=>taskRow(t,true)).join('')}`;
-    }).join('')}`;
+    }).join('')}</section>`}`;
 }
 
 
