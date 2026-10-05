@@ -1527,6 +1527,11 @@ html body .tag,html body .mchip,html body .dday--today,html body .ev,html body m
   html body #view > div.ttool{flex-wrap:wrap !important;overflow:visible !important;display:flex !important}
   .ttable .c-brand,.ttable .c-who,.ttable th:nth-child(3),.ttable th:nth-child(4){display:none}
 }
+
+/* 작은 버튼 규격 = '내 것만 보기' 기준: 높이 30 · 글자 12 · 좌우 12 · 모서리 6 */
+html body .btn--sm,html body .mine{display:inline-flex;align-items:center;justify-content:center;gap:6px;height:30px;padding:0 12px !important;font-size:12px !important;font-weight:600;line-height:1;border-radius:var(--r-sm) !important;white-space:nowrap}
+/* 브랜드 컬러칩은 쓰지 않음 */
+.bdot,.snav__dot,.brandtitle .dot,.gauge__hd .dot,.brow .dot{display:none !important}
 </style>
 </head>
 <body>
@@ -1878,7 +1883,7 @@ function brandBar(){
 
 function mineBtn(){
   const on=!!myFilter();
-  return `<button class="mine" data-act="mine" aria-pressed="${on}">내 것만</button>`;
+  return `<button class="mine" data-act="mine" aria-pressed="${on}">내 것만 보기</button>`;
 }
 function topbar(){
   if(UI.brand==='__set') return `<header class="topbar"><div class="tophead">
@@ -2164,7 +2169,7 @@ function calendarView(){
 /* ---------- 업무 ---------- */
 function ownersOf(t){ return (Array.isArray(t.owners)&&t.owners.length)? t.owners : (t.owner? [t.owner] : []); }
 function ownerFilter(w){ return OWNERS.includes(w)? w : ''; }
-/* 기본은 전체, '내 것만' 켜면 설정된 내 이름만 */
+/* 기본은 전체, '내 것만 보기' 켜면 설정된 내 이름만 */
 function myFilter(){ const me=DB.settings.me||''; return (me && UI.mine===true)? me : ''; }
 function hasOwner(t,who){ return !who || ownersOf(t).includes(who); }
 function ownerPicker(sel){
@@ -2291,7 +2296,7 @@ function allTasksView(){
     return `<tr class="trow ${t.done?'is-done':''}" data-edit-task="${t.id}">
       <td class="c-chk"><input type="checkbox" data-toggle-task="${t.id}" ${t.done?'checked':''} onclick="event.stopPropagation()" aria-label="완료 표시" /></td>
       <td class="c-title"><div class="tt">${t.priority==='긴급'?'<span class="pr">긴급</span>':''}${esc(t.title)}</div>${t.area?`<div class="ta">${esc(t.area)}</div>`:''}</td>
-      <td class="c-brand"><span class="bdot" style="background:${hueBg(b.hue,58)}"></span>${esc(b.name)}</td>
+      <td class="c-brand">${esc(b.name)}</td>
       <td class="c-who">${ow.length?esc(ow.length>2?ow.slice(0,2).join(', ')+' 외 '+(ow.length-2):ow.join(', ')):'<span class="mutd">—</span>'}</td>
       <td class="c-due">${t.due?t.due.slice(5).replace('-','/'):'<span class="mutd">—</span>'}</td>
       <td class="c-st"><span class="st ${st.cls}">${st.l}</span></td>
@@ -2394,7 +2399,7 @@ function meModal(){
   const names=OWNERS;
   modal({
     title:'내 이름',
-    body:`<p style="margin:0 0 12px;color:var(--mut);font-size:13px">이 브라우저에서 나로 기억할 이름입니다. 업무 탭이 처음부터 내 것만 보이도록 맞춰집니다.</p>
+    body:`<p style="margin:0 0 12px;color:var(--mut);font-size:13px">이 브라우저에서 나로 기억할 이름입니다. 업무·캘린더 탭의 ‘내 것만 보기’가 이 이름 기준으로 걸러집니다.</p>
       <label class="f"><span>이름</span><select id="me_name">
         <option value="">선택 안 함</option>${names.map(n=>`<option ${n===cur?'selected':''}>${esc(n)}</option>`).join('')}
       </select></label>`,
@@ -3266,7 +3271,6 @@ function allView(){
         const pct=r.goal? r.actual/r.goal*100:0;
         return `<div class="gauge">
           <div class="gauge__hd">
-            <span class="dot" style="background:${hueBg(r.b.hue,52)};width:8px;height:8px;border-radius:2px"></span>
             <span class="gauge__name">${esc(r.b.name)}</span>
             <span class="gauge__val"><b>${man(r.actual)}</b>/${man(r.goal)}만 · 콘텐츠 ${r.cs} · 업무 ${r.openT}${r.overdue?` <span style="color:var(--alert)">지연 ${r.overdue}</span>`:''}${r.empty?` · 빈 유형 ${r.empty}`:''}</span>
           </div>
@@ -3289,7 +3293,6 @@ function settingsView(){
         <div class="eyebrow" style="margin-bottom:8px">순서를 바꾸려면 ⠿ 를 잡고 위아래로 끌어 놓으세요</div>
         ${DB.brands.map(b=>`<div class="tk brow" draggable="true" data-brandrow="${b.id}">
           <span class="grip" title="끌어서 순서 변경">⠿</span>
-          <span class="dot" style="background:${hueBg(b.hue,52)};margin-top:5px"></span>
           <div class="tk__t"><div class="tk__title">${esc(b.name)} <span style="font-weight:400;color:var(--mut)">${esc(b.ko||'')}</span></div>
             <div class="tk__meta"><span class="eyebrow">${b.channels.map(esc).join(' · ')}</span></div></div>
           <button class="btn btn--sm" data-hide-brand="${b.id}" style="${b.hidden?'border-color:#E4C9CE;color:var(--alert)':''}">${b.hidden?'숨김':'표시'}</button>
