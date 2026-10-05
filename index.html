@@ -1306,7 +1306,12 @@ body.ro .ev:hover{transform:none;box-shadow:0 1px 2px rgba(16,20,32,.04)}
   .snav__i:hover{background:#F2F3F7;color:var(--ink)}
   .snav__i[aria-current="true"]{background:#EEF0F6;color:var(--ink);font-weight:650}
   .snav__i svg{width:16px;height:16px;flex:0 0 auto;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
-  .snav__dot{width:8px;height:8px;border-radius:50%;flex:0 0 auto;margin:0 4px}
+  .snav__sub{display:flex;flex-direction:column;gap:1px;margin:1px 0 2px}
+  .snav__sub[hidden]{display:none}
+  .snav__sub .snav__i{padding-left:35px}
+  .snav__grp{margin-top:2px}
+  .snav__chev{width:14px !important;height:14px !important;color:var(--mut);transition:transform .15s}
+  .snav__grp[aria-expanded="true"] .snav__chev{transform:rotate(90deg)}
   .snav__l{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
   .snav__m{font-size:11px;color:var(--mut);font-variant-numeric:tabular-nums}
   .snav__ft{margin-top:auto;padding-top:10px;border-top:1px solid var(--line2);display:flex;flex-direction:column;gap:1px}
@@ -1602,6 +1607,8 @@ function render(){
 }
 
 const ICON={
+  tag:'<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 4h7l9 9-7 7-9-9z"/><circle cx="8.5" cy="8.5" r="1.2"/></svg>',
+  chev:'<svg class="snav__chev" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg>',
   home:'<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 11l8-7 8 7v8a1 1 0 0 1-1 1h-4v-6h-6v6H5a1 1 0 0 1-1-1z"/></svg>',
   user:'<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 20c1.5-4 4.5-6 8-6s6.5 2 8 6"/></svg>',
   gear:'<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3M4.9 4.9l2.1 2.1M17 17l2.1 2.1M4.9 19.1L7 17M17 7l2.1-2.1"/></svg>'
@@ -1614,12 +1621,18 @@ function sideNav(){
     <button class="snav__logo" data-act="home" title="홈으로"><img src="${LOGO_SRC}" alt="DDL" /></button>
     <div class="snav__h">운영</div>
     ${item('data-act="home"','전체 브랜드',ICON.home,UI.brand==='__home')}
-    <div class="snav__h">브랜드</div>
-    ${DB.brands.filter(br=>!br.hidden).map(br=>{
-      const {goal,actual}=totals(br.id,UI.ym);
-      const meta = goal? Math.round(actual/goal*100)+'%' : '';
-      return item(`data-brand="${br.id}"`, br.name, `<span class="snav__dot" style="background:${hueBg(br.hue,58)}"></span>`, UI.brand===br.id, meta);
-    }).join('')}
+    ${(()=>{
+      const list=DB.brands.filter(br=>!br.hidden);
+      const open = UI.navBrands!==false;
+      return `<button class="snav__i snav__grp" data-act="nav-brands" aria-expanded="${open}">${ICON.tag}<span class="snav__l">브랜드</span><span class="snav__m">${list.length}</span>${ICON.chev}</button>
+      <div class="snav__sub" ${open?'':'hidden'}>
+      ${list.map(br=>{
+        const {goal,actual}=totals(br.id,UI.ym);
+        const meta = goal? Math.round(actual/goal*100)+'%' : '';
+        return item(`data-brand="${br.id}"`, br.name, '', UI.brand===br.id, meta);
+      }).join('')}
+      </div>`;
+    })()}
     <div class="snav__ft">
       ${item('data-act="me"', s.me?('나 · '+s.me):'담당자 선택', ICON.user, false)}
       ${item('data-brand="__set"','설정',ICON.gear,UI.brand==='__set')}
@@ -3640,6 +3653,7 @@ function bind(){
 
 function act(a){
   if(a==='me') return meModal();
+  if(a==='nav-brands'){ const sub=document.querySelector('.snav__sub'); UI.navBrands=!!(sub&&sub.hidden); saveUI(); render(); return; }
   if(a==='go-summary'){ UI.tab='summary'; saveUI(); render(); return; }
   if(a==='home'){ UI.brand='__home'; UI.ym=ymOf(today); saveUI(); render(); return; }
   if(a==='task-new') return taskModal(null);
