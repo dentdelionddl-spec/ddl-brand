@@ -1415,6 +1415,22 @@ mark,.hl{background:linear-gradient(transparent 12%,var(--neon) 12%,var(--neon) 
 .cell--today{background:var(--accent-bg)}
 .cell--today .cell__d{color:var(--accent)}
 :focus-visible{outline-color:var(--accent)}
+
+/* 상단바 v3.1: 떠 있는 유리 판 대신 배경 위에 바로 놓는 깔끔한 헤더 */
+@media(min-width:761px){
+  .app--side .topbar{position:static !important;background:transparent !important;backdrop-filter:none !important;-webkit-backdrop-filter:none !important;border:0 !important;border-radius:0;box-shadow:none !important;padding:10px 4px 0 !important;margin:0}
+  .app--side .tophead{align-items:center;min-height:44px;gap:12px}
+  .app--side .brandtitle{font-size:22px !important;letter-spacing:-.02em;align-items:baseline;gap:10px}
+  .brandko{font-size:13px;font-weight:500;color:var(--mut);letter-spacing:0}
+  .app--side .tabrow{height:auto !important;margin-top:14px;padding:0}
+  .app--side .tabs{flex:0 0 auto;margin:0;padding:4px;gap:2px;border-radius:12px;background:rgba(255,255,255,.5);box-shadow:0 0 0 1px rgba(255,255,255,.6) inset,0 1px 2px rgba(0,0,0,.04)}
+  .app--side .tab{padding:7px 16px !important;margin:0 !important;font-size:13px}
+  .app--side .monthnav{margin:0 !important;padding:3px;border-radius:999px;background:rgba(255,255,255,.6);box-shadow:0 0 0 1px rgba(255,255,255,.6) inset,0 1px 2px rgba(0,0,0,.04)}
+  .app--side .monthnav button{border-radius:999px}
+  .app--side .view{padding-top:18px}
+}
+.tabs:empty{display:none}
+@media(max-width:760px){.tabrow{max-width:100%;overflow:hidden}.tabrow .tabs{width:100%;max-width:100%}}
 </style>
 </head>
 <body>
@@ -1700,7 +1716,7 @@ const ICON={
   chev:'<svg class="snav__chev" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg>',
   home:'<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 11l8-7 8 7v8a1 1 0 0 1-1 1h-4v-6h-6v6H5a1 1 0 0 1-1-1z"/></svg>',
   user:'<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 20c1.5-4 4.5-6 8-6s6.5 2 8 6"/></svg>',
-  gear:'<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3M4.9 4.9l2.1 2.1M17 17l2.1 2.1M4.9 19.1L7 17M17 7l2.1-2.1"/></svg>'
+  gear:'<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M10.33 4.32c.43-1.76 2.92-1.76 3.35 0a1.72 1.72 0 0 0 2.57 1.07c1.54-.94 3.31.83 2.37 2.37a1.72 1.72 0 0 0 1.07 2.57c1.76.43 1.76 2.92 0 3.35a1.72 1.72 0 0 0-1.07 2.57c.94 1.54-.83 3.31-2.37 2.37a1.72 1.72 0 0 0-2.57 1.07c-.43 1.76-2.92 1.76-3.35 0a1.72 1.72 0 0 0-2.57-1.07c-1.54.94-3.31-.83-2.37-2.37a1.72 1.72 0 0 0-1.07-2.57c-1.76-.43-1.76-2.92 0-3.35a1.72 1.72 0 0 0 1.07-2.57c-.94-1.54.83-3.31 2.37-2.37 1 .61 2.3.07 2.57-1.07z"/><circle cx="12" cy="12" r="3"/></svg>'
 };
 function sideNav(){
   const item=(attr,label,icon,on,meta='')=>`<button class="snav__i" ${attr} aria-current="${on}">${icon||''}<span class="snav__l">${esc(label)}</span>${meta?`<span class="snav__m">${esc(meta)}</span>`:''}</button>`;
@@ -1708,7 +1724,6 @@ function sideNav(){
   const sync = !s.workerUrl ? '로컬 저장' : (s.auto===false ? '수동 동기화' : '노션 자동 동기화');
   return `<aside class="snav" aria-label="메뉴">
     <button class="snav__logo" data-act="home" title="홈으로"><img src="${LOGO_SRC}" alt="DDL" /></button>
-    <div class="snav__h">운영</div>
     ${brandOf('ddl')&&!brandOf('ddl').hidden ? item('data-brand="ddl"','DDL',ICON.home,UI.brand==='ddl') : ''}
     ${(()=>{
       const list=DB.brands.filter(br=>!br.hidden && br.id!=='ddl');
@@ -1752,10 +1767,9 @@ function brandBar(){
 function topbar(){
   if(UI.brand==='__set') return `<header class="topbar"><div class="tophead">
       <h1 class="brandtitle">설정 · 동기화</h1><div class="spacer"></div>
-    </div><div class="tabs"></div></header>`;
+    </div></header>`;
   if(UI.brand==='__home') return `<header class="topbar">
-      <div class="tophead"><div><h1 class="brandtitle">전체 브랜드</h1><div class="brandsub">홈</div></div></div>
-      <div class="tabrow"><div class="tabs"></div>${monthNav()}</div>
+      <div class="tophead"><div><h1 class="brandtitle">전체 브랜드</h1></div><div class="spacer"></div>${monthNav()}</div>
     </header>`;
 
   const b=brandOf(UI.brand);
@@ -1763,15 +1777,15 @@ function topbar(){
   return `<header class="topbar">
     <div class="tophead">
       <div>
-        <h1 class="brandtitle">${esc(b.name)}</h1>
-        <div class="brandsub">${esc(b.ko||'')}</div>
+        <h1 class="brandtitle">${esc(b.name)}${b.ko?`<span class="brandko">${esc(b.ko)}</span>`:''}</h1>
       </div>
+      <div class="spacer"></div>
+      ${monthNav()}
     </div>
     <div class="tabrow">
       <div class="tabs" role="tablist">
         ${tabs.map(([k,l])=>`<button class="tab" role="tab" data-tab="${k}" aria-selected="${UI.tab===k}">${l}</button>`).join('')}
       </div>
-      ${monthNav()}
     </div>
   </header>`;
 }
