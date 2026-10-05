@@ -1418,7 +1418,7 @@ mark,.hl{background:linear-gradient(transparent 12%,var(--neon) 12%,var(--neon) 
 
 /* 상단바 v3.1: 떠 있는 유리 판 대신 배경 위에 바로 놓는 깔끔한 헤더 */
 @media(min-width:761px){
-  .app--side .topbar{position:static !important;background:transparent !important;backdrop-filter:none !important;-webkit-backdrop-filter:none !important;border:0 !important;border-radius:0;box-shadow:none !important;padding:10px 4px 0 !important;margin:0}
+  .app--side .topbar{position:static !important;background:transparent !important;backdrop-filter:none !important;-webkit-backdrop-filter:none !important;border:0 !important;border-radius:0;box-shadow:none !important;padding:10px 0 0 !important;margin:0}
   .app--side .tophead{align-items:center;min-height:44px;gap:12px}
   .app--side .brandtitle{font-size:22px !important;letter-spacing:-.02em;align-items:baseline;gap:10px}
   .brandko{font-size:13px;font-weight:500;color:var(--mut);letter-spacing:0}
@@ -1564,6 +1564,9 @@ html body .ustat__c:first-child{border-left:0 !important}
 html body .ustat__n{font-size:24px;font-weight:700}
 html body .ustat__l{font-size:12px;color:var(--ink2);margin-top:4px}
 @media(max-width:760px){.trw{grid-template-columns:16px minmax(0,1fr) auto}.trw__d{display:none}.tprog{display:none}html body .ustat__c:nth-child(odd){border-left:0 !important}html body .ustat{row-gap:14px}}
+
+/* 헤더(제목·탭·월 이동)와 카드의 좌우 끝선을 같은 세로선에 맞춤 */
+@media(min-width:761px){ html body .app--side > .main > .topbar{padding-left:0 !important;padding-right:0 !important} }
 </style>
 </head>
 <body>
