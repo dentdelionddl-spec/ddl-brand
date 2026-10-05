@@ -1836,7 +1836,7 @@ function sideNav(){
   return `<aside class="snav" aria-label="메뉴">
     <button class="snav__logo" data-act="home" title="홈으로"><img src="${LOGO_SRC}" alt="DDL" /></button>
     ${brandOf('ddl')&&!brandOf('ddl').hidden ? item('data-brand="ddl"','DDL',ICON.home,UI.brand==='ddl') : ''}
-    ${item('data-brand="__tasks"','업무',ICON.check,UI.brand==='__tasks', String(DB.tasks.filter(t=>!t.done&&brandOf(t.brandId)).length))}
+    ${item('data-brand="__tasks"','업무',ICON.check,UI.brand==='__tasks', String(DB.tasks.filter(t=>!t.done&&brandOf(t.brandId)&&!brandOf(t.brandId).hidden).length))}
     ${(()=>{
       const list=DB.brands.filter(br=>!br.hidden && br.id!=='ddl');
       const open = UI.navBrands!==false;
@@ -2212,7 +2212,8 @@ function tasksView(){
   const me=DB.settings.me||'';
   const who=myFilter();
   const scoped = who? all.filter(t=>hasOwner(t,who)) : all;
-  const open=scoped.filter(t=>!t.done), done=scoped.filter(t=>t.done);
+  /* 완료는 상단에서 고른 달에 마감된 것만 */
+  const open=scoped.filter(t=>!t.done), done=scoped.filter(t=>t.done&&(t.due||'').startsWith(UI.ym));
   const showDone = UI.taskDone===true;
   const list = showDone? done : open;
   const sorter=(x,y)=>(x.due||'9999').localeCompare(y.due||'9999')||PRIOS.indexOf(x.priority)-PRIOS.indexOf(y.priority);
@@ -2221,12 +2222,12 @@ function tasksView(){
     const first=a=>list.filter(t=>areaOf(t)===a).map(t=>t.due||'9999-99-99').sort()[0]||'9999-99-99';
     return first(x).localeCompare(first(y)) || x.localeCompare(y,'ko');
   });
-  const pct = scoped.length? Math.round(done.length/scoped.length*100):0;
+  const pct = (open.length+done.length)? Math.round(done.length/(open.length+done.length)*100):0;
   const chip=(label,val,on)=>`<button class="btn btn--sm" data-taskowner="${esc(val)}" style="border-radius:999px;${on?'background:var(--ink);border-color:var(--ink);color:#fff':''}">${esc(label)}</button>`;
   return `<div style="display:flex;align-items:center;gap:12px;margin-bottom:10px;flex-wrap:wrap">
       <div class="tabs" style="margin:0;border:1px solid var(--line);border-radius:999px;padding:2px;background:var(--card)">
         <button class="tab" data-taskview="todo" aria-selected="${!showDone}" style="border:0;border-radius:999px;padding:6px 14px">할 일 ${open.length}</button>
-        <button class="tab" data-taskview="done" aria-selected="${showDone}" style="border:0;border-radius:999px;padding:6px 14px">완료 ${done.length}</button>
+        <button class="tab" data-taskview="done" aria-selected="${showDone}" style="border:0;border-radius:999px;padding:6px 14px">${Number(UI.ym.slice(5))}월 완료 ${done.length}</button>
       </div>
       <div class="mono" style="font-size:12.5px;color:var(--mut)">진행률 ${pct}%</div>
       <div class="track" style="flex:1;max-width:220px"><i style="width:${pct}%;background:${hueBg(b.hue,58)}"></i></div>
@@ -2258,19 +2259,20 @@ function weekRange(){
   return [dateStr(mon),dateStr(sun)];
 }
 function allTasksView(){
-  const live=DB.tasks.filter(t=>brandOf(t.brandId));
+  const live=DB.tasks.filter(t=>{ const b=brandOf(t.brandId); return b && !b.hidden; });
   const bf=UI.taskBrand && brandOf(UI.taskBrand) ? UI.taskBrand : '';
   const who=myFilter();
   const scoped=live.filter(t=>(!bf||t.brandId===bf)&&(!who||hasOwner(t,who)));
-  const open=scoped.filter(t=>!t.done), done=scoped.filter(t=>t.done);
-  const showDone=UI.taskDone===true;
   const [wk0,wk1]=weekRange(); const ym=TODAY.slice(0,7);
+  /* 완료는 이번 달 마감분만 */
+  const open=scoped.filter(t=>!t.done), done=scoped.filter(t=>t.done&&(t.due||'').startsWith(ym));
+  const showDone=UI.taskDone===true;
   const late=open.filter(t=>t.due&&t.due<TODAY).length;
   const today=open.filter(t=>t.due===TODAY).length;
   const week=open.filter(t=>t.due&&t.due>=wk0&&t.due<=wk1).length;
   const monthAll=scoped.filter(t=>(t.due||'').startsWith(ym)), monthDone=monthAll.filter(t=>t.done).length;
   const rate=monthAll.length? Math.round(monthDone/monthAll.length*100) : 0;
-  const brandsWithTasks=DB.brands.filter(b=>live.some(t=>t.brandId===b.id));
+  const brandsWithTasks=DB.brands.filter(b=>!b.hidden && live.some(t=>t.brandId===b.id));
   const byDue=(x,y)=>(x.due||'9999-99-99').localeCompare(y.due||'9999-99-99')||PRIOS.indexOf(x.priority)-PRIOS.indexOf(y.priority);
 
   const groups = showDone
@@ -2310,7 +2312,7 @@ function allTasksView(){
   <div class="ttool">
     <div class="tabs">
       <button class="tab" data-taskview="todo" aria-selected="${!showDone}">할 일 ${open.length}</button>
-      <button class="tab" data-taskview="done" aria-selected="${showDone}">완료 ${done.length}</button>
+      <button class="tab" data-taskview="done" aria-selected="${showDone}">${Number(ym.slice(5))}월 완료 ${done.length}</button>
     </div>
     <select class="tsel" data-taskbrand aria-label="브랜드">
       <option value="">전체 브랜드</option>
