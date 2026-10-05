@@ -1657,6 +1657,55 @@ html body .modal .f input,html body .modal .f select,html body .modal .f textare
 #view .grid.g2 + .card,#view .kstrip + .grid{margin-top:16px}
 @media(max-width:760px){.dt{table-layout:auto}.dt colgroup{display:none}.pbar{display:none}#view .dt .numin{max-width:110px}#view .dt th:first-child,#view .dt td:first-child{padding-left:14px !important}#view .dt th:last-child,#view .dt td:last-child{padding-right:14px !important}}
 #view .grid.g2{gap:16px}
+
+/* ===== 캘린더 v2 ===== */
+.clegend{display:inline-flex;align-items:center;gap:6px;font-size:12px;color:var(--ink2)}
+.clegend i{width:8px;height:8px;border-radius:50%;background:hsl(var(--h) 62% 58%);display:inline-block;margin-left:8px}
+.clegend i:first-child{margin-left:0}
+.calv{display:grid;grid-template-columns:minmax(0,1.25fr) minmax(0,1fr);gap:16px;align-items:start}
+.mcal{padding:22px 22px 16px}
+.mcal__hd{display:flex;align-items:baseline;gap:8px;margin:0 4px 14px}
+.mcal__hd b{font-size:22px;font-weight:700;letter-spacing:-.02em}
+.mcal__hd span{font-size:13px;color:var(--mut)}
+.mcal__g{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));row-gap:6px}
+.mcal__w{font-size:12px;color:var(--mut);text-align:center;padding:4px 0 8px}
+.mcal__w.is-sun{color:var(--alert)}
+.mday{height:62px;display:flex;flex-direction:column;align-items:center;justify-content:flex-start;gap:5px;padding-top:6px;cursor:pointer;user-select:none;border-radius:var(--r-md)}
+.mday.is-out{cursor:default}
+.mday__n{width:34px;height:34px;display:grid;place-items:center;border-radius:10px;font-size:14px;font-weight:600;color:var(--ink);font-variant-numeric:tabular-nums;transition:background .12s,color .12s}
+.mday.is-sun .mday__n{color:var(--alert)}
+.mday.is-past .mday__n{color:#A3A6AD}
+.mday:not(.is-out):hover .mday__n{background:rgba(255,255,255,.85)}
+.mday.is-today .mday__n{color:var(--accent);box-shadow:0 0 0 1.5px var(--accent) inset}
+.mday.is-sel .mday__n{background:var(--accent) !important;color:#fff !important;box-shadow:0 8px 16px -8px rgba(46,107,230,.8)}
+.mday.cell--sel .mday__n{background:var(--accent-bg)}
+.mday__dots{display:flex;gap:3px;height:6px;align-items:center}
+.mday__dots i{width:5px;height:5px;border-radius:50%;background:hsl(var(--h) 62% 58%)}
+.mday__dots i.is-done{opacity:.35}
+.mday__dots em{font-style:normal;font-size:9px;line-height:1;color:var(--mut)}
+.mcal__hint{font-size:12px;color:var(--mut);margin:14px 4px 0}
+.agd{padding:0;display:flex;flex-direction:column}
+.agd__hd{display:flex;align-items:center;gap:12px;padding:20px 20px 14px}
+.agd__hd > div{flex:1;min-width:0}
+.agd__hd b{display:block;font-size:20px;font-weight:700;letter-spacing:-.02em}
+.agd__hd span{font-size:12px;color:var(--mut)}
+.agd__list{display:flex;flex-direction:column;gap:10px;padding:0 16px 16px}
+.acard{position:relative;display:grid;grid-template-columns:22px minmax(0,1fr) auto;gap:12px;align-items:start;padding:14px 14px 14px 12px;border-radius:var(--r-lg);
+  background:hsl(var(--h) 70% 96% / .92);box-shadow:0 0 0 1px hsl(var(--h) 50% 88%) inset;cursor:grab;transition:transform .12s,box-shadow .12s}
+.acard:hover{transform:translateY(-1px);box-shadow:0 0 0 1px hsl(var(--h) 50% 84%) inset,0 10px 20px -16px hsl(var(--h) 40% 30%)}
+.acard__chk{width:22px;height:22px;border-radius:50%;border:1.5px solid hsl(var(--h) 35% 70%);background:#fff;display:grid;place-items:center;padding:0;cursor:pointer;margin-top:1px}
+.acard__chk svg{width:13px;height:13px;fill:none;stroke:#fff;stroke-width:2.6;stroke-linecap:round;stroke-linejoin:round}
+.acard__chk[aria-pressed="true"]{background:hsl(var(--h) 45% 45%);border-color:hsl(var(--h) 45% 45%)}
+.acard__b{min-width:0;cursor:pointer}
+.acard__t{font-size:15px;font-weight:700;letter-spacing:-.01em;color:hsl(var(--h) 45% 28%);line-height:1.35;overflow:hidden;text-overflow:ellipsis;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical}
+.acard__m{display:flex;flex-wrap:wrap;gap:4px 12px;margin-top:6px;font-size:12px;color:hsl(var(--h) 15% 42%)}
+.acard__m span{display:inline-flex;align-items:center;gap:5px}
+.acard__m svg{width:13px;height:13px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;opacity:.8}
+.acard__tag{font-size:11px;font-weight:650;padding:4px 9px;border-radius:999px;background:hsl(var(--h) 60% 89%);color:hsl(var(--h) 45% 32%);white-space:nowrap}
+.acard.is-done{opacity:.55}
+.acard.is-done .acard__t{text-decoration:line-through}
+@media(max-width:1100px){.calv{grid-template-columns:1fr}}
+@media(max-width:760px){.mcal{padding:16px 10px 12px}.mday{height:52px;padding-top:3px;gap:4px}.mday__n{width:32px;height:32px;font-size:13px}.mcal__hint{display:none}.agd__hd{padding:16px 16px 12px}.agd__list{padding:0 12px 12px}}
 </style>
 </head>
 <body>
@@ -2199,19 +2248,73 @@ function calendarView(){
       ${cells.join('')}
     </div></div>
   </section>`;
-  return `<div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin-bottom:12px">
+  /* ----- 새 캘린더: 왼쪽 월 그리드 + 오른쪽 선택한 날 일정 카드 ----- */
+  const sel = (UI.calSel && UI.calSel.slice(0,7)===ym) ? UI.calSel : (TODAY.slice(0,7)===ym ? TODAY : `${ym}-01`);
+  const itemsOn = ds => [
+    ...cs.filter(c=>spans(c,ds)).map(c=>({k:'c',o:c})),
+    ...dayTasks.filter(t=>spans({date:t.start||t.due,end:t.due},ds)).map(t=>({k:'t',o:t}))
+  ];
+  const hueOf = it => it.k==='c' ? (TYPE_HUE[it.o.type]??262) : 214;
+  const days=[];
+  for(let i=0;i<lead;i++) days.push(`<div class="mday is-out"></div>`);
+  for(let d=1;d<=dim;d++){
+    const ds=`${y}-${pad(m)}-${pad(d)}`, dow=new Date(y,m-1,d).getDay();
+    const its=itemsOn(ds);
+    days.push(`<div class="mday ${ds===sel?'is-sel':''} ${ds===TODAY?'is-today':''} ${dow===0?'is-sun':''} ${ds<TODAY?'is-past':''}" data-date="${ds}">
+      <span class="mday__n">${d}</span>
+      <span class="mday__dots">${its.slice(0,3).map(it=>`<i class="${it.o.done?'is-done':''}" style="--h:${hueOf(it)}"></i>`).join('')}${its.length>3?'<em>+</em>':''}</span>
+    </div>`);
+  }
+  while(days.length%7) days.push(`<div class="mday is-out"></div>`);
+
+  const selItems=itemsOn(sel).sort((a,b)=>Number(a.o.done)-Number(b.o.done));
+  const sd=new Date(sel+'T00:00:00');
+  const md=x=>x? Number(x.slice(5,7))+'/'+Number(x.slice(8)) : '';
+  const card=it=>{
+    const o=it.o, h=hueOf(it), isC=it.k==='c';
+    const from=isC?o.date:(o.start||o.due), to=isC?(o.end||o.date):o.due;
+    const range = from&&to&&from!==to ? `${md(from)} ~ ${md(to)}` : md(to||from);
+    const ow = isC? '' : ownersOf(o).join(', ');
+    return `<div class="acard ${o.done?'is-done':''}" style="--h:${h}" draggable="true" data-drag="${it.k}:${o.id}">
+      <button class="acard__chk" ${isC?`data-toggle-content="${o.id}"`:`data-toggle-task-btn="${o.id}"`} aria-label="완료 표시" aria-pressed="${!!o.done}"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 12.5l4 4 8-9"/></svg></button>
+      <div class="acard__b" ${isC?`data-content="${o.id}"`:`data-edit-task="${o.id}"`}>
+        <div class="acard__t">${esc(o.title|| (isC?o.type:'(제목 없음)'))}</div>
+        <div class="acard__m">
+          <span><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="5" width="16" height="15" rx="2"/><path d="M4 10h16M9 3v4M15 3v4"/></svg>${range}</span>
+          ${ow?`<span><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 20c1.5-4 4.5-6 8-6s6.5 2 8 6"/></svg>${esc(ow)}</span>`:''}
+          ${(!isC&&o.area)?`<span>${esc(o.area)}</span>`:''}
+        </div>
+      </div>
+      <span class="acard__tag">${isC?esc(o.type):'업무'}</span>
+    </div>`;
+  };
+  const nC=cs.length, nT=dayTasks.length;
+
+  return `<div class="ttool">
+      <span class="clegend"><i style="--h:262"></i>콘텐츠 ${nC}<i style="--h:214"></i>업무 ${nT}</span>
       <div class="spacer" style="flex:1"></div>
-      ${EMBED?'':mineBtn()}
-      <button class="btn btn--sm btn--primary" data-newdate="${ym}-${pad(Math.min(today.getDate(),dim))}">항목 추가</button>
+      ${mineBtn()}
+      <button class="btn btn--sm btn--primary" data-newdate="${sel}">항목 추가</button>
     </div>
-  <section class="card">
-    <div class="card__hd"><h3><span class="hd-long">${ymLabel(ym)}</span><span class="hd-short">${ymLabelShort(ym)}</span> 운영 캘린더</h3>
-      <span class="eyebrow" style="margin-left:auto">${calWho?esc(calWho)+' 업무만':'전체 업무'}</span></div>
-    <div class="calwrap"><div class="cal">
-      ${['일','월','화','수','목','금','토'].map(d=>`<div class="cal__dow">${d}</div>`).join('')}
-      ${cells.join('')}
-    </div></div>
-  </section>`;
+  <div class="calv">
+    <section class="card mcal">
+      <div class="mcal__hd"><b>${m}월</b><span>${y}</span></div>
+      <div class="mcal__g">
+        ${['일','월','화','수','목','금','토'].map((d,i)=>`<div class="mcal__w ${i===0?'is-sun':''}">${d}</div>`).join('')}
+        ${days.join('')}
+      </div>
+      <div class="mcal__hint">날짜를 누르면 그날 일정이 오른쪽에 보여요 · 끌어서 여러 날을 고르면 기간으로 추가돼요</div>
+    </section>
+    <section class="card agd">
+      <div class="agd__hd">
+        <div><b>${sd.getMonth()+1}월 ${sd.getDate()}일</b><span>${WD_KO[sd.getDay()]}요일${sel===TODAY?' · 오늘':''} · ${selItems.length}건</span></div>
+        <button class="btn btn--sm" data-newdate="${sel}">이 날 추가</button>
+      </div>
+      <div class="agd__list">
+        ${selItems.length? selItems.map(card).join('') : `<div class="empty"><b>일정이 없어요</b>오른쪽 위 ‘이 날 추가’로 콘텐츠나 업무를 넣어 보세요.</div>`}
+      </div>
+    </section>
+  </div>`;
 }
 
 /* ---------- 업무 ---------- */
@@ -3412,7 +3515,7 @@ function moveItem(payload,target){
 }
 let selA=null, selB=null;
 function paintSel(){
-  document.querySelectorAll('.cell[data-date]').forEach(el=>{
+  document.querySelectorAll('.cell[data-date],.mday[data-date]').forEach(el=>{
     const d=el.dataset.date;
     const lo=selA<selB?selA:selB, hi=selA<selB?selB:selA;
     el.classList.toggle('cell--sel', !!selA && d>=lo && d<=hi);
@@ -3427,7 +3530,7 @@ function bindCalendar(){
   document.querySelectorAll('[data-drag]').forEach(el=>{
     el.addEventListener('dragstart',e=>{ e.dataTransfer.setData('text/plain', el.dataset.drag); e.dataTransfer.effectAllowed='move'; });
   });
-  document.querySelectorAll('.cell[data-date]').forEach(cell=>{
+  document.querySelectorAll('.cell[data-date],.mday[data-date]').forEach(cell=>{
     cell.addEventListener('dragover',e=>{ e.preventDefault(); e.dataTransfer.dropEffect='move'; });
     cell.addEventListener('drop',e=>{ e.preventDefault(); const p=e.dataTransfer.getData('text/plain'); if(p) moveItem(p, cell.dataset.date); });
     cell.addEventListener('mousedown',e=>{ if(e.target.closest('.ev, .cell__add')) return; e.preventDefault(); selA=selB=cell.dataset.date; paintSel(); });
@@ -3440,6 +3543,7 @@ function bindCalendar(){
       const a=selA<selB?selA:selB, b=selA<selB?selB:selA;
       selA=selB=null; paintSel();
       if(a!==b) addOnDate(a,b);
+      else if(document.querySelector('.mcal')){ UI.calSel=a; saveUI(); render(); }
     });
     document.addEventListener('keydown',e=>{ if(e.key==='Escape'&&selA){ selA=selB=null; paintSel(); } });
     window.addEventListener('blur',()=>{ if(selA){ selA=selB=null; paintSel(); } });
