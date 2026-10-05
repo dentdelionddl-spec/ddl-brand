@@ -1446,6 +1446,19 @@ html body .card,html body .snav,html body .modal{border-radius:var(--r-lg) !impo
 html body .refgrid > *,html body .thr,html body .ugal a,html body .ugal video,html body #view video,html body #view iframe,html body #view img{border-radius:var(--r-md) !important}
 html body .btn,html body .btn--sm,html body .btn--primary,html body .btn--ghost,html body .tab,html body .app--side .tab,html body .mine,html body .monthnav button,html body .app--side .monthnav button,html body .brandsel,html body .brandbar .btab,html body .blogo{border-radius:var(--r-sm) !important}
 html body .tag,html body .mchip,html body .dday--today,html body .ev,html body mark,html body .hl,html body .assetbox__v{border-radius:var(--r-xs) !important}
+
+/* ===== 데스크톱: 헤더(제목·탭)는 고정, 아래 내용만 스크롤 =====
+   사이드바와 내용의 위·아래 끝을 16px로 맞춘다 */
+@media(min-width:761px){
+  html,body{height:100%;overflow:hidden}
+  .app--side{height:100vh;min-height:0;padding:16px 16px 0 16px !important;align-items:stretch}
+  .app--side > .snav{position:static;height:calc(100vh - 32px);align-self:flex-start}
+  .app--side > .main{height:calc(100vh - 16px);min-height:0;display:flex;flex-direction:column}
+  .app--side > .main > .topbar{flex:0 0 auto}
+  .app--side > .main > .view{flex:1 1 auto;min-height:0;overflow-y:auto;overscroll-behavior:contain;
+    max-width:none !important;margin:0 -16px !important;padding:18px 16px 16px !important;width:auto}
+  .app--side > .main > .view > *:last-child{margin-bottom:0 !important}
+}
 </style>
 </head>
 <body>
@@ -1700,6 +1713,9 @@ function mobileLayout(){
   scrollToToday();
 }
 function render(){
+  const pv=document.getElementById('view'), pageKey=UI.brand+'|'+UI.tab;
+  const keepTop = (pv && window.__pageKey===pageKey) ? pv.scrollTop : 0;
+  window.__pageKey=pageKey;
   applyEmbed();
   if(EMBED&&EMBED.ro) document.body.classList.add('ro');
   if(UI.brand==='__all') UI.brand=DB.brands[0]?.id||'__set';
@@ -1716,7 +1732,7 @@ function render(){
       <div class="view" id="view"></div>
     </div>
   </div>`;
-  try{ $('#view').innerHTML = viewHtml(); }
+  try{ $('#view').innerHTML = viewHtml(); $('#view').scrollTop=keepTop; }
   catch(e){ console.error(e); $('#view').innerHTML = '<div class="card"><div class="empty"><b>이 화면을 그리지 못했습니다</b>' + esc(String(e.message||e)) + '<br><br><button class="btn btn--sm" data-act="go-summary">요약으로 이동</button></div></div>'; }
   const bb=document.querySelector('.brandbar'), tb=document.querySelector('.topbar');
   if(bb && window.__barScroll) bb.scrollLeft=window.__barScroll;
