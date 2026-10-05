@@ -1567,6 +1567,45 @@ html body .ustat__l{font-size:12px;color:var(--ink2);margin-top:4px}
 
 /* 헤더(제목·탭·월 이동)와 카드의 좌우 끝선을 같은 세로선에 맞춤 */
 @media(min-width:761px){ html body .app--side > .main > .topbar{padding-left:0 !important;padding-right:0 !important} }
+
+/* ===== 팝업·입력 v3 — 대시보드와 같은 글래스·글자·모서리 규격 ===== */
+html body .ov{background:rgba(24,26,30,.22) !important;-webkit-backdrop-filter:blur(8px) saturate(120%);backdrop-filter:blur(8px) saturate(120%)}
+html body .modal{max-width:540px;background:rgba(250,250,251,.86) !important;-webkit-backdrop-filter:blur(28px) saturate(170%);backdrop-filter:blur(28px) saturate(170%);
+  box-shadow:0 1px 0 rgba(255,255,255,.9) inset,0 0 0 1px rgba(255,255,255,.6) inset,0 30px 60px -20px rgba(20,22,28,.35),0 4px 12px -4px rgba(20,22,28,.12) !important;font-family:var(--sans)}
+html body .modal__hd{background:transparent !important;border:0 !important;padding:20px 20px 4px !important;display:flex;align-items:center}
+html body .modal__hd h3{font-size:16px !important;font-weight:700;letter-spacing:-.01em;color:var(--ink)}
+html body .modal__bd{background:transparent !important;padding:16px 20px 4px !important;display:flex;flex-direction:column;gap:14px}
+html body .modal__bd > p{margin:0 !important;font-size:12px !important;line-height:1.6;color:var(--ink2) !important}
+html body .modal__ft{background:transparent !important;border-top:1px solid var(--line) !important;margin-top:16px;padding:14px 20px !important;gap:8px;align-items:center}
+.mclose{margin-left:auto;width:30px;height:30px;border:0;border-radius:var(--r-sm);background:transparent;color:var(--ink2);display:grid;place-items:center;padding:0;cursor:pointer}
+.mclose:hover{background:rgba(17,18,20,.06);color:var(--ink)}
+.mclose svg{width:16px;height:16px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round}
+html body .btn--del{background:transparent !important;box-shadow:none !important;color:var(--alert) !important;padding-left:8px !important}
+html body .btn--del:hover{background:var(--alert-bg) !important}
+html body .modal .row2{gap:14px}
+html body .modal .f{display:flex;flex-direction:column;gap:6px;margin:0 !important}
+html body .modal .f > span{font-size:12px !important;font-weight:500 !important;color:var(--ink2) !important;letter-spacing:0}
+html body .modal .f input:not([type=checkbox]),html body .modal .f select,html body .modal .f textarea{
+  width:100%;height:36px;padding:0 12px !important;font:500 13px/1.4 var(--sans) !important;color:var(--ink);
+  background:rgba(255,255,255,.92) !important;border:1px solid var(--line) !important;border-radius:var(--r-md) !important;box-shadow:none !important;outline:0;transition:border-color .14s,box-shadow .14s}
+html body .modal .f textarea{height:auto;min-height:76px;padding:9px 12px !important;resize:vertical}
+html body .modal .f select{appearance:none;-webkit-appearance:none;padding-right:32px !important;cursor:pointer;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M1 1l4 4 4-4' fill='none' stroke='%238E9198' stroke-width='1.5'/%3E%3C/svg%3E") !important;background-repeat:no-repeat !important;background-position:right 12px center !important}
+html body .modal .f input:hover,html body .modal .f select:hover,html body .modal .f textarea:hover{border-color:rgba(17,18,20,.16) !important}
+html body .modal .f input:focus,html body .modal .f select:focus,html body .modal .f textarea:focus{border-color:var(--accent) !important;box-shadow:0 0 0 3px var(--accent-bg) !important;background:#fff !important}
+html body .modal input[type=date]::-webkit-calendar-picker-indicator{opacity:.45;cursor:pointer}
+html body .modal input::placeholder,html body .modal textarea::placeholder{color:#A6A9B0}
+html body .modal input[type=checkbox]{width:16px;height:16px;accent-color:var(--ink)}
+html body .modal label:has(> input[type=checkbox]#t_done){font-size:13px;font-weight:500;color:var(--ink)}
+/* 담당 선택: 체크박스 대신 토글 칩 (선택 = 검정) */
+.ochips{display:flex;gap:6px;flex-wrap:wrap}
+.ochip{position:relative;cursor:pointer}
+.ochip input{position:absolute;opacity:0;pointer-events:none}
+.ochip span{display:inline-flex;align-items:center;height:36px;padding:0 14px;border-radius:var(--r-md);font-size:13px;font-weight:600;color:var(--ink2);background:rgba(255,255,255,.92);box-shadow:0 0 0 1px var(--line) inset;transition:background .12s,color .12s}
+.ochip:hover span{color:var(--ink)}
+.ochip input:checked + span{background:var(--ink);color:#fff;box-shadow:none}
+.ochip input:focus-visible + span{outline:2px solid var(--accent);outline-offset:2px}
+@media(max-width:699px){html body .modal{max-width:none}}
 </style>
 </head>
 <body>
@@ -2211,9 +2250,8 @@ function hasOwner(t,who){ return !who || ownersOf(t).includes(who); }
 function ownerPicker(sel){
   const names=OWNERS;
   return `<div class="f"><span>담당 (여러 명 선택 가능)</span>
-    <div id="t_owners" style="display:flex;gap:6px;flex-wrap:wrap;padding-top:2px">
-      ${names.map(n=>`<label class="btn btn--sm" style="display:inline-flex;align-items:center;gap:6px;border-radius:999px;cursor:pointer">
-        <input type="checkbox" class="ownchk" value="${esc(n)}" ${ (sel||[]).includes(n)?'checked':'' } style="width:14px;height:14px;accent-color:var(--accent)" />${esc(n)}</label>`).join('')}
+    <div id="t_owners" class="ochips">
+      ${names.map(n=>`<label class="ochip"><input type="checkbox" class="ownchk" value="${esc(n)}" ${ (sel||[]).includes(n)?'checked':'' } /><span>${esc(n)}</span></label>`).join('')}
     </div></div>`;
 }
 function readOwners(){ return [...document.querySelectorAll('.ownchk:checked')].map(el=>el.value); }
@@ -3381,10 +3419,10 @@ function modal({title, body, onSave, onDelete, saveLabel='저장'}){
   $('#layer').innerHTML=`<div class="ov" data-ov>
     <div class="modal" role="dialog" aria-modal="true" aria-label="${esc(title)}">
       <div class="modal__hd"><h3>${esc(title)}</h3>
-        <button class="btn btn--ghost btn--sm" data-close style="margin-left:auto">닫기</button></div>
+        <button class="mclose" data-close aria-label="닫기"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg></button></div>
       <div class="modal__bd">${body}</div>
       <div class="modal__ft">
-        ${onDelete?`<button class="btn btn--sm" data-del style="color:var(--alert)">삭제</button>`:''}
+        ${onDelete?`<button class="btn btn--sm btn--del" data-del>삭제</button>`:''}
         <div class="spacer" style="flex:1"></div>
         <button class="btn btn--sm" data-close>취소</button>
         <button class="btn btn--primary btn--sm" data-save>${esc(saveLabel)}</button>
