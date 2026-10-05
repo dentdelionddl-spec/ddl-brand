@@ -1327,14 +1327,15 @@ const COST_KINDS = ['원가','광고비','수수료','인건비','기타'];
 const SEED_BRANDS = [
   {id:'ootn',     name:'OOTN',       ko:'오오티엔',   hue:40,  client:'', channels:['자사몰','무신사','플랫폼','기타']},
   {id:'aube',     name:'AUBE SEOUL', ko:'오브서울',   hue:340, client:'', channels:['자사몰','무신사','29CM','플랫폼','기타']},
-  {id:'fludk',    name:'FLUD K',     ko:'플러드케이', hue:96,  client:'', channels:['자사몰','무신사','29CM','플랫폼','기타']},
   {id:'vivicate', name:'VIVICATE',   ko:'비비케이트', hue:262, client:'이케이아이엔티', channels:['자사몰','ZVZO','29CM','플랫폼','기타']},
   {id:'ruhel',    name:'RUHEL',      ko:'루엘',       hue:200, client:'', channels:['자사몰','해외','플랫폼','기타']},
-  {id:'arikiv',   name:'ARIKIV',     ko:'아리키브',   hue:24,  client:'', channels:['자사몰','무신사','29CM','플랫폼','기타']},
   {id:'usuel',    name:'USUEL',      ko:'유주엘',     hue:170, client:'', channels:['콘텐츠 업로드 수']},
   {id:'factory',  name:'공장',       ko:'용저우 공장', hue:210, client:'', channels:['오더','샘플','기타']},
   {id:'ddl',      name:'DDL',        ko:'팀 디디엘',  hue:280, client:'', channels:['대행료','기타']}
 ];
+/* 운영 종료한 브랜드 — 저장된 목록·노션 설정에서도 걸러냄 */
+const REMOVED_BRANDS = ['fludk','arikiv','FLUD K','ARIKIV'];
+const isRemovedBrand = b => REMOVED_BRANDS.includes(b.id) || REMOVED_BRANDS.includes(b.name);
 
 /* ---------- storage (localStorage, 실패 시 메모리) ---------- */
 const KEY='ddl-brand-commerce-v1';
@@ -1376,7 +1377,7 @@ if(DB.settings.dbv!==3){ DB.settings.db={...DB.settings.db, ...NOTION_DB}; DB.se
 for(const k in NOTION_DB) if(!DB.settings.db[k]) DB.settings.db[k]=NOTION_DB[k];
 if(!DB.settings.workerUrl) DB.settings.workerUrl=PROXY_URL;
 if(!DB.brands||!DB.brands.length) DB.brands=JSON.parse(JSON.stringify(SEED_BRANDS));
-for(const sb of SEED_BRANDS) if(!DB.brands.some(b=>b.id===sb.id)) DB.brands.push(JSON.parse(JSON.stringify(sb)));
+DB.brands=DB.brands.filter(b=>!isRemovedBrand(b));
 /* 기기마다 따로 만들어진 동명 브랜드 합치기 */
 for(const sb of SEED_BRANDS){
   const dup=DB.brands.filter(b=>b.name===sb.name && b.id!==sb.id);
@@ -3228,6 +3229,7 @@ function brandModal(id){
         DB[k]=DB[k].filter(r=>r.brandId!==id);
       });
       if(UI.brand===id){ UI.brand=DB.brands[0]?.id||'__set'; saveUI(); }
+      setTimeout(pushBrands,300);
     }
   });
 }
@@ -3391,9 +3393,9 @@ async function pullBrands(){
     if(!raw){ await pushBrands(); return; }
     const list=JSON.parse(raw);
     if(Array.isArray(list)&&list.length){
-      DB.brands=list;
-      for(const sb of SEED_BRANDS) if(!DB.brands.some(b=>b.id===sb.id)) DB.brands.push(JSON.parse(JSON.stringify(sb)));
+      DB.brands=list.filter(b=>!isRemovedBrand(b));
       store.set(KEY,JSON.stringify(DB));
+      if(DB.brands.length!==list.length) await pushBrands();
     }
   }catch(e){}
 }
