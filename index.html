@@ -1872,6 +1872,25 @@ html body .m .card__hd{flex-wrap:nowrap !important}
   .pick__i{margin:0}
   .pick > span:last-child{margin-left:auto}
 }
+
+/* 모바일 필터: 상태는 한 줄 세그먼트, 브랜드·내 것만은 조용한 한 줄 */
+.mseg{display:flex;gap:2px;padding:3px;border-radius:12px;background:rgba(17,18,20,.06)}
+.mseg button{flex:1 1 0;min-width:0;height:36px;border:0;border-radius:9px;background:transparent;font:600 13px var(--sans);color:var(--ink2);display:inline-flex;align-items:center;justify-content:center;gap:3px;white-space:nowrap;padding:0 4px}
+.mseg button i{font-style:normal;font-size:11px;font-weight:600;color:var(--mut);font-variant-numeric:tabular-nums}
+.mseg button[aria-pressed="true"]{background:#fff;color:var(--ink);box-shadow:0 1px 3px rgba(0,0,0,.1)}
+.mseg button[aria-pressed="true"] i{color:var(--ink2)}
+.mbar{display:flex;align-items:center;justify-content:space-between;gap:12px;min-height:44px;padding:0 2px}
+.mbar__t{font-size:13px;color:var(--mut)}
+.msel{position:relative;display:inline-flex;align-items:center;min-width:0}
+.msel select{appearance:none;-webkit-appearance:none;border:0;background:transparent;font:650 15px var(--sans);color:var(--ink);padding:10px 22px 10px 2px;max-width:220px;text-overflow:ellipsis;cursor:pointer}
+.msel::after{content:"";position:absolute;right:6px;top:50%;width:7px;height:7px;margin-top:-6px;border-right:1.8px solid var(--ink2);border-bottom:1.8px solid var(--ink2);transform:rotate(45deg);pointer-events:none}
+.mswitch{display:inline-flex;align-items:center;gap:8px;height:44px;border:0;background:transparent;font:600 13px var(--sans);color:var(--ink2);padding:0 2px}
+.mswitch i{position:relative;width:40px;height:24px;border-radius:999px;background:rgba(17,18,20,.14);transition:background .15s}
+.mswitch i::after{content:"";position:absolute;top:2px;left:2px;width:20px;height:20px;border-radius:50%;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.2);transition:transform .15s}
+.mswitch[aria-pressed="true"]{color:var(--ink)}
+.mswitch[aria-pressed="true"] i{background:var(--accent)}
+.mswitch[aria-pressed="true"] i::after{transform:translateX(16px)}
+.mv > .mseg + .mbar{margin-top:-4px !important}
 </style>
 </head>
 <body>
@@ -2525,6 +2544,9 @@ const MI={
   next:'<svg viewBox="0 0 24 24"><path d="M9 5l7 7-7 7"/></svg>'
 };
 const mLiveBrands=()=>DB.brands.filter(b=>!b.hidden);
+const mSeg=(items,cur,attr)=>`<div class="mseg">${items.map(([k,l,n])=>`<button ${attr}="${k}" aria-pressed="${cur===k}">${esc(l)}${n?`<i>${n}</i>`:''}</button>`).join('')}</div>`;
+const mBrandSel=(attr,cur,ids)=>`<label class="msel"><select ${attr}>${[['','모든 브랜드'],...mLiveBrands().filter(b=>!ids||ids.has(b.id)).map(b=>[b.id,b.name])].map(([v,l])=>`<option value="${v}" ${cur===v?'selected':''}>${esc(l)}</option>`).join('')}</select></label>`;
+const mMine=()=>`<button class="mswitch" data-act="mine" aria-pressed="${!!myFilter()}"><span>내 것만</span><i></i></button>`;
 const mChip=(attr,label,on,n)=>`<button class="mchipb" ${attr} aria-pressed="${!!on}">${esc(label)}${n!==undefined?`<span>${n}</span>`:''}</button>`;
 function mTaskCard(t,showBrand=true){
   const st=taskState(t), b=brandOf(t.brandId), ow=ownersOf(t);
@@ -2564,18 +2586,8 @@ function mTasksView(){
   }
   const me=DB.settings.me||'';
   return `<section class="mv">
-    <div class="mrow">
-      ${mChip('data-mfilter="all"','전체',f==='all',G.all.length)}
-      ${mChip('data-mfilter="late"','지연',f==='late',G.late.length)}
-      ${mChip('data-mfilter="today"','오늘',f==='today',G.today.length)}
-      ${mChip('data-mfilter="week"','이번 주',f==='week',G.week.length)}
-      ${mChip('data-mfilter="done"',Number(ym.slice(5))+'월 완료',f==='done',G.done.length)}
-    </div>
-    <div class="mrow">
-      ${mChip('data-act="mine"', me? me+'님 것만':'내 것만 보기', !!who)}
-      ${mChip('data-mbrandf=""','모든 브랜드',!bf)}
-      ${mLiveBrands().filter(b=>live.some(t=>t.brandId===b.id)).map(b=>mChip(`data-mbrandf="${b.id}"`,b.name,bf===b.id)).join('')}
-    </div>
+    ${mSeg([['all','전체',G.all.length],['late','지연',G.late.length],['today','오늘',G.today.length],['week','이번 주',G.week.length],['done','완료',G.done.length]],f,'data-mfilter')}
+    <div class="mbar">${mBrandSel('data-mbrandsel',bf,new Set(live.map(t=>t.brandId)))}${mMine()}</div>
     <div class="mlist">${body || `<div class="mempty"><b>${f==='done'?'이번 달 완료한 업무가 없어요':'할 일이 없어요'}</b><span>오른쪽 아래 + 로 업무를 추가하세요</span></div>`}</div>
   </section>`;
 }
@@ -2608,7 +2620,7 @@ function mCalView(){
       <div class="mt__b" ${isC?`data-content="${o.id}"`:`data-edit-task="${o.id}"`}><div class="mt__t">${esc(o.title||(isC?o.type:'(제목 없음)'))}</div>${meta?`<div class="mt__m">${meta}</div>`:''}</div>
       <span class="mc__tag">${isC?esc(o.type):'업무'}</span></div>`; };
   return `<section class="mv">
-    <div class="mrow">${mChip('data-mcalbrand=""','모든 브랜드',!bf)}${mLiveBrands().map(b=>mChip(`data-mcalbrand="${b.id}"`,b.name,bf===b.id)).join('')}</div>
+    <div class="mbar">${mBrandSel('data-mcalbrandsel',bf)}${mMine()}</div>
     <div class="mcard mmonth">
       <div class="mmonth__hd"><button class="mico" data-mo="-1" aria-label="이전 달">${MI.prev}</button><b>${y}년 ${m}월</b><button class="mico" data-mo="1" aria-label="다음 달">${MI.next}</button></div>
       <div class="mmonth__g">${['일','월','화','수','목','금','토'].map((d,i)=>`<span class="w ${i===0?'is-sun':''}">${d}</span>`).join('')}${days.join('')}</div>
@@ -2629,12 +2641,12 @@ function mBrandsView(){
       const who=myFilter(), all=DB.tasks.filter(t=>t.brandId===b.id&&(!who||hasOwner(t,who)));
       const open=all.filter(t=>!t.done).sort((x,y)=>(x.due||'9999-99-99').localeCompare(y.due||'9999-99-99'));
       const done=all.filter(t=>t.done&&(t.due||'').startsWith(ym)).sort((x,y)=>(y.due||'').localeCompare(x.due||''));
-      inner=`<div class="mrow">${mChip('data-act="mine"', DB.settings.me? DB.settings.me+'님 것만':'내 것만 보기', !!who)}</div>
+      inner=`<div class="mbar"><span class="mbar__t">${open.length}건 진행 중</span>${mMine()}</div>
         <div class="mlist">${open.length?open.map(t=>mTaskCard(t,false)).join(''):'<div class="mempty"><b>할 일이 없어요</b><span>오른쪽 아래 + 로 업무를 추가하세요</span></div>'}
         ${done.length?`<div class="mgrp"><b>${Number(ym.slice(5))}월 완료</b><span>${done.length}</span></div>${done.map(t=>mTaskCard(t,false)).join('')}`:''}</div>`;
     } else { try{ inner=viewHtml(); }catch(e){ inner='<div class="mempty"><b>이 화면을 그리지 못했어요</b></div>'; } }
     return `<section class="mv">
-      <div class="mrow">${tabs.map(([k,l])=>mChip(`data-mbtab="${k}"`,l,UI.tab===k)).join('')}</div>
+      ${mSeg(tabs.map(([k,l])=>[k,l]),UI.tab,'data-mbtab')}
       ${['kpi','sales'].includes(UI.tab)?`<div class="mmonthbar"><button class="mico" data-mo="-1" aria-label="이전 달">${MI.prev}</button><b>${ymLabel(UI.ym)}</b><button class="mico" data-mo="1" aria-label="다음 달">${MI.next}</button></div>`:''}
       <div class="mlegacy">${inner}</div>
     </section>`;
@@ -2676,8 +2688,8 @@ function renderMobile(){
   bind();
   document.querySelectorAll('[data-mtab]').forEach(el=>el.onclick=()=>{ UI.mTab=el.dataset.mtab; if(UI.mTab!=='brands') UI.mBrand=''; saveUI(); render(); window.scrollTo(0,0); });
   document.querySelectorAll('[data-mfilter]').forEach(el=>el.onclick=()=>{ UI.mFilter=el.dataset.mfilter; saveUI(); render(); });
-  document.querySelectorAll('[data-mbrandf]').forEach(el=>el.onclick=()=>{ UI.mBrandF=el.dataset.mbrandf; saveUI(); render(); });
-  document.querySelectorAll('[data-mcalbrand]').forEach(el=>el.onclick=()=>{ UI.mCalBrand=el.dataset.mcalbrand; saveUI(); render(); });
+  document.querySelectorAll('[data-mbrandsel]').forEach(el=>el.onchange=()=>{ UI.mBrandF=el.value; saveUI(); render(); });
+  document.querySelectorAll('[data-mcalbrandsel]').forEach(el=>el.onchange=()=>{ UI.mCalBrand=el.value; saveUI(); render(); });
   document.querySelectorAll('[data-msel]').forEach(el=>el.onclick=()=>{ UI.mCalSel=el.dataset.msel; saveUI(); render(); });
   document.querySelectorAll('[data-mbrand]').forEach(el=>el.onclick=()=>{ UI.mBrand=el.dataset.mbrand; UI.tab='tasks'; saveUI(); render(); window.scrollTo(0,0); });
   document.querySelectorAll('[data-mbtab]').forEach(el=>el.onclick=()=>{ UI.tab=el.dataset.mbtab; saveUI(); render(); });
