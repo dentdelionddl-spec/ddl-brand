@@ -1326,6 +1326,95 @@ body.ro .ev:hover{transform:none;box-shadow:0 1px 2px rgba(16,20,32,.04)}
 }
 /* 공통 카드: 그림자 대신 얇은 테두리로 통일 */
 .card{box-shadow:none;border-color:var(--line);border-radius:12px}
+
+/* ================= 디자인 v3 — 무채색 · 글래스 · 포인트 블루 · 형광 강조 =================
+   이 블록이 최종 기준. 색·글자·모서리는 아래 변수만 쓴다. */
+:root{
+  --ink:#111214; --ink2:#55585F; --mut:#8E9198;
+  --line:rgba(17,18,20,.08); --line2:rgba(17,18,20,.05);
+  --paper:#E7E8EA; --card:rgba(255,255,255,.66); --card2:rgba(255,255,255,.84);
+  --accent:#2E6BE6; --accent-bg:rgba(46,107,230,.10);
+  --neon:#D4FF00; --neon-ink:#2B3300;
+  --ok:#11845B; --ok-bg:rgba(17,132,91,.10);
+  --alert:#D2452F; --alert-bg:rgba(210,69,47,.10);
+  --warn:#A86500; --warn-bg:rgba(240,160,0,.14);
+  --r:18px; --rs:10px;
+  --sh:0 1px 0 rgba(255,255,255,.9) inset, 0 0 0 1px rgba(255,255,255,.55) inset, 0 20px 40px -26px rgba(20,22,28,.28), 0 2px 6px -2px rgba(20,22,28,.06);
+  --glass:blur(22px) saturate(160%);
+}
+body{color:var(--ink);background:
+  radial-gradient(1200px 700px at 85% -10%,#F6F6F7 0%,transparent 60%),
+  radial-gradient(900px 600px at -10% 110%,#F1F1F2 0%,transparent 55%),
+  var(--paper) fixed;}
+
+/* 글래스 면: 카드·사이드바·상단바·모달 */
+.card,.snav,.modal{background:var(--card) !important;-webkit-backdrop-filter:var(--glass);backdrop-filter:var(--glass);border:0 !important;box-shadow:var(--sh) !important;border-radius:var(--r)}
+.card__hd{background:transparent !important;backdrop-filter:none !important;border-bottom:1px solid var(--line2) !important}
+.card__hd h3{font-size:15px;font-weight:650}
+.modal__hd,.modal__ft{background:var(--card2) !important}
+.ov{background:rgba(30,32,36,.28) !important;-webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px)}
+.app--side .topbar{background:rgba(231,232,234,.62) !important;-webkit-backdrop-filter:var(--glass);backdrop-filter:var(--glass);border-bottom:1px solid var(--line) !important}
+
+/* 사이드바: 떠 있는 유리 판 + 배경 없는 검정 로고 */
+@media(min-width:761px){
+  .app--side{gap:16px;padding:16px 16px 0 16px}
+  .snav{top:16px;height:calc(100vh - 32px);border-radius:var(--r);padding:18px 12px}
+  .snav__logo{background:transparent !important;padding:2px 10px;margin:0 0 16px}
+  .snav__logo img{filter:brightness(0);height:20px}
+  .snav__i{border-radius:12px;padding:9px 12px;color:var(--ink2)}
+  .snav__i:hover{background:rgba(255,255,255,.55)}
+  .snav__i[aria-current="true"]{background:var(--card2);color:var(--ink);box-shadow:0 1px 0 #fff inset,0 6px 14px -10px rgba(0,0,0,.25)}
+  .snav__sub{margin:2px 0 4px 19px;padding-left:4px;border-left:1px solid var(--line)}
+  .snav__sub .snav__i{padding-left:14px}
+  .snav__ft{border-top-color:var(--line)}
+  .app--side .topbar{border-radius:var(--r);padding-top:14px !important;margin-bottom:4px}
+  .app--side .view{padding:16px 0 80px}
+}
+
+/* 글자 크기 5단계: 24 · 20 · 15 · 13 · 12 */
+.brandtitle{font-size:20px !important;font-weight:700;color:var(--ink)}
+.eyebrow,.brandsub{font-family:var(--sans);font-size:12px;letter-spacing:0;text-transform:none;color:var(--mut)}
+.ustat__n,.gauge__val,.num{letter-spacing:-.02em}
+.ustat__n{font-size:24px;font-family:var(--sans)}
+.ustat__l,.tk__meta,.tag,.dday{font-size:12px}
+.tk__title,.tk__t{font-size:13px}
+
+/* 버튼: 주요 = 블루, 기본 = 반투명 흰색 */
+.btn{border-radius:999px !important;border:0 !important;background:var(--card2);box-shadow:0 0 0 1px var(--line) inset;color:var(--ink);font-weight:550}
+.btn:hover{background:#fff}
+.btn--primary{background:var(--accent) !important;color:#fff !important;box-shadow:0 8px 18px -10px rgba(46,107,230,.8) !important}
+.btn--primary:hover{background:#2861D4 !important}
+.btn--ghost{background:transparent;box-shadow:none}
+
+/* 탭: 선택 = 흰 알약 */
+.tabs{gap:4px}
+.tab{border-radius:10px !important;padding:8px 14px !important;color:var(--ink2)}
+.tab::after{display:none !important}
+.tab[aria-selected="true"],.tab[aria-current="true"]{background:#fff;color:var(--ink);font-weight:650;box-shadow:0 1px 3px rgba(0,0,0,.08)}
+
+/* 상태 배지 */
+.tag{border:0 !important;border-radius:6px !important;background:rgba(17,18,20,.06);color:var(--ink2);font-family:var(--sans);font-weight:650;padding:3px 8px}
+.tag--ok{background:var(--ok-bg) !important;color:var(--ok) !important}
+.tag--urgent{background:var(--alert-bg) !important;color:var(--alert) !important}
+.tag--high{background:var(--warn-bg) !important;color:var(--warn) !important}
+.dday{font-family:var(--sans)}
+.dday--over{color:var(--alert)}
+.dday--soon{color:var(--warn)}
+.dday--today{background:var(--neon);color:var(--neon-ink);padding:1px 5px;border-radius:4px}
+.modal{background:rgba(255,255,255,.9) !important}
+mark,.hl{background:linear-gradient(transparent 12%,var(--neon) 12%,var(--neon) 88%,transparent 88%);color:var(--neon-ink);padding:0 3px;border-radius:3px}
+
+/* 목록 행·숫자 카드·입력 */
+.tk{background:var(--card2) !important;border:0 !important;box-shadow:0 0 0 1px rgba(255,255,255,.6) inset,0 1px 2px rgba(0,0,0,.04)}
+.tk--click:hover{background:#fff !important;box-shadow:0 0 0 1px var(--accent-bg) inset,0 6px 16px -12px rgba(0,0,0,.3) !important}
+.ustat__c{background:var(--card2);border:0;box-shadow:0 1px 0 #fff inset,0 0 0 1px rgba(255,255,255,.6) inset}
+.ustat__c--warn{background:var(--alert-bg)}
+.f input,.f select,.f textarea{background:rgba(255,255,255,.9);border:1px solid var(--line)}
+.f input:focus,.f select:focus,.f textarea:focus{border-color:var(--accent);box-shadow:0 0 0 3.5px var(--accent-bg)}
+#view thead th{color:var(--mut);font-weight:500;font-size:12px}
+.cell--today{background:var(--accent-bg)}
+.cell--today .cell__d{color:var(--accent)}
+:focus-visible{outline-color:var(--accent)}
 </style>
 </head>
 <body>
@@ -1962,7 +2051,7 @@ function ownerPicker(sel){
 function readOwners(){ return [...document.querySelectorAll('.ownchk:checked')].map(el=>el.value); }
 function taskRow(t,compact,showBrand){
   const d = t.due? daysBetween(TODAY,t.due) : null;
-  const dd = d===null? '' : (d<0? `<span class="dday dday--over">D+${-d}</span>` : d===0? `<span class="dday dday--over">D-DAY</span>` : `<span class="dday ${d<=3?'dday--soon':''}">D-${d}</span>`);
+  const dd = d===null? '' : (d<0? `<span class="dday dday--over">D+${-d}</span>` : d===0? `<span class="dday dday--today">D-DAY</span>` : `<span class="dday ${d<=3?'dday--soon':''}">D-${d}</span>`);
   const pcls = t.priority==='긴급'?'tag--urgent':t.priority==='높음'?'tag--high':'';
   return `<div class="tk tk--click ${t.done?'tk--done':''}" data-edit-task="${t.id}">
     <input type="checkbox" data-toggle-task="${t.id}" ${t.done?'checked':''} onclick="event.stopPropagation()" aria-label="완료 표시" />
