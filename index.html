@@ -1458,6 +1458,10 @@ html body .tag,html body .mchip,html body .dday--today,html body .ev,html body m
   .app--side > .main > .view{flex:1 1 auto;min-height:0;overflow-y:auto;overscroll-behavior:contain;
     max-width:none !important;margin:0 -16px !important;padding:18px 16px 16px !important;width:auto}
   .app--side > .main > .view > *:last-child{margin-bottom:0 !important}
+  /* 탭 줄 아래 여백: 스크롤되는 내용이 탭에 붙지 않게 16px 띄우고 경계는 살짝 흐리게 */
+  .app--side > .main > .topbar{padding-bottom:16px !important}
+  .app--side > .main > .view{padding-top:4px !important;
+    -webkit-mask-image:linear-gradient(to bottom,transparent 0,#000 14px);mask-image:linear-gradient(to bottom,transparent 0,#000 14px)}
 }
 </style>
 </head>
