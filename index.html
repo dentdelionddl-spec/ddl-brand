@@ -1606,6 +1606,21 @@ html body .modal label:has(> input[type=checkbox]#t_done){font-size:13px;font-we
 .ochip input:checked + span{background:var(--ink);color:#fff;box-shadow:none}
 .ochip input:focus-visible + span{outline:2px solid var(--accent);outline-offset:2px}
 @media(max-width:699px){html body .modal{max-width:none}}
+
+/* ===== 컨트롤 높이 통일: 모든 버튼·칩·입력·선택·탭 묶음·월 이동 = 34px =====
+   탭 묶음/월 이동은 바깥 34px 안에 28px 버튼 (위아래 3px) */
+:root{--h:34px;--h-in:28px}
+html body .btn,html body .btn--sm,html body .btn--primary,html body .mine,html body .tsel,html body .mclose,html body .ochip span,
+html body #view input:not([type=checkbox]):not([type=radio]):not([type=range]):not([type=file]),html body #view select,
+html body .modal .f input:not([type=checkbox]),html body .modal .f select{height:var(--h) !important;min-height:var(--h);box-sizing:border-box}
+html body .mclose{width:var(--h)}
+html body .tabs,html body .tabrow .tabs,html body .ttool .tabs,html body .app--side .tabs{height:var(--h) !important;box-sizing:border-box;padding:3px !important;align-items:center}
+html body .tabs .tab,html body .tabrow .tab,html body .app--side .tab,html body .ttool .tab{height:var(--h-in) !important;padding-top:0 !important;padding-bottom:0 !important;display:inline-flex;align-items:center}
+html body .monthnav,html body .app--side .monthnav{height:var(--h) !important;box-sizing:border-box;padding:3px !important;display:flex;align-items:center}
+html body .monthnav button,html body .app--side .monthnav button{height:var(--h-in) !important;display:inline-flex;align-items:center;justify-content:center;padding-top:0 !important;padding-bottom:0 !important}
+html body .monthnav .cur{height:var(--h-in);display:inline-flex;align-items:center;justify-content:center}
+html body .modal .ochips{min-height:var(--h);align-items:center}
+html body .modal .f input,html body .modal .f select,html body .modal .f textarea,html body .modal .ochips,html body .modal .f > span{margin:0 !important}
 </style>
 </head>
 <body>
