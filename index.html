@@ -1432,13 +1432,10 @@ mark,.hl{background:linear-gradient(transparent 12%,var(--neon) 12%,var(--neon) 
 .tabs:empty{display:none}
 @media(max-width:760px){.tabrow{max-width:100%;overflow:hidden}.tabrow .tabs{width:100%;max-width:100%}}
 
-/* 내 것만 토글 */
-.mine{display:inline-flex;align-items:center;gap:6px;height:34px;padding:0 14px 0 11px;border:0;border-radius:999px;font-size:13px;font-weight:600;color:var(--ink2);background:rgba(255,255,255,.6);box-shadow:0 0 0 1px rgba(255,255,255,.6) inset,0 1px 2px rgba(0,0,0,.04);white-space:nowrap}
-.mine svg{width:15px;height:15px;fill:none;stroke:currentColor;stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round}
-.mine:hover{background:#fff;color:var(--ink)}
-.mine[aria-pressed="true"]{background:var(--accent);color:#fff;box-shadow:0 8px 18px -10px rgba(46,107,230,.8)}
-.app--side .monthnav{height:34px;align-items:center}
-@media(max-width:760px){.mine{height:32px;padding:0 12px 0 10px;font-size:12px}}
+/* 내 것만 토글: 다른 작은 버튼과 같은 크기의 텍스트 알약 */
+.mine{height:30px;padding:0 12px;border:0;border-radius:999px;font-size:12px;font-weight:600;color:var(--ink2);background:transparent;box-shadow:0 0 0 1px var(--line) inset;white-space:nowrap}
+.mine:hover{color:var(--ink);background:rgba(255,255,255,.6)}
+.mine[aria-pressed="true"]{background:var(--ink);color:#fff;box-shadow:none}
 </style>
 </head>
 <body>
@@ -1773,15 +1770,15 @@ function brandBar(){
 }
 
 function mineBtn(){
-  const me=DB.settings.me||''; const on=!!myFilter();
-  return `<button class="mine" data-act="mine" aria-pressed="${on}" title="${me?'내 업무만 보기':'내 이름을 먼저 설정하세요'}">${ICON.user}<span>${on?esc(me)+'님 것만':'내 것만'}</span></button>`;
+  const on=!!myFilter();
+  return `<button class="mine" data-act="mine" aria-pressed="${on}">내 것만</button>`;
 }
 function topbar(){
   if(UI.brand==='__set') return `<header class="topbar"><div class="tophead">
       <h1 class="brandtitle">설정 · 동기화</h1><div class="spacer"></div>
     </div></header>`;
   if(UI.brand==='__home') return `<header class="topbar">
-      <div class="tophead"><div><h1 class="brandtitle">전체 브랜드</h1></div><div class="spacer"></div>${mineBtn()}${monthNav()}</div>
+      <div class="tophead"><div><h1 class="brandtitle">전체 브랜드</h1></div><div class="spacer"></div>${monthNav()}</div>
     </header>`;
 
   const b=brandOf(UI.brand);
@@ -1792,7 +1789,7 @@ function topbar(){
         <h1 class="brandtitle">${esc(b.name)}${b.ko?`<span class="brandko">${esc(b.ko)}</span>`:''}</h1>
       </div>
       <div class="spacer"></div>
-      ${mineBtn()}${monthNav()}
+      ${monthNav()}
     </div>
     <div class="tabrow">
       <div class="tabs" role="tablist">
@@ -1859,7 +1856,7 @@ function homeView(){
   const pacePct=Math.round(paceRatio(ym)*100);
   const sum=brands.reduce((a,b)=>{ const t=totals(b.id,ym); return {goal:a.goal+t.goal, actual:a.actual+t.actual}; },{goal:0,actual:0});
 
-  const who=myFilter();
+  const who='';
   const owners=OWNERS;
   const openAll=DB.tasks.filter(t=>!t.done && hasOwner(t,who));
   const todayTasks=openAll.filter(t=>t.due===TODAY || (t.start&&t.due&&t.start<=TODAY&&TODAY<=t.due))
@@ -1929,7 +1926,7 @@ function summaryView(){
   const pacePct=Math.round(paceRatio(ym)*100);
   const cs=contentsOf(b.id,ym);
   const counts=TYPES.map(t=>[t,cs.filter(c=>c.type===t).length]);
-  const sumWho=myFilter();
+  const sumWho='';
   const sumOwners=OWNERS;
   const openTasks=tasksOf(b.id).filter(t=>!t.done && (!sumWho || hasOwner(t,sumWho)));
   const todayTasks=openTasks.filter(t=>t.due===TODAY || (t.start&&t.due&&t.start<=TODAY&&TODAY<=t.due))
@@ -2039,8 +2036,8 @@ function calendarView(){
     </div></div>
   </section>`;
   return `<div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin-bottom:12px">
-
       <div class="spacer" style="flex:1"></div>
+      ${EMBED?'':mineBtn()}
       <button class="btn btn--sm btn--primary" data-newdate="${ym}-${pad(Math.min(today.getDate(),dim))}">항목 추가</button>
     </div>
   <section class="card">
@@ -2123,6 +2120,7 @@ function tasksView(){
       <div class="mono" style="font-size:12.5px;color:var(--mut)">진행률 ${pct}%</div>
       <div class="track" style="flex:1;max-width:220px"><i style="width:${pct}%;background:${hueBg(b.hue,58)}"></i></div>
       <div class="spacer" style="flex:1"></div>
+      ${mineBtn()}
       <button class="btn btn--primary btn--sm" data-act="task-new">업무 추가</button>
     </div>
     ${!list.length? `<div class="card"><div class="empty"><b>${showDone?'완료한 업무가 없습니다':'할 일이 없습니다'}</b>${who?`담당 ${esc(who)} 기준입니다.`:'업무를 추가하거나 노션 주간 플랜에서 내려받으세요.'}</div></div>`
