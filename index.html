@@ -1436,6 +1436,16 @@ mark,.hl{background:linear-gradient(transparent 12%,var(--neon) 12%,var(--neon) 
 .mine{height:30px;padding:0 12px;border:0;border-radius:999px;font-size:12px;font-weight:600;color:var(--ink2);background:transparent;box-shadow:0 0 0 1px var(--line) inset;white-space:nowrap}
 .mine:hover{color:var(--ink);background:rgba(255,255,255,.6)}
 .mine[aria-pressed="true"]{background:var(--ink);color:#fff;box-shadow:none}
+
+/* ===== 모서리 기준 (최종) — 12 · 8 · 6 · 4 =====
+   12 큰 면(카드·사이드바·팝업) / 8 안쪽 면(행·입력·탭 묶음) / 6 버튼·탭 / 4 배지 */
+:root{--r-lg:12px;--r-md:8px;--r-sm:6px;--r-xs:4px;--r:12px;--rs:8px}
+html body .card,html body .snav,html body .modal{border-radius:var(--r-lg) !important}
+@media(max-width:699px){html body .modal{border-radius:var(--r-lg) var(--r-lg) 0 0 !important}}
+.tk,.ustat__c,.f input,.f select,.f textarea,.tabs,.app--side .tabs,.monthnav,.app--side .monthnav,.snav__i,.snav__i[aria-current="true"],
+html body .refgrid > *,html body .thr,html body .ugal a,html body .ugal video,html body #view video,html body #view iframe,html body #view img{border-radius:var(--r-md) !important}
+html body .btn,html body .btn--sm,html body .btn--primary,html body .btn--ghost,html body .tab,html body .app--side .tab,html body .mine,html body .monthnav button,html body .app--side .monthnav button,html body .brandsel,html body .brandbar .btab,html body .blogo{border-radius:var(--r-sm) !important}
+html body .tag,html body .mchip,html body .dday--today,html body .ev,html body mark,html body .hl,html body .assetbox__v{border-radius:var(--r-xs) !important}
 </style>
 </head>
 <body>
