@@ -1621,6 +1621,42 @@ html body .monthnav button,html body .app--side .monthnav button{height:var(--h-
 html body .monthnav .cur{height:var(--h-in);display:inline-flex;align-items:center;justify-content:center}
 html body .modal .ochips{min-height:var(--h);align-items:center}
 html body .modal .f input,html body .modal .f select,html body .modal .f textarea,html body .modal .ochips,html body .modal .f > span{margin:0 !important}
+
+/* ===== 데이터 표 공통 (.dt) — 업무 표와 같은 글자·여백·선 ===== */
+.dt{width:100%;border-collapse:collapse;table-layout:fixed}
+#view .dt th{font-size:12px !important;font-weight:500 !important;color:var(--mut) !important;text-align:left;padding:12px 10px !important;border:0 !important;border-bottom:1px solid var(--line) !important;background:transparent !important;letter-spacing:0;text-transform:none}
+#view .dt td{font-size:13px !important;color:var(--ink);padding:9px 10px !important;border:0 !important;border-top:1px solid var(--line2) !important;vertical-align:middle;background:transparent !important;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#view .dt tbody tr:first-child td{border-top:0 !important}
+#view .dt th:first-child,#view .dt td:first-child{padding-left:20px !important}
+#view .dt th:last-child,#view .dt td:last-child{padding-right:20px !important}
+#view .dt th,#view .dt td{text-align:left !important}
+#view .dt th.num,#view .dt td.num{text-align:right !important;font-variant-numeric:tabular-nums}
+#view .dt td.num:has(.pbar){overflow:visible}
+#view .dt td b{font-weight:600}
+#view .dt tfoot td{font-weight:700 !important;border-top:1px solid var(--line) !important;padding-top:12px !important;padding-bottom:12px !important}
+.dt__click{cursor:pointer;transition:background .12s}
+.dt__click:hover td{background:rgba(255,255,255,.6) !important}
+.dt__note{font-size:12px;color:var(--mut);padding:2px 20px 16px}
+#view .dt .numin{width:100%;max-width:160px;text-align:right;font:500 13px/1 var(--sans);font-variant-numeric:tabular-nums;color:var(--ink);padding:0 12px !important;background:rgba(255,255,255,.92) !important;border:1px solid var(--line) !important;border-radius:var(--r-md) !important;outline:0}
+#view .dt .numin:focus{border-color:var(--accent) !important;box-shadow:0 0 0 3px var(--accent-bg)}
+#view .dt .numin::placeholder{color:#B5B8BE}
+.pct{display:inline-block;min-width:38px;font-weight:600}
+.pbar{display:inline-block;width:52px;height:6px;margin-left:10px;border-radius:999px;background:rgba(17,18,20,.08);overflow:hidden;vertical-align:middle}
+.pbar i{display:block;height:100%;background:var(--accent);border-radius:999px}
+.trend{padding:6px 20px 14px}
+.trend__r{display:grid;grid-template-columns:36px minmax(0,1fr) 110px;gap:14px;align-items:center;padding:9px 0;border-top:1px solid var(--line2)}
+.trend__r:first-child{border-top:0}
+.trend__m{font-size:13px;color:var(--ink2)}
+.trend__r.is-cur .trend__m{color:var(--ink);font-weight:700}
+.trend__b{position:relative;height:8px;border-radius:999px;background:rgba(17,18,20,.05);overflow:hidden}
+.trend__b i{position:absolute;left:0;top:0;bottom:0;border-radius:999px}
+.trend__b .g{background:rgba(17,18,20,.12)}
+.trend__b .a{background:var(--accent)}
+.trend__v{font-size:12px;color:var(--mut);text-align:right;font-variant-numeric:tabular-nums}
+.trend__v b{color:var(--ink);font-weight:600}
+#view .grid.g2 + .card,#view .kstrip + .grid{margin-top:16px}
+@media(max-width:760px){.dt{table-layout:auto}.dt colgroup{display:none}.pbar{display:none}#view .dt .numin{max-width:110px}#view .dt th:first-child,#view .dt td:first-child{padding-left:14px !important}#view .dt th:last-child,#view .dt td:last-child{padding-right:14px !important}}
+#view .grid.g2{gap:16px}
 </style>
 </head>
 <body>
@@ -3229,84 +3265,64 @@ function costModal(id){
 /* ---------- 매출 · 손익 ---------- */
 function salesView(){
   const b=brandOf(UI.brand), ym=UI.ym;
-  const rows=b.channels.map(ch=>{
-    const r=salesOf(b.id,ym).find(s=>s.channel===ch)||{channel:ch,goal:0,actual:0};
-    return r;
-  });
+  const rows=b.channels.map(ch=>salesOf(b.id,ym).find(s=>s.channel===ch)||{channel:ch,goal:0,actual:0});
   const goal=rows.reduce((a,r)=>a+Number(r.goal||0),0), actual=rows.reduce((a,r)=>a+Number(r.actual||0),0);
   const cs=costsOf(b.id,ym), cost=costTotal(b.id,ym), profit=actual-cost;
-  const months=[-5,-4,-3,-2,-1,0].map(n=>ymShift(ym,n));
-  const trend=months.map(m=>({m, ...totals(b.id,m)}));
+  const pct=goal? Math.round(actual/goal*100) : 0;
+  const trend=[-5,-4,-3,-2,-1,0].map(n=>ymShift(ym,n)).map(m=>({m, ...totals(b.id,m)}));
   const max=Math.max(1,...trend.map(t=>Math.max(t.goal,t.actual)));
+  const bar=(v,g)=>`<span class="pbar"><i style="width:${g?Math.min(100,v/g*100):0}%"></i></span>`;
+  const money=v=>`<input class="numin" type="text" inputmode="numeric" value="${v?won(v):''}" placeholder="0"`;
 
-  return `<div class="grid g2">
+  return `
+  <section class="kstrip card">
+    <div class="kst"><p>${Number(ym.slice(5))}월 목표</p><b>${man(goal)}</b><span>만원</span></div>
+    <div class="kst"><p>실적</p><b>${man(actual)}</b><span>만원 · 달성 ${pct}%</span></div>
+    <div class="kst"><p>비용</p><b>${man(cost)}</b><span>만원</span></div>
+    <div class="kst"><p>영업이익</p><b class="${profit<0?'is-bad':''}">${profit<0?'-':''}${man(Math.abs(profit))}</b><span>만원 · 이익률 ${actual?Math.round(profit/actual*100):0}%</span></div>
+  </section>
+
+  <div class="grid g2">
     <section class="card">
-      <div class="card__hd"><h3>${ymLabel(ym)} 채널별 목표 · 실적</h3>
-        <span class="eyebrow" style="margin-left:auto">단위 원 · 저장은 자동</span></div>
-      <div class="card__bd">
-        <table>
-          <thead><tr><th>채널</th><th style="text-align:right">목표</th><th style="text-align:right">실적</th><th style="text-align:right">달성률</th></tr></thead>
-          <tbody>
-          ${rows.map(r=>`<tr>
-            <td>${esc(r.channel)}</td>
-            <td><input class="num" type="number" step="10000" value="${r.goal||''}" data-sale="${esc(r.channel)}" data-f="goal" placeholder="0" /></td>
-            <td><input class="num" type="number" step="10000" value="${r.actual||''}" data-sale="${esc(r.channel)}" data-f="actual" placeholder="0" /></td>
-            <td class="num">${r.goal?Math.round((r.actual||0)/r.goal*100)+'%':'—'}</td></tr>`).join('')}
-          </tbody>
-          <tfoot><tr>
-            <th>합계</th><th class="num" >${won(goal)}</th>
-            <th class="num" >${won(actual)}</th>
-            <th class="num" >${goal?Math.round(actual/goal*100)+'%':'—'}</th>
-          </tr></tfoot>
-        </table>
-        <div class="eyebrow" style="margin-top:10px">채널 구성은 설정 · 동기화 화면에서 브랜드별로 바꿉니다</div>
-      </div>
+      <div class="card__hd"><h3>채널별 목표 · 실적</h3><span class="eyebrow" style="margin-left:auto">단위 원 · 입력하면 자동 저장</span></div>
+      <table class="dt">
+        <colgroup><col><col style="width:26%"><col style="width:26%"><col style="width:150px"></colgroup>
+        <thead><tr><th>채널</th><th class="num">목표</th><th class="num">실적</th><th class="num">달성률</th></tr></thead>
+        <tbody>${rows.map(r=>`<tr>
+          <td><b>${esc(r.channel)}</b></td>
+          <td class="num">${money(r.goal)} data-sale="${esc(r.channel)}" data-f="goal" /></td>
+          <td class="num">${money(r.actual)} data-sale="${esc(r.channel)}" data-f="actual" /></td>
+          <td class="num"><span class="pct">${r.goal?Math.round((r.actual||0)/r.goal*100)+'%':'—'}</span>${bar(r.actual||0,r.goal)}</td></tr>`).join('')}
+        </tbody>
+        <tfoot><tr><td>합계</td><td class="num">${won(goal)}</td><td class="num">${won(actual)}</td><td class="num">${goal?pct+'%':'—'}</td></tr></tfoot>
+      </table>
+      <div class="dt__note">채널 구성은 설정에서 브랜드별로 바꿀 수 있어요</div>
     </section>
+
     <section class="card">
-      <div class="card__hd"><h3>최근 6개월 추이</h3></div>
-      <div class="card__bd">
-        ${trend.map(t=>`<div class="gauge">
-          <div class="gauge__hd"><span class="gauge__name mono" style="font-size:11.5px">${t.m}</span>
-            <span class="gauge__val"><b>${man(t.actual)}</b> / ${man(t.goal)}만</span></div>
-          <div class="track" style="height:11px">
-            <i style="width:${t.goal/max*100}%;background:#E8E8E1"></i>
-            <i style="width:${t.actual/max*100}%;background:${hueBg(b.hue,58)}"></i>
-          </div></div>`).join('')}
-        
+      <div class="card__hd"><h3>최근 6개월</h3><span class="eyebrow" style="margin-left:auto">실적 / 목표 · 만원</span></div>
+      <div class="trend">
+        ${trend.map(t=>`<div class="trend__r ${t.m===ym?'is-cur':''}">
+          <span class="trend__m">${Number(t.m.slice(5))}월</span>
+          <span class="trend__b"><i class="g" style="width:${t.goal/max*100}%"></i><i class="a" style="width:${t.actual/max*100}%"></i></span>
+          <span class="trend__v"><b>${man(t.actual)}</b> / ${man(t.goal)}</span>
+        </div>`).join('')}
       </div>
     </section>
   </div>
 
-  <div class="grid g2" style="margin-top:14px">
-    <section class="card">
-      <div class="card__hd"><h3>비용</h3>
-        <button class="btn btn--sm" data-act="cost-new" style="margin-left:auto">비용 추가</button></div>
-      ${cs.length?`<table>
-        <thead><tr><th>구분</th><th>항목</th><th style="text-align:right">금액</th><th></th></tr></thead>
-        <tbody>${cs.map(c=>`<tr>
-          <td><span class="tag">${esc(c.kind||'기타')}</span></td>
-          <td>${esc(c.name)}</td>
-          <td class="num">${won(c.amount)}</td>
-          <td style="text-align:right"><button class="btn btn--ghost btn--sm" data-edit-cost="${c.id}">편집</button></td>
-        </tr>`).join('')}</tbody>
-        <tfoot><tr><th>합계</th><th></th><th class="num" style="font-size:12px;color:var(--ink)">${won(cost)}</th><th></th></tr></tfoot>
-      </table>`:`<div class="empty"><b>이 달 비용이 없습니다</b>원가·광고비·수수료를 넣으면 아래 손익이 계산됩니다.</div>`}
-    </section>
-    <section class="card">
-      <div class="card__hd"><h3>손익</h3><span class="eyebrow" style="margin-left:auto">${ymLabel(ym)}</span></div>
-      <div class="card__bd">
-        <div class="mono" style="font-size:26px;font-weight:600;letter-spacing:-.02em;color:${profit>=0?'var(--ok)':'var(--alert)'}">
-          ${profit<0?'-':''}${man(Math.abs(profit))}<span style="font-size:13px;color:var(--mut)">만원</span></div>
-        <div class="mono" style="font-size:12px;color:var(--mut);margin-bottom:14px">
-          이익률 ${actual? Math.round(profit/actual*100):0}%</div>
-        <table><tbody>
-          <tr><td>매출 실적</td><td class="num">${won(actual)}</td></tr>
-          <tr><td>비용 합계</td><td class="num">${won(cost)}</td></tr>
-          <tr><td style="font-weight:700">영업이익</td><td class="num" style="font-weight:700">${won(profit)}</td></tr>
-        </tbody></table>
-      </div>
-    </section>
-  </div>`;
+  <section class="card">
+    <div class="card__hd"><h3>비용</h3><span class="eyebrow">${cs.length}건</span><button class="btn btn--sm" data-act="cost-new" style="margin-left:auto">비용 추가</button></div>
+    ${cs.length?`<table class="dt">
+      <colgroup><col style="width:140px"><col><col style="width:180px"></colgroup>
+      <thead><tr><th>구분</th><th>항목</th><th class="num">금액</th></tr></thead>
+      <tbody>${cs.map(c=>`<tr class="dt__click" data-edit-cost="${c.id}">
+        <td><span class="st st--plan">${esc(c.kind||'기타')}</span></td>
+        <td>${esc(c.name)}</td>
+        <td class="num">${won(c.amount)}</td></tr>`).join('')}</tbody>
+      <tfoot><tr><td>합계</td><td></td><td class="num">${won(cost)}</td></tr></tfoot>
+    </table>`:`<div class="empty"><b>이 달 비용이 없어요</b>원가·광고비·수수료를 넣으면 영업이익이 계산돼요.</div>`}
+  </section>`;
 }
 
 /* ---------- 제품 ---------- */
@@ -4034,7 +4050,7 @@ function bind(){
     const ch=el.dataset.sale, f=el.dataset.f;
     let r=DB.sales.find(s=>s.brandId===UI.brand&&s.ym===UI.ym&&s.channel===ch);
     if(!r){ r={id:uid(),brandId:UI.brand,ym:UI.ym,channel:ch,goal:0,actual:0}; DB.sales.push(r); }
-    r[f]=Number(el.value||0); r.dirty=true; save(); render();
+    r[f]=Number(String(el.value||'').replace(/[^\d.-]/g,''))||0; r.dirty=true; save(); render();
   });
   document.querySelectorAll('[data-act]').forEach(el=>el.onclick=()=>act(el.dataset.act));
   if(UI.tab==='calendar') bindCalendar();
