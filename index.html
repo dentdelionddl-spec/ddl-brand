@@ -1431,6 +1431,14 @@ mark,.hl{background:linear-gradient(transparent 12%,var(--neon) 12%,var(--neon) 
 }
 .tabs:empty{display:none}
 @media(max-width:760px){.tabrow{max-width:100%;overflow:hidden}.tabrow .tabs{width:100%;max-width:100%}}
+
+/* 내 것만 토글 */
+.mine{display:inline-flex;align-items:center;gap:6px;height:34px;padding:0 14px 0 11px;border:0;border-radius:999px;font-size:13px;font-weight:600;color:var(--ink2);background:rgba(255,255,255,.6);box-shadow:0 0 0 1px rgba(255,255,255,.6) inset,0 1px 2px rgba(0,0,0,.04);white-space:nowrap}
+.mine svg{width:15px;height:15px;fill:none;stroke:currentColor;stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round}
+.mine:hover{background:#fff;color:var(--ink)}
+.mine[aria-pressed="true"]{background:var(--accent);color:#fff;box-shadow:0 8px 18px -10px rgba(46,107,230,.8)}
+.app--side .monthnav{height:34px;align-items:center}
+@media(max-width:760px){.mine{height:32px;padding:0 12px 0 10px;font-size:12px}}
 </style>
 </head>
 <body>
@@ -1764,12 +1772,16 @@ function brandBar(){
   </nav>`;
 }
 
+function mineBtn(){
+  const me=DB.settings.me||''; const on=!!myFilter();
+  return `<button class="mine" data-act="mine" aria-pressed="${on}" title="${me?'내 업무만 보기':'내 이름을 먼저 설정하세요'}">${ICON.user}<span>${on?esc(me)+'님 것만':'내 것만'}</span></button>`;
+}
 function topbar(){
   if(UI.brand==='__set') return `<header class="topbar"><div class="tophead">
       <h1 class="brandtitle">설정 · 동기화</h1><div class="spacer"></div>
     </div></header>`;
   if(UI.brand==='__home') return `<header class="topbar">
-      <div class="tophead"><div><h1 class="brandtitle">전체 브랜드</h1></div><div class="spacer"></div>${monthNav()}</div>
+      <div class="tophead"><div><h1 class="brandtitle">전체 브랜드</h1></div><div class="spacer"></div>${mineBtn()}${monthNav()}</div>
     </header>`;
 
   const b=brandOf(UI.brand);
@@ -1780,7 +1792,7 @@ function topbar(){
         <h1 class="brandtitle">${esc(b.name)}${b.ko?`<span class="brandko">${esc(b.ko)}</span>`:''}</h1>
       </div>
       <div class="spacer"></div>
-      ${monthNav()}
+      ${mineBtn()}${monthNav()}
     </div>
     <div class="tabrow">
       <div class="tabs" role="tablist">
@@ -1847,7 +1859,7 @@ function homeView(){
   const pacePct=Math.round(paceRatio(ym)*100);
   const sum=brands.reduce((a,b)=>{ const t=totals(b.id,ym); return {goal:a.goal+t.goal, actual:a.actual+t.actual}; },{goal:0,actual:0});
 
-  const who=ownerFilter(UI.taskOwner===undefined? (DB.settings.me||'') : UI.taskOwner);
+  const who=myFilter();
   const owners=OWNERS;
   const openAll=DB.tasks.filter(t=>!t.done && hasOwner(t,who));
   const todayTasks=openAll.filter(t=>t.due===TODAY || (t.start&&t.due&&t.start<=TODAY&&TODAY<=t.due))
@@ -1859,10 +1871,6 @@ function homeView(){
 
   return `
 
-  <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin:16px 0 8px">
-    
-    ${[['','전체'],...owners.map(o=>[o,o])].map(([v,l])=>`<button class="btn btn--sm" data-taskowner="${esc(v)}" style="border-radius:999px;${who===v?'background:var(--ink);border-color:var(--ink);color:#fff':''}">${esc(l)}</button>`).join('')}
-  </div>
   <div class="grid g2">
     <section class="card">
       <div class="card__hd"><h3>오늘 해야 할 업무</h3><span class="eyebrow">전 브랜드 ${todayTasks.length}건</span></div>
@@ -1921,7 +1929,7 @@ function summaryView(){
   const pacePct=Math.round(paceRatio(ym)*100);
   const cs=contentsOf(b.id,ym);
   const counts=TYPES.map(t=>[t,cs.filter(c=>c.type===t).length]);
-  const sumWho=ownerFilter(UI.taskOwner===undefined? (DB.settings.me||'') : UI.taskOwner);
+  const sumWho=myFilter();
   const sumOwners=OWNERS;
   const openTasks=tasksOf(b.id).filter(t=>!t.done && (!sumWho || hasOwner(t,sumWho)));
   const todayTasks=openTasks.filter(t=>t.due===TODAY || (t.start&&t.due&&t.start<=TODAY&&TODAY<=t.due))
@@ -1942,10 +1950,6 @@ function summaryView(){
   }).join('') : `<div class="empty"><b>이 브랜드에 채널이 없습니다</b>설정에서 브랜드 채널을 추가하면 여기에 표시됩니다.</div>`;
 
   return `
-  <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin:16px 0 8px">
-    
-    ${[['','전체'],...sumOwners.map(o=>[o,o])].map(([v,l])=>`<button class="btn btn--sm" data-taskowner="${esc(v)}" style="border-radius:999px;${sumWho===v?'background:var(--ink);border-color:var(--ink);color:#fff':''}">${esc(l)}</button>`).join('')}
-  </div>
   <div class="grid g2">
     <section class="card">
       <div class="card__hd"><h3>오늘 해야 할 업무</h3>
@@ -2006,7 +2010,7 @@ function calendarView(){
   const onlyContent = EMBED && EMBED.only==='content';
   const noTasks = EMBED && (EMBED.only==='content' || EMBED.only==='plan');
   const cs=contentsSpanning(b.id,ym).filter(c=>!onlyContent || CONTENT_TYPES.includes(c.type));
-  const calWho=EMBED? '' : (ownerFilter(UI.taskOwner===undefined? (DB.settings.me||'') : UI.taskOwner));
+  const calWho=EMBED? '' : (myFilter());
   const allDayTasks=tasksSpanning(b.id,ym);
   const dayTasks=noTasks? [] : allDayTasks.filter(t=>hasOwner(t,calWho));
   const calOwners=OWNERS;
@@ -2035,8 +2039,7 @@ function calendarView(){
     </div></div>
   </section>`;
   return `<div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin-bottom:12px">
-      
-      ${chip('전체','',!calWho)}${calOwners.map(o=>chip(o,o,calWho===o)).join('')}
+
       <div class="spacer" style="flex:1"></div>
       <button class="btn btn--sm btn--primary" data-newdate="${ym}-${pad(Math.min(today.getDate(),dim))}">항목 추가</button>
     </div>
@@ -2053,6 +2056,8 @@ function calendarView(){
 /* ---------- 업무 ---------- */
 function ownersOf(t){ return (Array.isArray(t.owners)&&t.owners.length)? t.owners : (t.owner? [t.owner] : []); }
 function ownerFilter(w){ return OWNERS.includes(w)? w : ''; }
+/* 기본은 전체, '내 것만' 켜면 설정된 내 이름만 */
+function myFilter(){ const me=DB.settings.me||''; return (me && UI.mine===true)? me : ''; }
 function hasOwner(t,who){ return !who || ownersOf(t).includes(who); }
 function ownerPicker(sel){
   const names=OWNERS;
@@ -2097,7 +2102,7 @@ function tasksView(){
   const all=tasksOf(b.id);
   const owners=OWNERS;
   const me=DB.settings.me||'';
-  const who=ownerFilter(UI.taskOwner===undefined? me : UI.taskOwner);
+  const who=myFilter();
   const scoped = who? all.filter(t=>hasOwner(t,who)) : all;
   const open=scoped.filter(t=>!t.done), done=scoped.filter(t=>t.done);
   const showDone = UI.taskDone===true;
@@ -2119,9 +2124,6 @@ function tasksView(){
       <div class="track" style="flex:1;max-width:220px"><i style="width:${pct}%;background:${hueBg(b.hue,58)}"></i></div>
       <div class="spacer" style="flex:1"></div>
       <button class="btn btn--primary btn--sm" data-act="task-new">업무 추가</button>
-    </div>
-    <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:14px">
-      ${chip('담당 전체','',!who)}${owners.map(o=>chip((o===me?'나 · ':'')+o+' '+all.filter(t=>hasOwner(t,o)&&!t.done).length,o,who===o)).join('')}
     </div>
     ${!list.length? `<div class="card"><div class="empty"><b>${showDone?'완료한 업무가 없습니다':'할 일이 없습니다'}</b>${who?`담당 ${esc(who)} 기준입니다.`:'업무를 추가하거나 노션 주간 플랜에서 내려받으세요.'}</div></div>`
     : areas.map(a=>{
@@ -2198,7 +2200,7 @@ function meModal(){
       <label class="f"><span>이름</span><select id="me_name">
         <option value="">선택 안 함</option>${names.map(n=>`<option ${n===cur?'selected':''}>${esc(n)}</option>`).join('')}
       </select></label>`,
-    onSave:()=>{ DB.settings.me=$('#me_name').value; UI.taskOwner=DB.settings.me; saveUI(); }
+    onSave:()=>{ DB.settings.me=$('#me_name').value; saveUI(); }
   });
 }
 function actionModal(id){
@@ -3757,6 +3759,7 @@ function bind(){
 
 function act(a){
   if(a==='me') return meModal();
+  if(a==='mine'){ if(!DB.settings.me) return meModal(); UI.mine=!myFilter(); saveUI(); render(); return; }
   if(a==='nav-brands'){ const sub=document.querySelector('.snav__sub'); UI.navBrands=!!(sub&&sub.hidden); saveUI(); render(); return; }
   if(a==='go-summary'){ UI.tab='summary'; saveUI(); render(); return; }
   if(a==='home'){ UI.brand='__home'; UI.ym=ymOf(today); saveUI(); render(); return; }
