@@ -2139,7 +2139,9 @@ const daysBetween=(a,b)=>Math.round((new Date(b+'T00:00:00')-new Date(a+'T00:00:
 const brandOf=id=>DB.brands.find(b=>b.id===id);
 const hueBg=(h,l=45)=>`hsl(${h} 42% ${l}%)`;
 
-let UI={ brand: DB.brands[0].id, tab:'calendar', ym: ymOf(today) };
+/* 홈 = DDL 페이지 (전체 브랜드 화면은 쓰지 않음) */
+const HOME_BRAND=()=>brandOf('ddl')?'ddl':(DB.brands[0]?.id||'__set');
+let UI={ brand: HOME_BRAND(), tab:'calendar', ym: ymOf(today) };
 const savedUI=store.get(KEY+':ui'); if(savedUI){ try{ UI=Object.assign(UI,JSON.parse(savedUI)); }catch(e){} }
 if(UI.tab==='summary') UI.tab='calendar'; /* 요약 탭은 없앰 */
 const saveUI=()=>store.set(KEY+':ui',JSON.stringify(UI));
@@ -2277,7 +2279,7 @@ function render(){
   window.__pageKey=pageKey;
   applyEmbed();
   if(EMBED&&EMBED.ro) document.body.classList.add('ro');
-  if(UI.brand==='__all') UI.brand=DB.brands[0]?.id||'__set';
+  if(UI.brand==='__all'||UI.brand==='__home') UI.brand=HOME_BRAND();
   const special = UI.brand==='__set' || UI.brand==='__home' || UI.brand==='__tasks';
   if(!special){ const b=brandOf(UI.brand)||DB.brands[0]; UI.brand=b?.id||'__set'; }
   $('#app').innerHTML= EMBED
@@ -4623,7 +4625,7 @@ function act(a){
   if(a==='mine'){ if(!DB.settings.me) return meModal(); UI.mine=!myFilter(); saveUI(); render(); return; }
   if(a==='nav-brands'){ const sub=document.querySelector('.snav__sub'); UI.navBrands=!!(sub&&sub.hidden); saveUI(); render(); return; }
   if(a==='go-summary'){ UI.tab='calendar'; saveUI(); render(); return; }
-  if(a==='home'){ UI.brand='__home'; UI.ym=ymOf(today); saveUI(); render(); return; }
+  if(a==='home'){ UI.brand=HOME_BRAND(); UI.tab='calendar'; UI.ym=ymOf(today); saveUI(); render(); return; }
   if(a==='task-new') return taskModal(null);
   if(a==='prod-new') return prodModal(null);
   if(a==='plan-new') return planModal(null);
