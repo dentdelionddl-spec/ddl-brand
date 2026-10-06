@@ -2333,7 +2333,7 @@ function sideNav(){
     <button class="snav__logo" data-act="home" title="홈으로"><img src="${LOGO_SRC}" alt="DDL" /></button>
     ${brandOf('ddl')&&!brandOf('ddl').hidden ? item('data-brand="ddl"','DDL',ICON.home,UI.brand==='ddl') : ''}
     ${item('data-brand="__tasks"','업무',ICON.check,UI.brand==='__tasks', String(DB.tasks.filter(t=>!t.done&&brandOf(t.brandId)&&!brandOf(t.brandId).hidden).length), true)}
-    ${item('data-brand="__sched"','스케줄',ICON.cal,UI.brand==='__sched')}
+    ${item('data-brand="__sched"','캘린더',ICON.cal,UI.brand==='__sched')}
     ${(()=>{
       const list=DB.brands.filter(br=>!br.hidden && br.id!=='ddl');
       const open = UI.navBrands!==false;
@@ -2386,7 +2386,7 @@ function topbar(){
       <h1 class="brandtitle">설정 · 동기화</h1><div class="spacer"></div>
     </div></header>`;
   if(UI.brand==='__sched') return `<header class="topbar">
-      <div class="tophead"><div><h1 class="brandtitle">스케줄<span class="brandko">전체 브랜드</span></h1></div><div class="spacer"></div>${monthNav()}</div>
+      <div class="tophead"><div><h1 class="brandtitle">캘린더<span class="brandko">전체 브랜드</span></h1></div><div class="spacer"></div>${monthNav()}</div>
     </header>`;
   if(UI.brand==='__tasks') return `<header class="topbar">
       <div class="tophead"><div><h1 class="brandtitle">업무<span class="brandko">전체 브랜드</span></h1></div><div class="spacer"></div></div>
