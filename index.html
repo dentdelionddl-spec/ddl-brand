@@ -2071,6 +2071,9 @@ body.share .f:has(#t_brand),body.share .f:has(#c_brand){display:none !important}
 body.share .m{padding-bottom:0 !important}
 body.share .mfab{bottom:calc(20px + env(safe-area-inset-bottom)) !important}
 body.share .m .mmain{padding-bottom:32px}
+
+.sharewait .spin{width:22px;height:22px;border-radius:50%;border:2px solid rgba(17,18,20,.12);border-top-color:var(--ink);animation:spin .8s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
 </style>
 </head>
 <body>
@@ -2335,7 +2338,10 @@ function render(){
   if(SHARE_KEY){
     const sb=shareBrand();
     if(!sb){
-      $('#app').innerHTML=`<div class="sharewait"><img src="${LOGO_SRC}" alt="DDL"><b>${DB.settings.lastSync?'링크를 찾을 수 없어요':'불러오는 중…'}</b><span>${DB.settings.lastSync?'공유가 해제됐거나 주소가 바뀌었을 수 있어요.':'잠시만 기다려 주세요.'}</span></div>`;
+      /* 노션에서 브랜드 목록을 확인하기 전에는 '없음' 대신 로딩만 보여줌 */
+      $('#app').innerHTML = window.__shareChecked
+        ? `<div class="sharewait"><img src="${LOGO_SRC}" alt="DDL"><b>링크를 찾을 수 없어요</b><span>공유가 해제됐거나 주소가 바뀌었을 수 있어요.</span></div>`
+        : `<div class="sharewait"><img src="${LOGO_SRC}" alt="DDL"><i class="spin" aria-label="불러오는 중"></i></div>`;
       return;
     }
     UI.brand=sb.id; UI.mTab='brands'; UI.mBrand=sb.id; UI.mine=false;
@@ -4794,6 +4800,11 @@ function act(a){
 /* 새로 접속하면 항상 홈 화면부터 */
 if(SHARE_KEY){ document.body.classList.add('share'); UI.tab='calendar'; UI.mTab='brands'; UI.ym=ymOf(today); }
 else if(!EMBED){ UI.brand='__home'; UI.ym=ymOf(today); UI.thrPast=false; UI.linkDone=false; saveUI(); }
+/* 공유 링크: 브랜드 목록만 먼저 받아서 바로 화면을 띄우고, 나머지 데이터는 이어서 채움 */
+if(SHARE_KEY){
+  if(shareBrand()) window.__shareChecked=true;
+  else pullBrands().catch(()=>{}).finally(()=>{ window.__shareChecked=true; render(); });
+}
 render();
 bootSync();
 /* 자동 갱신 */
