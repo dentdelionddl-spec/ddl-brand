@@ -1981,6 +1981,19 @@ html body .dd--f:hover{box-shadow:0 0 0 1px rgba(17,18,20,.16) inset !important}
 html body .dd--f[aria-expanded="true"]{background:#fff !important;box-shadow:0 0 0 1px var(--accent) inset,0 0 0 3px var(--accent-bg) !important}
 html body .ttable .dd--f,html body .dt .dd--f,html body td .dd--f{height:30px !important;min-width:96px}
 @media(max-width:760px){ html body .modal .dd--f{height:44px !important;font-size:15px !important} }
+
+/* ===== PC 업무 보드: 모바일과 같은 부품 ===== */
+.tboard{display:flex;flex-direction:column;gap:10px}
+.tboard__bar{display:flex;align-items:center;gap:18px;flex-wrap:wrap;margin-bottom:4px}
+.tboard__bar .mseg{flex:0 0 auto;width:500px;max-width:100%}
+.tboard__bar .mswitch{height:36px}
+.tboard .mgrp{margin:12px 2px 2px}
+.tcards{display:grid;grid-template-columns:repeat(auto-fill,minmax(400px,1fr));gap:10px}
+.tcards .mt{min-height:64px;cursor:default}
+.mt__chk svg,.mswitch svg,.mico svg{fill:none;stroke:currentColor;stroke-linecap:round;stroke-linejoin:round}
+.mt__chk svg{stroke-width:3}
+.tcards .mt:hover{box-shadow:0 0 0 1px rgba(255,255,255,.8) inset,0 8px 20px -14px rgba(20,22,28,.35)}
+.tboard .mempty{padding:56px 16px}
 </style>
 </head>
 <body>
@@ -2379,10 +2392,10 @@ const monthNav=()=>`<div class="monthnav">
 function viewHtml(){
   if(UI.brand==='__home') return homeView();
   if(UI.brand==='__set') return settingsView();
-  if(UI.brand==='__tasks') return allTasksView();
+  if(UI.brand==='__tasks') return taskBoard('');
   switch(UI.tab){
     case 'calendar': return calendarView();
-    case 'tasks': return tasksView();
+    case 'tasks': return taskBoard(UI.brand);
     case 'plans': return plansView();
     case 'kpi': return kpiView();
     case 'sales': return salesView();
@@ -2855,6 +2868,38 @@ function enhanceSelects(root){
   });
 }
 ['wheel','touchmove'].forEach(t=>window.addEventListener(t,e=>{ const p=document.querySelector('.ddpop'); if(p&&!p.contains(e.target)) ddClose(); },{passive:true,capture:true}));
+
+/* ---------- 업무 보드 (PC) — 모바일과 같은 디자인: 상태 세그먼트 + 조용한 필터 줄 + 업무 카드 ---------- */
+function taskBoard(bid){
+  const live = bid ? DB.tasks.filter(t=>t.brandId===bid)
+                   : DB.tasks.filter(t=>{ const b=brandOf(t.brandId); return b&&!b.hidden; });
+  const bf = bid ? '' : (UI.taskBrand&&brandOf(UI.taskBrand)?UI.taskBrand:'');
+  const who=myFilter();
+  const sc=live.filter(t=>(!bf||t.brandId===bf)&&(!who||hasOwner(t,who)));
+  const open=sc.filter(t=>!t.done), ym = bid ? UI.ym : TODAY.slice(0,7);
+  const [,wk1]=weekRange();
+  const G={ late:open.filter(t=>t.due&&t.due<TODAY), today:open.filter(t=>t.due===TODAY),
+    week:open.filter(t=>t.due&&t.due>TODAY&&t.due<=wk1), all:open, done:sc.filter(t=>t.done&&(t.due||'').startsWith(ym)) };
+  const f=UI.mFilter&&G[UI.mFilter]?UI.mFilter:'all';
+  const byDue=(x,y)=>(x.due||'9999-99-99').localeCompare(y.due||'9999-99-99')||PRIOS.indexOf(x.priority)-PRIOS.indexOf(y.priority);
+  const grid=r=>`<div class="tcards">${r.map(t=>mTaskCard(t,!bid)).join('')}</div>`;
+  let body;
+  if(f==='all'){
+    body=[['지연',G.late],['오늘',G.today],['이번 주',G.week],['이후',open.filter(t=>t.due&&t.due>wk1)],['마감 없음',open.filter(t=>!t.due)]]
+      .filter(([,r])=>r.length).map(([k,r])=>`<div class="mgrp"><b>${k}</b><span>${r.length}</span></div>${grid(r.sort(byDue))}`).join('');
+  } else body = G[f].length ? grid(G[f].slice().sort(f==='done'?(x,y)=>(y.due||'').localeCompare(x.due||''):byDue)) : '';
+  const brands = DB.brands.filter(b=>!b.hidden&&live.some(t=>t.brandId===b.id));
+  return `<div class="tboard">
+    <div class="tboard__bar">
+      ${mSeg([['all','전체',G.all.length],['late','지연',G.late.length],['today','오늘',G.today.length],['week','이번 주',G.week.length],['done',Number(ym.slice(5))+'월 완료',G.done.length]],f,'data-mfilter')}
+      ${bid?'':dd('taskBrand',bf,[['','모든 브랜드'],...brands.map(b=>[b.id,b.name])],'dd--m')}
+      ${mMine()}
+      <div class="spacer" style="flex:1"></div>
+      <button class="btn btn--primary btn--sm" data-act="task-new">업무 추가</button>
+    </div>
+    ${body || `<div class="mempty"><b>${f==='done'?'이 달 완료한 업무가 없어요':'할 일이 없어요'}</b><span>${who?esc(who)+'님 담당 기준이에요':'업무 추가로 시작하세요'}</span></div>`}
+  </div>`;
+}
 
 /* ---------- 업무 (전체 브랜드) ---------- */
 function taskState(t){
@@ -4462,6 +4507,7 @@ function bind(){
   });
   document.querySelectorAll('[data-tab]').forEach(el=>el.onclick=()=>{ UI.tab=el.dataset.tab; saveUI(); render(); });
   enhanceSelects(document.getElementById('app'));
+  document.querySelectorAll('[data-mfilter]').forEach(el=>el.onclick=()=>{ UI.mFilter=el.dataset.mfilter; saveUI(); render(); });
   document.querySelectorAll('[data-dd]').forEach(el=>el.onclick=e=>{ e.stopPropagation(); el.getAttribute('aria-expanded')==='true'? ddClose() : ddOpen(el); });
   document.querySelectorAll('[data-taskview]').forEach(el=>el.onclick=()=>{ UI.taskDone=(el.dataset.taskview==='done'); saveUI(); render(); });
   document.querySelectorAll('[data-taskowner]').forEach(el=>el.onclick=()=>{ UI.taskOwner=el.dataset.taskowner||''; saveUI(); render(); });
