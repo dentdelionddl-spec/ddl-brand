@@ -2,7 +2,7 @@
 <html lang="ko">
 <head>
 <meta charset="utf-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<meta name="viewport" content="width=device-width, initial-scale=1, minimum-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
 <title>DDL 브랜드 관리</title>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable.min.css" />
 <style>
@@ -1891,6 +1891,16 @@ html body .m .card__hd{flex-wrap:nowrap !important}
 .mswitch[aria-pressed="true"] i{background:var(--accent)}
 .mswitch[aria-pressed="true"] i::after{transform:translateX(16px)}
 .mv > .mseg + .mbar{margin-top:-4px !important}
+
+/* 모바일: 화면 고정 — 확대·가로 흔들림·바운스 없음 */
+@media(max-width:760px){
+  html,body{width:100%;max-width:100%;overflow-x:hidden;overscroll-behavior:none;-webkit-text-size-adjust:100%;text-size-adjust:100%;touch-action:pan-y}
+  .m{overflow-x:hidden;max-width:100vw}
+  .m *{touch-action:manipulation}
+  .mrow{touch-action:pan-x}
+  /* iOS는 16px 미만 입력칸을 누르면 자동 확대 → 모든 입력 16px */
+  input,select,textarea,html body .modal .f input:not([type=checkbox]),html body .modal .f select,html body .modal .f textarea,html body .msel select{font-size:16px !important}
+}
 </style>
 </head>
 <body>
@@ -2531,6 +2541,13 @@ function tasksView(){
    하단 탭: 업무 · 캘린더 · 브랜드 · 설정 / 터치 크기 44px 이상
    ========================================================= */
 const isMobile=()=>window.matchMedia('(max-width:760px)').matches;
+if(!window.__noZoom){ window.__noZoom=1;
+  const block=e=>{ if(isMobile()) e.preventDefault(); };
+  ['gesturestart','gesturechange','gestureend'].forEach(t=>document.addEventListener(t,block,{passive:false}));
+  document.addEventListener('touchmove',e=>{ if(isMobile() && e.touches && e.touches.length>1) e.preventDefault(); },{passive:false});
+  let lastTap=0;
+  document.addEventListener('touchend',e=>{ if(!isMobile()) return; const now=Date.now(); if(now-lastTap<300 && !e.target.closest('input,textarea,select')) e.preventDefault(); lastTap=now; },{passive:false});
+}
 if(!window.__mqFix){ window.__mqFix=1; window.matchMedia('(max-width:760px)').addEventListener('change',()=>render()); }
 const MI={
   tasks:'<svg viewBox="0 0 24 24"><rect x="4" y="4" width="16" height="16" rx="4"/><path d="M8.5 12.5l2.5 2.5 4.5-5"/></svg>',
