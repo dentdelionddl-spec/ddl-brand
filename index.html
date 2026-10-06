@@ -2025,7 +2025,7 @@ html body .modal__bd > label > input[type=checkbox]:checked{background:radial-gr
   .mtop__r{justify-self:end;display:flex;align-items:center}
   html body .m .mtop__t{flex:none;font-size:16px;font-weight:700;letter-spacing:-.01em;text-align:center;max-width:58vw}
   html body .m .mtop__logo{height:15px;display:block}
-  .mback{display:inline-flex;align-items:center;gap:2px;height:44px;margin-left:-8px;padding:0 6px 0 0;border:0;background:transparent;color:var(--accent);font:500 15px var(--sans);cursor:pointer}
+  .mback{display:inline-flex;align-items:center;gap:2px;height:44px;width:44px;margin-left:-8px;padding:0;border:0;background:transparent;color:var(--ink);font:500 15px var(--sans);cursor:pointer}
   .mback svg{width:22px;height:22px;stroke-width:2.2}
   .mback:active{opacity:.5}
   html body .m .mtop__me{width:32px;height:32px;border-radius:50%;background:rgba(17,18,20,.06);box-shadow:none;font:700 11px var(--sans);color:var(--ink2);display:grid;place-items:center;padding:0}
@@ -2862,7 +2862,7 @@ function renderMobile(){
   const nav=(k,l)=>`<button class="mnav__i" data-mtab="${k}" aria-current="${tab===k}">${MI[k]}<span>${l}</span></button>`;
   $('#app').innerHTML=`<div class="m">
     <header class="mtop">
-      <div class="mtop__l">${detail?`<button class="mback" data-mback aria-label="브랜드 목록">${MI.back}<span>브랜드</span></button>`:`<img class="mtop__logo" src="${LOGO_SRC}" alt="DDL">`}</div>
+      <div class="mtop__l">${detail?`<button class="mback" data-mback aria-label="브랜드 목록">${MI.back}</button>`:`<img class="mtop__logo" src="${LOGO_SRC}" alt="DDL">`}</div>
       <b class="mtop__t">${esc(title)}</b>
       <div class="mtop__r"><button class="mtop__me ${me?'has-name':''}" data-act="me" aria-label="내 이름">${me?esc(me.slice(-2)):MI_ME}</button></div>
     </header>
