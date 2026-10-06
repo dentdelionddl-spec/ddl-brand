@@ -1971,6 +1971,16 @@ html body .modal__ft{margin-top:0 !important}
   html body .m .mnav::before{content:"";position:absolute;left:0;right:0;bottom:100%;height:22px;pointer-events:none;background:linear-gradient(rgba(238,239,241,0),rgba(238,239,241,.97))}
   html body .m .mfab{z-index:6}
 }
+
+/* 기본 선택칸 대체: 입력칸과 같은 모양의 드롭다운 버튼 */
+html body select.dd-native,html body .modal .f select.dd-native,html body #view select.dd-native,html body .modal select.dd-native{position:absolute !important;width:1px !important;height:1px !important;opacity:0 !important;pointer-events:none !important;padding:0 !important;margin:0 !important;border:0 !important}
+html body .dd--f{display:flex;width:100%;justify-content:space-between;height:var(--h,34px) !important;padding:0 12px !important;border-radius:var(--r-md) !important;
+  background:rgba(255,255,255,.92) !important;box-shadow:0 0 0 1px var(--line) inset !important;font:500 13px/1 var(--sans) !important;color:var(--ink) !important;text-align:left}
+html body .dd--f span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0}
+html body .dd--f:hover{box-shadow:0 0 0 1px rgba(17,18,20,.16) inset !important}
+html body .dd--f[aria-expanded="true"]{background:#fff !important;box-shadow:0 0 0 1px var(--accent) inset,0 0 0 3px var(--accent-bg) !important}
+html body .ttable .dd--f,html body .dt .dd--f,html body td .dd--f{height:30px !important;min-width:96px}
+@media(max-width:760px){ html body .modal .dd--f{height:44px !important;font-size:15px !important} }
 </style>
 </head>
 <body>
@@ -2811,6 +2821,9 @@ function ddClose(){ document.querySelectorAll('.ddpop').forEach(p=>p.remove()); 
 function ddOpen(btn){
   const id=btn.dataset.dd, opts=window.__ddOpts[id]||[];
   const cur=(opts.find(([,l])=>l===btn.querySelector('span').textContent)||[''])[0];
+  ddMenu(btn, opts, cur, v=>{ (DD_ON[id]||(()=>{}))(v); saveUI(); render(); });
+}
+function ddMenu(btn,opts,cur,onPick){
   ddClose(); btn.setAttribute('aria-expanded','true');
   const r=btn.getBoundingClientRect(), pop=document.createElement('div');
   pop.className='ddpop'; pop.setAttribute('role','listbox');
@@ -2819,10 +2832,28 @@ function ddOpen(btn){
   const w=Math.max(r.width,200), left=Math.min(Math.max(8,r.left), window.innerWidth-w-8);
   const below=window.innerHeight-r.bottom, h=pop.offsetHeight;
   pop.style.cssText=`left:${left}px;min-width:${w}px;`+(below<h+16 && r.top>below ? `bottom:${window.innerHeight-r.top+6}px` : `top:${r.bottom+6}px`);
-  pop.querySelectorAll('[data-v]').forEach(o=>o.onclick=()=>{ ddClose(); (DD_ON[id]||(()=>{}))(o.dataset.v); saveUI(); render(); });
+  pop.querySelectorAll('[data-v]').forEach(o=>o.onclick=()=>{ ddClose(); onPick(o.dataset.v); });
+  const sel=pop.querySelector('[aria-selected="true"]'); if(sel) sel.scrollIntoView({block:'nearest'});
   setTimeout(()=>{ const off=e=>{ if(!pop.contains(e.target)&&e.target!==btn&&!btn.contains(e.target)){ ddClose(); document.removeEventListener('pointerdown',off,true); } }; document.addEventListener('pointerdown',off,true); },0);
 }
 document.addEventListener('keydown',e=>{ if(e.key==='Escape') ddClose(); });
+/* 모든 기본 선택칸(<select>)을 같은 드롭다운으로 — 실제 select는 숨겨 두고 값만 주고받음 */
+function enhanceSelects(root){
+  (root||document).querySelectorAll('select:not([data-native]):not([data-dd-done])').forEach(sel=>{
+    sel.setAttribute('data-dd-done','1');
+    const btn=document.createElement('button'); btn.type='button'; btn.className='dd dd--f';
+    btn.setAttribute('aria-haspopup','listbox'); btn.setAttribute('aria-expanded','false');
+    if(sel.id) btn.setAttribute('aria-label', (sel.closest('label')?.querySelector('span')?.textContent)||sel.getAttribute('aria-label')||'');
+    const paint=()=>{ const o=sel.options[sel.selectedIndex]; btn.innerHTML=`<span>${esc(o?o.textContent:'')}</span>${DD_CHEV}`; };
+    paint(); sel.addEventListener('change',paint);
+    sel.classList.add('dd-native'); sel.after(btn);
+    btn.onclick=e=>{ e.preventDefault(); e.stopPropagation();
+      if(btn.getAttribute('aria-expanded')==='true') return ddClose();
+      const opts=[...sel.options].map(o=>[o.value,o.textContent]);
+      ddMenu(btn, opts, sel.value, v=>{ sel.value=v; sel.dispatchEvent(new Event('change',{bubbles:true})); sel.dispatchEvent(new Event('input',{bubbles:true})); paint(); });
+    };
+  });
+}
 ['wheel','touchmove'].forEach(t=>window.addEventListener(t,e=>{ const p=document.querySelector('.ddpop'); if(p&&!p.contains(e.target)) ddClose(); },{passive:true,capture:true}));
 
 /* ---------- 업무 (전체 브랜드) ---------- */
@@ -3926,6 +3957,7 @@ function modal({title, body, onSave, onDelete, saveLabel='저장', footer=true})
   /* PC만 첫 칸에 바로 커서 — 폰은 칸을 눌렀을 때만 키보드 */
   const first=$('#layer').querySelector('input,select,textarea'); if(first && !isMobile()) first.focus();
   fitSheet();
+  enhanceSelects($('#layer'));
   $('#layer').querySelectorAll('.modal__bd input,.modal__bd textarea,.modal__bd select').forEach(el=>el.addEventListener('focus',()=>{ if(isMobile()) setTimeout(()=>el.scrollIntoView({block:'center',behavior:'smooth'}),280); }));
   document.onkeydown=e=>{ if(e.key==='Escape') close(); };
 }
@@ -4429,6 +4461,7 @@ function bind(){
     saveUI(); render();
   });
   document.querySelectorAll('[data-tab]').forEach(el=>el.onclick=()=>{ UI.tab=el.dataset.tab; saveUI(); render(); });
+  enhanceSelects(document.getElementById('app'));
   document.querySelectorAll('[data-dd]').forEach(el=>el.onclick=e=>{ e.stopPropagation(); el.getAttribute('aria-expanded')==='true'? ddClose() : ddOpen(el); });
   document.querySelectorAll('[data-taskview]').forEach(el=>el.onclick=()=>{ UI.taskDone=(el.dataset.taskview==='done'); saveUI(); render(); });
   document.querySelectorAll('[data-taskowner]').forEach(el=>el.onclick=()=>{ UI.taskOwner=el.dataset.taskowner||''; saveUI(); render(); });
