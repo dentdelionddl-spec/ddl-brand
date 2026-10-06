@@ -1994,6 +1994,27 @@ html body .ttable .dd--f,html body .dt .dd--f,html body td .dd--f{height:30px !i
 .mt__chk svg{stroke-width:3}
 .tcards .mt:hover{box-shadow:0 0 0 1px rgba(255,255,255,.8) inset,0 8px 20px -14px rgba(20,22,28,.35)}
 .tboard .mempty{padding:56px 16px}
+
+html body .modal__bd > *{flex-shrink:0 !important}
+/* ===== 팝업 글자·정렬 통일 (최종) =====
+   칸 글자: PC 13px / 모바일 14px, 모든 칸 글자 세로 가운데 · 체크 줄은 칸 모양 + 스위치 */
+html body .modal .f input:not([type=checkbox]):not([type=file]),html body .modal .dd--f,html body .modal .f select{line-height:normal !important;padding-top:0 !important;padding-bottom:0 !important}
+html body .modal input[type=date]{line-height:var(--h,34px) !important}
+html body .modal .ochip span{display:inline-flex;align-items:center;line-height:1}
+html body .modal__bd > label:has(> input[type=checkbox]){flex-direction:row-reverse;justify-content:space-between;height:var(--h,34px);padding:0 12px !important;
+  background:rgba(255,255,255,.92);box-shadow:0 0 0 1px var(--line) inset;border-radius:var(--r-md);font-size:13px !important;font-weight:500;color:var(--ink)}
+html body .modal__bd > label > input[type=checkbox]{-webkit-appearance:none;appearance:none;flex:0 0 auto;width:36px !important;height:22px !important;margin:0 !important;border-radius:999px;cursor:pointer;
+  background:radial-gradient(circle 9px at 11px 50%,#fff 96%,transparent 100%),rgba(17,18,20,.16);transition:background .15s;box-shadow:inset 0 0 0 0 transparent}
+html body .modal__bd > label > input[type=checkbox]:checked{background:radial-gradient(circle 9px at 25px 50%,#fff 96%,transparent 100%),var(--accent)}
+@media(max-width:760px){
+  html body .modal .f > span{font-size:12px !important}
+  html body .modal .f input:not([type=checkbox]):not([type=file]),html body .modal .f textarea,html body .modal .dd--f,html body .modal .ochip span{font-size:14px !important}
+  html body .modal input[type=date]{line-height:44px !important}
+  html body .modal__bd > label:has(> input[type=checkbox]){height:44px;font-size:14px !important}
+  html body .modal__ft .btn{font-size:14px !important;font-weight:650}
+  html body .modal__hd h3{font-size:16px !important}
+  html body .modal .f textarea{padding-top:11px !important}
+}
 </style>
 </head>
 <body>
