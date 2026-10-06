@@ -2052,6 +2052,25 @@ html body div:has(> .sub:not([data-ptab]))::-webkit-scrollbar{display:none}
   .subrow--act .btn{height:34px !important}
   .m .mlegacy .ustat{padding:14px 2px}
 }
+
+/* ===== 공유 링크 화면 ===== */
+.sharebtn{gap:6px}
+.sharebtn svg{width:14px;height:14px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.mico svg{fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.sharewait{min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;text-align:center;padding:24px}
+.sharewait img{height:20px;filter:brightness(0);margin-bottom:10px}
+.sharewait b{font-size:16px}
+.sharewait span{font-size:13px;color:var(--mut)}
+@media(min-width:761px){
+  .app--share{padding:16px 24px 0 !important;max-width:1440px;margin:0 auto}
+  .app--share > .main{width:100%}
+}
+/* 공유 화면에서는 담당자·내 것만·브랜드 바꾸기 없음 */
+body.share .mine,body.share .mswitch,body.share [data-act="me"],body.share .snav,body.share .brandbar{display:none !important}
+body.share .f:has(#t_brand),body.share .f:has(#c_brand){display:none !important}
+body.share .m{padding-bottom:0 !important}
+body.share .mfab{bottom:calc(20px + env(safe-area-inset-bottom)) !important}
+body.share .m .mmain{padding-bottom:32px}
 </style>
 </head>
 <body>
@@ -2181,7 +2200,7 @@ const HOME_BRAND=()=>brandOf('ddl')?'ddl':(DB.brands[0]?.id||'__set');
 let UI={ brand: HOME_BRAND(), tab:'calendar', ym: ymOf(today) };
 const savedUI=store.get(KEY+':ui'); if(savedUI){ try{ UI=Object.assign(UI,JSON.parse(savedUI)); }catch(e){} }
 if(UI.tab==='summary') UI.tab='calendar'; /* 요약 탭은 없앰 */
-const saveUI=()=>store.set(KEY+':ui',JSON.stringify(UI));
+const saveUI=()=>store.set(KEY+(SHARE_KEY?':ui:share':':ui'),JSON.stringify(UI));
 
 function toast(msg,ms=2200){
   const t=document.createElement('div'); t.className='toast'; t.textContent=msg;
@@ -2227,6 +2246,9 @@ function ymLabelShort(ym){ const [y,m]=ym.split('-'); return `${String(y).slice(
 /* =========================================================
    RENDER
    ========================================================= */
+/* 공유 링크 (?s=키): 한 브랜드만 보는 부분 미러링 — 같은 코드·같은 데이터라 대시보드를 고치면 그대로 반영 */
+const SHARE_KEY=(new URLSearchParams(location.search).get('s')||'').trim();
+const shareBrand=()=> SHARE_KEY ? (DB.brands.find(b=>b.shareKey===SHARE_KEY)||null) : null;
 const EMBED=(()=>{ const q=new URLSearchParams(location.search); if(!q.get('embed')) return null;
   return { brand:(q.get('brand')||'').toLowerCase(), view:(q.get('view')||'calendar'), only:(q.get('only')||''), ro:!!q.get('readonly') }; })();
 function applyEmbed(){
@@ -2310,6 +2332,15 @@ function mobileLayout(){
   scrollToToday();
 }
 function render(){
+  if(SHARE_KEY){
+    const sb=shareBrand();
+    if(!sb){
+      $('#app').innerHTML=`<div class="sharewait"><img src="${LOGO_SRC}" alt="DDL"><b>${DB.settings.lastSync?'링크를 찾을 수 없어요':'불러오는 중…'}</b><span>${DB.settings.lastSync?'공유가 해제됐거나 주소가 바뀌었을 수 있어요.':'잠시만 기다려 주세요.'}</span></div>`;
+      return;
+    }
+    UI.brand=sb.id; UI.mTab='brands'; UI.mBrand=sb.id; UI.mine=false;
+    if(!['calendar','kpi','tasks','plans','sales','products'].includes(UI.tab)) UI.tab='calendar';
+  }
   if(!EMBED && isMobile()) return renderMobile();
   const pv=document.getElementById('view'), pageKey=UI.brand+'|'+UI.tab;
   const keepTop = (pv && window.__pageKey===pageKey) ? pv.scrollTop : 0;
@@ -2321,6 +2352,7 @@ function render(){
   if(!special){ const b=brandOf(UI.brand)||DB.brands[0]; UI.brand=b?.id||'__set'; }
   $('#app').innerHTML= EMBED
   ? `<div class="app"><div class="main"><div class="view" id="view" style="padding:14px"></div></div></div>`
+  : SHARE_KEY ? `<div class="app app--side app--share"><div class="main">${topbar()}<div class="view" id="view"></div></div></div>`
   : `
   <div class="app app--side">
     ${sideNav()}
@@ -2353,6 +2385,7 @@ function headerGlass(){
 
 const ICON={
   cal:'<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="5" width="16" height="15" rx="3"/><path d="M4 10h16M9 3v4M15 3v4"/></svg>',
+  share:'<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 15V4M8 8l4-4 4 4"/><path d="M5 12v7a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-7"/></svg>',
   check:'<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="4" width="16" height="16" rx="3"/><path d="M8.5 12.5l2.5 2.5 4.5-5"/></svg>',
   tag:'<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 4h7l9 9-7 7-9-9z"/><circle cx="8.5" cy="8.5" r="1.2"/></svg>',
   chev:'<svg class="snav__chev" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg>',
@@ -2438,6 +2471,7 @@ function topbar(){
         <h1 class="brandtitle">${esc(b.name)}${b.ko?`<span class="brandko">${esc(b.ko)}</span>`:''}</h1>
       </div>
       <div class="spacer"></div>
+      ${SHARE_KEY?'':`<button class="btn btn--sm sharebtn" data-act="share" title="이 브랜드만 보는 공유 링크 복사">${ICON.share}공유</button>`}
       ${monthNav()}
     </div>
     <div class="tabrow">
@@ -2869,6 +2903,7 @@ function renderMobile(){
   const tab=UI.mTab||'tasks';
   const key='m|'+tab+'|'+(UI.mBrand||'')+'|'+UI.tab; const mm=document.querySelector('.mmain'); const keepY=(window.__mKey===key&&mm)?mm.scrollTop:0; window.__mKey=key;
   const detail = tab==='brands' && UI.mBrand && brandOf(UI.mBrand);
+  const shared = !!SHARE_KEY;
   let title={tasks:'업무',cal:'캘린더',brands:'브랜드',set:'설정'}[tab], body='';
   try{
     if(tab==='tasks') body=mTasksView();
@@ -2882,13 +2917,13 @@ function renderMobile(){
   const nav=(k,l)=>`<button class="mnav__i" data-mtab="${k}" aria-current="${tab===k}">${MI[k]}<span>${l}</span></button>`;
   $('#app').innerHTML=`<div class="m">
     <header class="mtop">
-      <div class="mtop__l">${detail?`<button class="mback" data-mback aria-label="브랜드 목록">${MI.back}</button>`:`<img class="mtop__logo" src="${LOGO_SRC}" alt="DDL">`}</div>
+      <div class="mtop__l">${detail&&!shared?`<button class="mback" data-mback aria-label="브랜드 목록">${MI.back}</button>`:`<img class="mtop__logo" src="${LOGO_SRC}" alt="DDL">`}</div>
       <b class="mtop__t">${esc(title)}</b>
-      <div class="mtop__r"><button class="mtop__me ${me?'has-name':''}" data-act="me" aria-label="내 이름">${me?esc(me.slice(-2)):MI_ME}</button></div>
+      <div class="mtop__r">${detail&&!shared?`<button class="mico" data-act="share" aria-label="공유 링크 복사">${ICON.share}</button>`:''}${shared?'':`<button class="mtop__me ${me?'has-name':''}" data-act="me" aria-label="내 이름">${me?esc(me.slice(-2)):MI_ME}</button>`}</div>
     </header>
     <main id="view" class="mmain">${body}</main>
     ${fab}
-    <nav class="mnav">${nav('tasks','업무')}${nav('cal','캘린더')}${nav('brands','브랜드')}${nav('set','설정')}</nav>
+    ${shared?'':`<nav class="mnav">${nav('tasks','업무')}${nav('cal','캘린더')}${nav('brands','브랜드')}${nav('set','설정')}</nav>`}
   </div>`;
   bind();
   document.querySelectorAll('[data-mtab]').forEach(el=>el.onclick=()=>{ UI.mTab=el.dataset.mtab; if(UI.mTab!=='brands') UI.mBrand=''; saveUI(); render(); });
@@ -2988,6 +3023,18 @@ function taskBoard(bid){
     </div>
     ${body || `<div class="mempty"><b>${f==='done'?'이 달 완료한 업무가 없어요':'할 일이 없어요'}</b><span>${who?esc(who)+'님 담당 기준이에요':'업무 추가로 시작하세요'}</span></div>`}
   </div>`;
+}
+
+/* 브랜드 공유 링크 만들기·복사 (키는 브랜드 설정에 저장되어 노션과 동기화) */
+async function shareBrandLink(){
+  const b=brandOf(UI.brand); if(!b) return;
+  if(!b.shareKey){ b.shareKey=(uid()+uid()+uid()).replace(/[^a-z0-9]/gi,'').slice(0,20); save(); await pushBrands(); }
+  const url=location.origin+location.pathname+'?s='+b.shareKey;
+  let ok=false;
+  try{ await navigator.clipboard.writeText(url); ok=true; }catch(e){}
+  if(!ok){ const t=document.createElement('textarea'); t.value=url; document.body.appendChild(t); t.select(); try{ ok=document.execCommand('copy'); }catch(e){} t.remove(); }
+  if(ok) toast(`${b.name} 공유 링크를 복사했어요`,2600);
+  else modal({title:'공유 링크', footer:false, body:`<label class="f"><span>아래 주소를 복사해서 보내세요</span><input type="text" value="${esc(url)}" readonly onclick="this.select()"></label>`});
 }
 
 /* ---------- 업무 (전체 브랜드) ---------- */
@@ -4693,10 +4740,11 @@ function bind(){
 
 function act(a){
   if(a==='me') return meModal();
+  if(a==='share') return shareBrandLink();
   if(a==='mine'){ if(!DB.settings.me) return meModal(); UI.mine=!myFilter(); saveUI(); render(); return; }
   if(a==='nav-brands'){ const sub=document.querySelector('.snav__sub'); UI.navBrands=!!(sub&&sub.hidden); saveUI(); render(); return; }
   if(a==='go-summary'){ UI.tab='calendar'; saveUI(); render(); return; }
-  if(a==='home'){ UI.brand=HOME_BRAND(); UI.tab='calendar'; UI.ym=ymOf(today); saveUI(); render(); return; }
+  if(a==='home'){ if(SHARE_KEY) return; UI.brand=HOME_BRAND(); UI.tab='calendar'; UI.ym=ymOf(today); saveUI(); render(); return; }
   if(a==='task-new') return taskModal(null);
   if(a==='prod-new') return prodModal(null);
   if(a==='plan-new') return planModal(null);
@@ -4744,7 +4792,8 @@ function act(a){
 }
 
 /* 새로 접속하면 항상 홈 화면부터 */
-if(!EMBED){ UI.brand='__home'; UI.ym=ymOf(today); UI.thrPast=false; UI.linkDone=false; saveUI(); }
+if(SHARE_KEY){ document.body.classList.add('share'); UI.tab='calendar'; UI.mTab='brands'; UI.ym=ymOf(today); }
+else if(!EMBED){ UI.brand='__home'; UI.ym=ymOf(today); UI.thrPast=false; UI.linkDone=false; saveUI(); }
 render();
 bootSync();
 /* 자동 갱신 */
