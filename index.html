@@ -1944,6 +1944,33 @@ html body .m .card__hd{flex-wrap:nowrap !important}
   .m .mmain{flex:1 1 auto;min-height:0;overflow-y:auto;overflow-x:hidden;-webkit-overflow-scrolling:touch;overscroll-behavior:contain;padding:12px 16px 96px}
   .m .mnav{position:relative;flex:0 0 auto;left:auto;right:auto;bottom:auto}
 }
+
+/* ===== 팝업 틀: 머리·바닥 고정, 가운데만 스크롤 (PC·모바일 공통) ===== */
+html body .modal{display:flex !important;flex-direction:column;overflow:hidden !important;max-height:calc(100% - 48px)}
+html body .modal__hd,html body .modal__ft{flex:0 0 auto;position:relative !important;z-index:2;background:rgba(247,247,248,.97) !important}
+html body .modal__hd::after,html body .modal__ft::before{content:"";position:absolute;left:0;right:0;height:18px;pointer-events:none}
+html body .modal__hd::after{top:100%;background:linear-gradient(rgba(247,247,248,.97),rgba(247,247,248,0))}
+html body .modal__ft::before{bottom:100%;background:linear-gradient(rgba(247,247,248,0),rgba(247,247,248,.97))}
+html body .modal__bd{flex:1 1 auto;min-height:0;overflow-y:auto;overscroll-behavior:contain;-webkit-overflow-scrolling:touch;padding-top:14px !important;padding-bottom:18px !important}
+html body .modal__ft{margin-top:0 !important}
+@media(max-width:760px){
+  html body .ov{position:fixed !important;left:0;right:0;top:0;height:100%;align-items:flex-end !important}
+  html body .modal{max-height:calc(100% - 12px) !important;border-radius:20px 20px 0 0 !important}
+  html body .modal__ft{padding-bottom:calc(12px + env(safe-area-inset-bottom)) !important}
+  /* iOS 날짜칸이 옆으로 삐져나오지 않게 */
+  html body .modal input[type=date]{-webkit-appearance:none;appearance:none;display:block;min-width:0;width:100% !important;max-width:100%;text-align:left;line-height:44px}
+  html body .modal input[type=date]::-webkit-date-and-time-value{text-align:left}
+  html body .modal .row2 > *{min-width:0}
+}
+
+/* 모바일 상단 바·하단 탭: 거의 불투명 + 내용과 닿는 쪽에 부드러운 그라데이션 (PC 헤더와 같은 방식) */
+@media(max-width:760px){
+  html body .m .mtop{background:rgba(234,235,237,.97) !important;border-bottom:0 !important;z-index:5}
+  html body .m .mtop::after{content:"";position:absolute;left:0;right:0;top:100%;height:18px;pointer-events:none;background:linear-gradient(rgba(234,235,237,.97),rgba(234,235,237,0))}
+  html body .m .mnav{background:rgba(238,239,241,.97) !important;border-top:0 !important;z-index:5}
+  html body .m .mnav::before{content:"";position:absolute;left:0;right:0;bottom:100%;height:22px;pointer-events:none;background:linear-gradient(rgba(238,239,241,0),rgba(238,239,241,.97))}
+  html body .m .mfab{z-index:6}
+}
 </style>
 </head>
 <body>
@@ -2584,6 +2611,13 @@ function tasksView(){
    하단 탭: 업무 · 캘린더 · 브랜드 · 설정 / 터치 크기 44px 이상
    ========================================================= */
 const isMobile=()=>window.matchMedia('(max-width:760px)').matches;
+/* 폰 키보드가 올라오면 시트가 키보드 위 보이는 영역 안에 들어오도록 */
+function fitSheet(){
+  const ov=document.querySelector('#layer .ov'); if(!ov) return;
+  if(!isMobile()||!window.visualViewport){ ov.style.height=''; ov.style.top=''; return; }
+  const vv=window.visualViewport; ov.style.top=vv.offsetTop+'px'; ov.style.height=vv.height+'px'; ov.style.bottom='auto';
+}
+if(window.visualViewport && !window.__vvFix){ window.__vvFix=1; ['resize','scroll'].forEach(t=>window.visualViewport.addEventListener(t,fitSheet)); }
 if(!window.__noZoom){ window.__noZoom=1;
   const block=e=>{ if(isMobile()) e.preventDefault(); };
   ['gesturestart','gesturechange','gestureend'].forEach(t=>document.addEventListener(t,block,{passive:false}));
@@ -3889,7 +3923,10 @@ function modal({title, body, onSave, onDelete, saveLabel='저장', footer=true})
   const sv=$('#layer').querySelector('[data-save]'); if(sv) sv.onclick=()=>{ if(onSave()!==false){ save(); close(); render(); } };
   const d=$('#layer').querySelector('[data-del]');
   if(d) d.onclick=()=>{ if(confirm('삭제할까요? 되돌릴 수 없습니다.')){ onDelete(); save(); close(); render(); } };
-  const first=$('#layer').querySelector('input,select,textarea'); if(first) first.focus();
+  /* PC만 첫 칸에 바로 커서 — 폰은 칸을 눌렀을 때만 키보드 */
+  const first=$('#layer').querySelector('input,select,textarea'); if(first && !isMobile()) first.focus();
+  fitSheet();
+  $('#layer').querySelectorAll('.modal__bd input,.modal__bd textarea,.modal__bd select').forEach(el=>el.addEventListener('focus',()=>{ if(isMobile()) setTimeout(()=>el.scrollIntoView({block:'center',behavior:'smooth'}),280); }));
   document.onkeydown=e=>{ if(e.key==='Escape') close(); };
 }
 const opt=(arr,v)=>arr.map(a=>`<option ${a===v?'selected':''}>${esc(a)}</option>`).join('');
