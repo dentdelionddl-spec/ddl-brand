@@ -2015,6 +2015,8 @@ html body .modal__bd > label > input[type=checkbox]:checked{background:radial-gr
   html body .modal__hd h3{font-size:16px !important}
   html body .modal .f textarea{padding-top:11px !important}
 }
+
+.evb{font-style:normal;font-weight:700;font-size:10.5px;opacity:.65;margin-right:5px;letter-spacing:.01em}
 </style>
 </head>
 <body>
@@ -2280,7 +2282,7 @@ function render(){
   applyEmbed();
   if(EMBED&&EMBED.ro) document.body.classList.add('ro');
   if(UI.brand==='__all'||UI.brand==='__home') UI.brand=HOME_BRAND();
-  const special = UI.brand==='__set' || UI.brand==='__home' || UI.brand==='__tasks';
+  const special = UI.brand==='__set' || UI.brand==='__home' || UI.brand==='__tasks' || UI.brand==='__sched';
   if(!special){ const b=brandOf(UI.brand)||DB.brands[0]; UI.brand=b?.id||'__set'; }
   $('#app').innerHTML= EMBED
   ? `<div class="app"><div class="main"><div class="view" id="view" style="padding:14px"></div></div></div>`
@@ -2315,6 +2317,7 @@ function headerGlass(){
 }
 
 const ICON={
+  cal:'<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="5" width="16" height="15" rx="3"/><path d="M4 10h16M9 3v4M15 3v4"/></svg>',
   check:'<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="4" width="16" height="16" rx="3"/><path d="M8.5 12.5l2.5 2.5 4.5-5"/></svg>',
   tag:'<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 4h7l9 9-7 7-9-9z"/><circle cx="8.5" cy="8.5" r="1.2"/></svg>',
   chev:'<svg class="snav__chev" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg>',
@@ -2330,6 +2333,7 @@ function sideNav(){
     <button class="snav__logo" data-act="home" title="홈으로"><img src="${LOGO_SRC}" alt="DDL" /></button>
     ${brandOf('ddl')&&!brandOf('ddl').hidden ? item('data-brand="ddl"','DDL',ICON.home,UI.brand==='ddl') : ''}
     ${item('data-brand="__tasks"','업무',ICON.check,UI.brand==='__tasks', String(DB.tasks.filter(t=>!t.done&&brandOf(t.brandId)&&!brandOf(t.brandId).hidden).length), true)}
+    ${item('data-brand="__sched"','스케줄',ICON.cal,UI.brand==='__sched')}
     ${(()=>{
       const list=DB.brands.filter(br=>!br.hidden && br.id!=='ddl');
       const open = UI.navBrands!==false;
@@ -2356,7 +2360,7 @@ function brandBar(){
       <span class="btab__n">${esc(label)}</span>${meta?`<span class="btab__p">${esc(meta)}</span>`:''}</button>`;
   /* 모바일 메뉴: 사이드바와 같은 순서 */
   const o=(v,l)=>`<option value="${v}" ${UI.brand===v?'selected':''}>${esc(l)}</option>`;
-  const mobileSel = `<select class="brandsel" aria-label="메뉴">
+  const mobileSel = `<select class="brandsel" aria-label="메뉴" data-native>
     ${brandOf('ddl')&&!brandOf('ddl').hidden?o('ddl','DDL'):''}${o('__tasks','업무')}
     <optgroup label="브랜드">${o('__home','전체')}${DB.brands.filter(br=>!br.hidden&&br.id!=='ddl').map(br=>o(br.id,br.name)).join('')}</optgroup>
     ${o('__set','설정')}</select>`;
@@ -2381,6 +2385,9 @@ function topbar(){
   if(UI.brand==='__set') return `<header class="topbar"><div class="tophead">
       <h1 class="brandtitle">설정 · 동기화</h1><div class="spacer"></div>
     </div></header>`;
+  if(UI.brand==='__sched') return `<header class="topbar">
+      <div class="tophead"><div><h1 class="brandtitle">스케줄<span class="brandko">전체 브랜드</span></h1></div><div class="spacer"></div>${monthNav()}</div>
+    </header>`;
   if(UI.brand==='__tasks') return `<header class="topbar">
       <div class="tophead"><div><h1 class="brandtitle">업무<span class="brandko">전체 브랜드</span></h1></div><div class="spacer"></div></div>
     </header>`;
@@ -2415,6 +2422,7 @@ function viewHtml(){
   if(UI.brand==='__home') return homeView();
   if(UI.brand==='__set') return settingsView();
   if(UI.brand==='__tasks') return taskBoard('');
+  if(UI.brand==='__sched') return calendarView(true);
   switch(UI.tab){
     case 'calendar': return calendarView();
     case 'tasks': return taskBoard(UI.brand);
@@ -2529,15 +2537,19 @@ function homeView(){
 }
 
 /* ---------- 캘린더 ---------- */
-function calendarView(){
-  const b=brandOf(UI.brand), ym=UI.ym;
+function calendarView(all){
+  /* all = 스케줄 (보이는 모든 브랜드, 브랜드 필터 가능) */
+  const sb = all && UI.schedBrand && brandOf(UI.schedBrand) ? UI.schedBrand : '';
+  const bids = all ? (sb ? [sb] : DB.brands.filter(x=>!x.hidden).map(x=>x.id)) : [brandOf(UI.brand).id];
+  const b = all ? null : brandOf(UI.brand), ym=UI.ym;
+  const bn = r => { if(!(all&&!sb)) return ''; const nm=brandOf(r.brandId)?.name||''; return `<em class="evb" title="${esc(nm)}">${esc(nm.split(' ')[0])}</em>`; };
   const [y,m]=ym.split('-').map(Number);
   const first=new Date(y,m-1,1), dim=new Date(y,m,0).getDate(), lead=first.getDay();
   const onlyContent = EMBED && EMBED.only==='content';
   const noTasks = EMBED && (EMBED.only==='content' || EMBED.only==='plan');
-  const cs=contentsSpanning(b.id,ym).filter(c=>!onlyContent || CONTENT_TYPES.includes(c.type));
+  const cs=bids.flatMap(id=>contentsSpanning(id,ym)).filter(c=>!onlyContent || CONTENT_TYPES.includes(c.type));
   const calWho=EMBED? '' : (myFilter());
-  const allDayTasks=tasksSpanning(b.id,ym);
+  const allDayTasks=bids.flatMap(id=>tasksSpanning(id,ym));
   const dayTasks=noTasks? [] : allDayTasks.filter(t=>hasOwner(t,calWho));
   const calOwners=OWNERS;
   const cells=[];
@@ -2549,8 +2561,8 @@ function calendarView(){
     const tks=dayTasks.filter(t=>spans({date:t.start||t.due,end:t.due},ds));
     cells.push(`<div class="cell ${ds===TODAY?'cell--today':''} ${ds<TODAY?'cell--past':''}" data-date="${ds}">
       <div class="cell__d ${dow===0?'cell__sun':''}"><span class="cn">${d}</span></div>
-      ${evs.map(e=>`<span class="ev ${e.done?'ev--done':''}" draggable="true" data-drag="c:${e.id}" style="--h:${TYPE_HUE[e.type]??262};border-left-color:${hueBg(TYPE_HUE[e.type]||0,55)}"><b class="evchk" data-toggle-content="${e.id}" title="완료 표시" aria-pressed="${!!e.done}"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 12.5l4 4 8-9"/></svg></b><span data-content="${e.id}" style="cursor:pointer">${e.end&&e.end!==e.date?(ds===e.date?'▶ ':(ds===e.end?'■ ':'· ')):''}${(e.att&&e.att.length)||(e.attView&&e.attView.length)?'📎':''}${esc(e.type)} · ${esc(e.title||'')}</span></span>`).join('')}
-      ${tks.map(t=>`<span class="ev ev--task ${t.done?'ev--done':''}" draggable="true" data-drag="t:${t.id}" style="--h:214"><b class="evchk" data-toggle-task-btn="${t.id}" title="완료 표시" aria-pressed="${!!t.done}"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 12.5l4 4 8-9"/></svg></b><span data-edit-task="${t.id}" style="cursor:pointer">${t.start&&t.start!==t.due?(ds===t.start?'▶ ':(ds===t.due?'■ ':'· ')):''}${esc(t.title)}</span></span>`).join('')}
+      ${evs.map(e=>`<span class="ev ${e.done?'ev--done':''}" draggable="true" data-drag="c:${e.id}" style="--h:${TYPE_HUE[e.type]??262};border-left-color:${hueBg(TYPE_HUE[e.type]||0,55)}"><b class="evchk" data-toggle-content="${e.id}" title="완료 표시" aria-pressed="${!!e.done}"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 12.5l4 4 8-9"/></svg></b><span data-content="${e.id}" style="cursor:pointer">${bn(e)}${e.end&&e.end!==e.date?(ds===e.date?'▶ ':(ds===e.end?'■ ':'· ')):''}${(e.att&&e.att.length)||(e.attView&&e.attView.length)?'📎':''}${esc(e.type)} · ${esc(e.title||'')}</span></span>`).join('')}
+      ${tks.map(t=>`<span class="ev ev--task ${t.done?'ev--done':''}" draggable="true" data-drag="t:${t.id}" style="--h:214"><b class="evchk" data-toggle-task-btn="${t.id}" title="완료 표시" aria-pressed="${!!t.done}"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 12.5l4 4 8-9"/></svg></b><span data-edit-task="${t.id}" style="cursor:pointer">${bn(t)}${t.start&&t.start!==t.due?(ds===t.start?'▶ ':(ds===t.due?'■ ':'· ')):''}${esc(t.title)}</span></span>`).join('')}
       <button class="cell__add" data-newdate="${ds}" aria-label="${d}일 추가">+</button>
     </div>`);
   }
@@ -2565,6 +2577,7 @@ function calendarView(){
     </div></div>
   </section>`;
   return `<div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin-bottom:12px">
+      ${all? dd('schedBrand',sb,[['','모든 브랜드'],...DB.brands.filter(x=>!x.hidden).map(x=>[x.id,x.name])],'dd--m') : ''}
       <div class="spacer" style="flex:1"></div>
       ${EMBED?'':mineBtn()}
       <button class="btn btn--sm btn--primary" data-newdate="${ym}-${pad(Math.min(today.getDate(),dim))}">항목 추가</button>
@@ -2843,7 +2856,8 @@ const MI_ME='<svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 
 const DD_ON={
   taskBrand: v=>{ UI.taskBrand=v; },
   mBrand:    v=>{ UI.mBrandF=v; },
-  mCalBrand: v=>{ UI.mCalBrand=v; }
+  mCalBrand: v=>{ UI.mCalBrand=v; },
+  schedBrand:v=>{ UI.schedBrand=v; }
 };
 window.__ddOpts={};
 const DD_CHEV='<svg class="dd__c" viewBox="0 0 10 6" aria-hidden="true"><path d="M1 1l4 4 4-4"/></svg>';
@@ -4131,13 +4145,14 @@ function attChips(list, editable){
 function contentModal(id,date,cat,end){
   if(EMBED&&EMBED.ro) return;
   const isNew=!id;
-  const c = isNew? {id:uid(),brandId:UI.brand,date:date||TODAY,end:(end&&end!==date?end:''),type:(cat==='콘텐츠'?'EGC':'온라인'),title:'',memo:'',done:false}
+  const c = isNew? {id:uid(),brandId:(brandOf(UI.brand)?UI.brand:(UI.schedBrand&&brandOf(UI.schedBrand)?UI.schedBrand:HOME_BRAND())),date:date||TODAY,end:(end&&end!==date?end:''),type:(cat==='콘텐츠'?'EGC':'온라인'),title:'',memo:'',done:false}
                  : DB.contents.find(x=>x.id===id);
   const kind = cat || catOf(c.type);
   const typeOptions = kind==='콘텐츠' ? CONTENT_TYPES : OPS_TYPES;
   modal({
     title: kind+(isNew?' 추가':' 편집'),
-    body:`<div class="row2">
+    body:`${brandOf(UI.brand)&&isNew?'':`<label class="f"><span>브랜드</span><select id="c_brand">${DB.brands.filter(b=>!b.hidden||b.id===c.brandId).map(b=>`<option value="${b.id}" ${b.id===c.brandId?'selected':''}>${esc(b.name)}</option>`).join('')}</select></label>`}
+      <div class="row2">
         <label class="f"><span>시작일</span><input type="date" id="c_date" value="${c.date}" /></label>
         <label class="f"><span>마감일 (하루면 비워두세요)</span><input type="date" id="c_end" value="${c.end||''}" /></label>
       </div>
@@ -4150,6 +4165,7 @@ function contentModal(id,date,cat,end){
       <div id="c_atts" class="atts">${attChips(c.att, true)}</div>
       <label style="display:flex;gap:8px;align-items:center"><input type="checkbox" id="c_done" ${c.done?'checked':''} style="width:16px;height:16px;accent-color:var(--ink)" /> 완료</label>`,
     onSave:()=>{
+      if($('#c_brand')) c.brandId=$('#c_brand').value||c.brandId;
       c.date=$('#c_date').value||TODAY;
       const ce=$('#c_end').value; c.end=(ce&&ce>=c.date)?ce:'';
       if(ce&&ce<c.date){ toast('마감일이 시작일보다 빠릅니다'); return false; }
