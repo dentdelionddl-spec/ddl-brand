@@ -1912,6 +1912,29 @@ html body .m .card__hd{flex-wrap:nowrap !important}
   html body .mswitch i::after{top:2px;left:2px;width:18px;height:18px}
   html body .mswitch[aria-pressed="true"] i::after{transform:translateX(14px)}
 }
+
+/* ===== 공통 드롭다운 (.dd) — PC·모바일 같은 모양 ===== */
+.dd{display:inline-flex;align-items:center;gap:7px;height:var(--h,34px);padding:0 12px;border:0;border-radius:var(--r-sm);background:rgba(255,255,255,.6);box-shadow:0 0 0 1px var(--line) inset;
+  font:600 13px/1 var(--sans);color:var(--ink);cursor:pointer;white-space:nowrap;transition:background .12s,box-shadow .12s}
+.dd:hover{background:#fff}
+.dd[aria-expanded="true"]{background:#fff;box-shadow:0 0 0 1px var(--accent) inset,0 0 0 3px var(--accent-bg)}
+.dd span{display:block;line-height:1}
+.dd__c{flex:0 0 auto;width:10px;height:6px;fill:none;stroke:var(--ink2);stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round;transition:transform .15s}
+.dd[aria-expanded="true"] .dd__c{transform:rotate(180deg)}
+.dd--m{height:36px;padding:0 6px 0 2px;background:transparent;box-shadow:none;font-size:15px;font-weight:700;gap:6px}
+.dd--m:hover,.dd--m[aria-expanded="true"]{background:transparent;box-shadow:none}
+.dd--m .dd__c{width:10px;height:6px;stroke-width:1.8}
+.ddpop{position:fixed;z-index:200;max-height:min(50vh,360px);overflow-y:auto;padding:6px;border-radius:12px;
+  background:rgba(250,250,251,.92);-webkit-backdrop-filter:blur(24px) saturate(170%);backdrop-filter:blur(24px) saturate(170%);
+  box-shadow:0 0 0 1px rgba(17,18,20,.06),0 18px 40px -16px rgba(20,22,28,.35),0 2px 8px -2px rgba(20,22,28,.12);animation:ddIn .12s ease-out}
+@keyframes ddIn{from{opacity:0;transform:translateY(-4px)}to{opacity:1;transform:none}}
+.ddpop button{display:flex;align-items:center;justify-content:space-between;gap:16px;width:100%;height:36px;padding:0 10px;border:0;border-radius:8px;background:transparent;
+  font:500 13px var(--sans);color:var(--ink2);text-align:left;cursor:pointer}
+.ddpop button:hover{background:rgba(17,18,20,.05);color:var(--ink)}
+.ddpop button[aria-selected="true"]{color:var(--ink);font-weight:700}
+.ddpop svg{width:14px;height:14px;fill:none;stroke:var(--accent);stroke-width:2.4;stroke-linecap:round;stroke-linejoin:round;visibility:hidden}
+.ddpop button[aria-selected="true"] svg{visibility:visible}
+@media(max-width:760px){.ddpop{padding:6px}.ddpop button{height:44px;font-size:15px;padding:0 12px}}
 </style>
 </head>
 <body>
@@ -2573,7 +2596,7 @@ const MI={
 };
 const mLiveBrands=()=>DB.brands.filter(b=>!b.hidden);
 const mSeg=(items,cur,attr)=>`<div class="mseg">${items.map(([k,l,n])=>`<button ${attr}="${k}" aria-pressed="${cur===k}">${esc(l)}${n?`<i>${n}</i>`:''}</button>`).join('')}</div>`;
-const mBrandSel=(attr,cur,ids)=>`<label class="msel"><select ${attr}>${[['','모든 브랜드'],...mLiveBrands().filter(b=>!ids||ids.has(b.id)).map(b=>[b.id,b.name])].map(([v,l])=>`<option value="${v}" ${cur===v?'selected':''}>${esc(l)}</option>`).join('')}</select></label>`;
+const mBrandSel=(id,cur,ids)=>dd(id,cur,[['','모든 브랜드'],...mLiveBrands().filter(b=>!ids||ids.has(b.id)).map(b=>[b.id,b.name])],'dd--m');
 const mMine=()=>`<button class="mswitch" data-act="mine" aria-pressed="${!!myFilter()}"><span>내 것만</span><i></i></button>`;
 const mChip=(attr,label,on,n)=>`<button class="mchipb" ${attr} aria-pressed="${!!on}">${esc(label)}${n!==undefined?`<span>${n}</span>`:''}</button>`;
 function mTaskCard(t,showBrand=true){
@@ -2615,7 +2638,7 @@ function mTasksView(){
   const me=DB.settings.me||'';
   return `<section class="mv">
     ${mSeg([['all','전체',G.all.length],['late','지연',G.late.length],['today','오늘',G.today.length],['week','이번 주',G.week.length],['done','완료',G.done.length]],f,'data-mfilter')}
-    <div class="mbar">${mBrandSel('data-mbrandsel',bf,new Set(live.map(t=>t.brandId)))}${mMine()}</div>
+    <div class="mbar">${mBrandSel('mBrand',bf,new Set(live.map(t=>t.brandId)))}${mMine()}</div>
     <div class="mlist">${body || `<div class="mempty"><b>${f==='done'?'이번 달 완료한 업무가 없어요':'할 일이 없어요'}</b><span>오른쪽 아래 + 로 업무를 추가하세요</span></div>`}</div>
   </section>`;
 }
@@ -2648,7 +2671,7 @@ function mCalView(){
       <div class="mt__b" ${isC?`data-content="${o.id}"`:`data-edit-task="${o.id}"`}><div class="mt__t">${esc(o.title||(isC?o.type:'(제목 없음)'))}</div>${meta?`<div class="mt__m">${meta}</div>`:''}</div>
       <span class="mc__tag">${isC?esc(o.type):'업무'}</span></div>`; };
   return `<section class="mv">
-    <div class="mbar">${mBrandSel('data-mcalbrandsel',bf)}${mMine()}</div>
+    <div class="mbar">${mBrandSel('mCalBrand',bf)}${mMine()}</div>
     <div class="mcard mmonth">
       <div class="mmonth__hd"><button class="mico" data-mo="-1" aria-label="이전 달">${MI.prev}</button><b>${y}년 ${m}월</b><button class="mico" data-mo="1" aria-label="다음 달">${MI.next}</button></div>
       <div class="mmonth__g">${['일','월','화','수','목','금','토'].map((d,i)=>`<span class="w ${i===0?'is-sun':''}">${d}</span>`).join('')}${days.join('')}</div>
@@ -2716,8 +2739,6 @@ function renderMobile(){
   bind();
   document.querySelectorAll('[data-mtab]').forEach(el=>el.onclick=()=>{ UI.mTab=el.dataset.mtab; if(UI.mTab!=='brands') UI.mBrand=''; saveUI(); render(); window.scrollTo(0,0); });
   document.querySelectorAll('[data-mfilter]').forEach(el=>el.onclick=()=>{ UI.mFilter=el.dataset.mfilter; saveUI(); render(); });
-  document.querySelectorAll('[data-mbrandsel]').forEach(el=>el.onchange=()=>{ UI.mBrandF=el.value; saveUI(); render(); });
-  document.querySelectorAll('[data-mcalbrandsel]').forEach(el=>el.onchange=()=>{ UI.mCalBrand=el.value; saveUI(); render(); });
   document.querySelectorAll('[data-msel]').forEach(el=>el.onclick=()=>{ UI.mCalSel=el.dataset.msel; saveUI(); render(); });
   document.querySelectorAll('[data-mbrand]').forEach(el=>el.onclick=()=>{ UI.mBrand=el.dataset.mbrand; UI.tab='tasks'; saveUI(); render(); window.scrollTo(0,0); });
   document.querySelectorAll('[data-mbtab]').forEach(el=>el.onclick=()=>{ UI.tab=el.dataset.mbtab; saveUI(); render(); });
@@ -2728,6 +2749,38 @@ function renderMobile(){
   if(keepY) window.scrollTo(0,keepY);
 }
 const MI_ME='<svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 20c1.5-4 4.5-6 8-6s6.5 2 8 6"/></svg>';
+
+/* ---------- 공통 드롭다운 (필터용) ----------
+   버튼 = 글자 + 작은 화살표 한 줄, 누르면 유리 메뉴(선택 항목에 체크) */
+const DD_ON={
+  taskBrand: v=>{ UI.taskBrand=v; },
+  mBrand:    v=>{ UI.mBrandF=v; },
+  mCalBrand: v=>{ UI.mCalBrand=v; }
+};
+window.__ddOpts={};
+const DD_CHEV='<svg class="dd__c" viewBox="0 0 10 6" aria-hidden="true"><path d="M1 1l4 4 4-4"/></svg>';
+function dd(id,cur,opts,cls=''){
+  window.__ddOpts[id]=opts;
+  const label=(opts.find(([v])=>v===cur)||opts[0])[1];
+  return `<button class="dd ${cls}" data-dd="${id}" aria-haspopup="listbox" aria-expanded="false"><span>${esc(label)}</span>${DD_CHEV}</button>`;
+}
+function ddClose(){ document.querySelectorAll('.ddpop').forEach(p=>p.remove()); document.querySelectorAll('.dd[aria-expanded="true"]').forEach(b=>b.setAttribute('aria-expanded','false')); }
+function ddOpen(btn){
+  const id=btn.dataset.dd, opts=window.__ddOpts[id]||[];
+  const cur=(opts.find(([,l])=>l===btn.querySelector('span').textContent)||[''])[0];
+  ddClose(); btn.setAttribute('aria-expanded','true');
+  const r=btn.getBoundingClientRect(), pop=document.createElement('div');
+  pop.className='ddpop'; pop.setAttribute('role','listbox');
+  pop.innerHTML=opts.map(([v,l])=>`<button role="option" data-v="${esc(v)}" aria-selected="${v===cur}"><span>${esc(l)}</span><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 12.5l4 4 8-9"/></svg></button>`).join('');
+  document.body.appendChild(pop);
+  const w=Math.max(r.width,200), left=Math.min(Math.max(8,r.left), window.innerWidth-w-8);
+  const below=window.innerHeight-r.bottom, h=pop.offsetHeight;
+  pop.style.cssText=`left:${left}px;min-width:${w}px;`+(below<h+16 && r.top>below ? `bottom:${window.innerHeight-r.top+6}px` : `top:${r.bottom+6}px`);
+  pop.querySelectorAll('[data-v]').forEach(o=>o.onclick=()=>{ ddClose(); (DD_ON[id]||(()=>{}))(o.dataset.v); saveUI(); render(); });
+  setTimeout(()=>{ const off=e=>{ if(!pop.contains(e.target)&&e.target!==btn&&!btn.contains(e.target)){ ddClose(); document.removeEventListener('pointerdown',off,true); } }; document.addEventListener('pointerdown',off,true); },0);
+}
+document.addEventListener('keydown',e=>{ if(e.key==='Escape') ddClose(); });
+['wheel','touchmove'].forEach(t=>window.addEventListener(t,e=>{ const p=document.querySelector('.ddpop'); if(p&&!p.contains(e.target)) ddClose(); },{passive:true,capture:true}));
 
 /* ---------- 업무 (전체 브랜드) ---------- */
 function taskState(t){
@@ -2799,10 +2852,7 @@ function allTasksView(){
       <button class="tab" data-taskview="todo" aria-selected="${!showDone}">할 일 ${open.length}</button>
       <button class="tab" data-taskview="done" aria-selected="${showDone}">${Number(ym.slice(5))}월 완료 ${done.length}</button>
     </div>
-    <select class="tsel" data-taskbrand aria-label="브랜드">
-      <option value="">전체 브랜드</option>
-      ${brandsWithTasks.map(b=>`<option value="${b.id}" ${bf===b.id?'selected':''}>${esc(b.name)}</option>`).join('')}
-    </select>
+    ${dd('taskBrand',bf,[['','모든 브랜드'],...brandsWithTasks.map(b=>[b.id,b.name])])}
     <div class="spacer" style="flex:1"></div>
     ${mineBtn()}
     <button class="btn btn--primary btn--sm" data-act="task-new">업무 추가</button>
@@ -4333,7 +4383,7 @@ function bind(){
     saveUI(); render();
   });
   document.querySelectorAll('[data-tab]').forEach(el=>el.onclick=()=>{ UI.tab=el.dataset.tab; saveUI(); render(); });
-  document.querySelectorAll('[data-taskbrand]').forEach(el=>el.onchange=()=>{ UI.taskBrand=el.value; saveUI(); render(); });
+  document.querySelectorAll('[data-dd]').forEach(el=>el.onclick=e=>{ e.stopPropagation(); el.getAttribute('aria-expanded')==='true'? ddClose() : ddOpen(el); });
   document.querySelectorAll('[data-taskview]').forEach(el=>el.onclick=()=>{ UI.taskDone=(el.dataset.taskview==='done'); saveUI(); render(); });
   document.querySelectorAll('[data-taskowner]').forEach(el=>el.onclick=()=>{ UI.taskOwner=el.dataset.taskowner||''; saveUI(); render(); });
   document.querySelectorAll('[data-mo]').forEach(el=>el.onclick=()=>{
