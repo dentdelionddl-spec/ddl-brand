@@ -2683,7 +2683,25 @@ if(!window.__noZoom){ window.__noZoom=1;
   let lastTap=0;
   document.addEventListener('touchend',e=>{ if(!isMobile()) return; const now=Date.now(); if(now-lastTap<300 && !e.target.closest('input,textarea,select')) e.preventDefault(); lastTap=now; },{passive:false});
 }
-if(!window.__mqFix){ window.__mqFix=1; window.matchMedia('(max-width:760px)').addEventListener('change',()=>render()); }
+/* PC ↔ 모바일 화면 연동: 창 크기가 바뀌어도 보던 화면 그대로 */
+function toMobileState(){
+  const b=UI.brand;
+  if(b==='__tasks'){ UI.mTab='tasks'; }
+  else if(b==='__sched'){ UI.mTab='cal'; }
+  else if(b==='__set'){ UI.mTab='set'; }
+  else if(brandOf(b)){
+    if(UI.tab==='calendar'){ UI.mTab='cal'; UI.schedBrand=b; }
+    else { UI.mTab='brands'; UI.mBrand=b; }
+  }
+}
+function toDesktopState(){
+  const t=UI.mTab||'tasks';
+  if(t==='tasks') UI.brand='__tasks';
+  else if(t==='cal') UI.brand='__sched';
+  else if(t==='set') UI.brand='__set';
+  else if(t==='brands'){ if(UI.mBrand&&brandOf(UI.mBrand)){ UI.brand=UI.mBrand; } else { UI.brand=HOME_BRAND(); UI.tab='calendar'; } }
+}
+if(!window.__mqFix){ window.__mqFix=1; window.matchMedia('(max-width:760px)').addEventListener('change',e=>{ e.matches? toMobileState() : toDesktopState(); ddClose&&ddClose(); saveUI(); render(); }); }
 const MI={
   tasks:'<svg viewBox="0 0 24 24"><rect x="4" y="4" width="16" height="16" rx="4"/><path d="M8.5 12.5l2.5 2.5 4.5-5"/></svg>',
   cal:'<svg viewBox="0 0 24 24"><rect x="4" y="5" width="16" height="15" rx="3"/><path d="M4 10h16M9 3v4M15 3v4"/></svg>',
@@ -2714,7 +2732,7 @@ function mTaskCard(t,showBrand=true){
 }
 function mTasksView(){
   const live=DB.tasks.filter(t=>{ const b=brandOf(t.brandId); return b&&!b.hidden; });
-  const bf=UI.mBrandF&&brandOf(UI.mBrandF)?UI.mBrandF:'';
+  const bf=UI.taskBrand&&brandOf(UI.taskBrand)?UI.taskBrand:'';
   const who=myFilter();
   const sc=live.filter(t=>(!bf||t.brandId===bf)&&(!who||hasOwner(t,who)));
   const open=sc.filter(t=>!t.done), ym=TODAY.slice(0,7);
@@ -2746,7 +2764,7 @@ function mTasksView(){
 function mCalView(){
   const ym=UI.ym, [y,m]=ym.split('-').map(Number);
   const first=new Date(y,m-1,1), dim=new Date(y,m,0).getDate(), lead=first.getDay();
-  const bf=UI.mCalBrand&&brandOf(UI.mCalBrand)?UI.mCalBrand:'';
+  const bf=UI.schedBrand&&brandOf(UI.schedBrand)?UI.schedBrand:'';
   const live=new Set(mLiveBrands().map(b=>b.id));
   const inB=r=>live.has(r.brandId)&&(!bf||r.brandId===bf);
   const cs=(DB.contents||[]).filter(c=>inB(c));
@@ -2855,8 +2873,8 @@ const MI_ME='<svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 
    버튼 = 글자 + 작은 화살표 한 줄, 누르면 유리 메뉴(선택 항목에 체크) */
 const DD_ON={
   taskBrand: v=>{ UI.taskBrand=v; },
-  mBrand:    v=>{ UI.mBrandF=v; },
-  mCalBrand: v=>{ UI.mCalBrand=v; },
+  mBrand:    v=>{ UI.taskBrand=v; },
+  mCalBrand: v=>{ UI.schedBrand=v; },
   schedBrand:v=>{ UI.schedBrand=v; }
 };
 window.__ddOpts={};
