@@ -2074,6 +2074,20 @@ body.share .m .mmain{padding-bottom:32px}
 
 .sharewait .spin{width:22px;height:22px;border-radius:50%;border:2px solid rgba(17,18,20,.12);border-top-color:var(--ink);animation:spin .8s linear infinite}
 @keyframes spin{to{transform:rotate(360deg)}}
+
+/* 기간 일정: 시작·끝 날만 글자, 사이는 얇은 선으로 이어짐 (PC 캘린더) */
+@media(min-width:761px){
+  html body .calx .cell{overflow:visible}
+  html body .calx .ev.ev--start{border-top-right-radius:0 !important;border-bottom-right-radius:0 !important;margin-right:-6px !important;width:calc(100% + 6px)}
+  html body .calx .ev.ev--end{border-top-left-radius:0 !important;border-bottom-left-radius:0 !important;margin-left:-6px !important;width:calc(100% + 6px)}
+  html body .calx .ev.ev--mid{position:relative;background:transparent !important;box-shadow:none !important;margin-left:-6px !important;margin-right:-6px !important;width:calc(100% + 12px);border-radius:0 !important;padding:0 !important;cursor:grab}
+  html body .calx .ev.ev--mid::before{content:"";position:absolute;left:0;right:0;top:50%;height:4px;margin-top:-2px;background:hsl(var(--h,214) 60% 84%)}
+  html body .calx .ev.ev--mid > *{visibility:hidden}
+  html body .calx .ev.ev--mid:hover::before{height:6px;margin-top:-3px;background:hsl(var(--h,214) 60% 76%)}
+  html body .calx .ev.ev--mid.ev--done::before{opacity:.5}
+  html body .calx .ev.ev--end .evchk{display:none}
+  html body .calx .ev.ev--end > span{color:hsl(var(--h,214) 30% 40%)}
+}
 </style>
 </head>
 <body>
@@ -2631,13 +2645,18 @@ function calendarView(all){
   for(let i=0;i<lead;i++) cells.push(`<div class="cell cell--out"></div>`);
   for(let d=1;d<=dim;d++){
     const ds=`${y}-${pad(m)}-${pad(d)}`;
-    const evs=cs.filter(c=>spans(c,ds));
+    /* 기간 일정은 위에 같은 순서로 쌓아 날짜끼리 한 줄로 이어지게 */
+    const multi=(a,b)=>a&&b&&a!==b;
+    const ord=(a0,a1,b0,b1,ia,ib)=>(Number(!multi(b0,b1))-Number(!multi(a0,a1)))*-1 || String(a0).localeCompare(String(b0)) || String(ia).localeCompare(String(ib));
+    const evs=cs.filter(c=>spans(c,ds)).sort((a,b)=>ord(a.date,a.end,b.date,b.end,a.id,b.id));
     const dow=new Date(y,m-1,d).getDay();
-    const tks=dayTasks.filter(t=>spans({date:t.start||t.due,end:t.due},ds));
+    const tks=dayTasks.filter(t=>spans({date:t.start||t.due,end:t.due},ds)).sort((a,b)=>ord(a.start,a.due,b.start,b.due,a.id,b.id));
+    /* 지난달에 시작한 기간 일정은 이번 달 1일에 이름을 한 번 보여줌 */
+    const pos=(a,b)=>!multi(a,b)?'':(ds===a?'ev--start':ds===b?'ev--end':(d===1&&a<ds?'ev--start ev--cont':'ev--mid'));
     cells.push(`<div class="cell ${ds===TODAY?'cell--today':''} ${ds<TODAY?'cell--past':''}" data-date="${ds}">
       <div class="cell__d ${dow===0?'cell__sun':''}"><span class="cn">${d}</span></div>
-      ${evs.map(e=>`<span class="ev ${e.done?'ev--done':''}" draggable="true" data-drag="c:${e.id}" style="--h:${TYPE_HUE[e.type]??262};border-left-color:${hueBg(TYPE_HUE[e.type]||0,55)}"><b class="evchk" data-toggle-content="${e.id}" title="완료 표시" aria-pressed="${!!e.done}"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 12.5l4 4 8-9"/></svg></b><span data-content="${e.id}" style="cursor:pointer">${bn(e)}${e.end&&e.end!==e.date?(ds===e.date?'▶ ':(ds===e.end?'■ ':'· ')):''}${(e.att&&e.att.length)||(e.attView&&e.attView.length)?'📎':''}${esc(e.type)} · ${esc(e.title||'')}</span></span>`).join('')}
-      ${tks.map(t=>`<span class="ev ev--task ${t.done?'ev--done':''}" draggable="true" data-drag="t:${t.id}" style="--h:214"><b class="evchk" data-toggle-task-btn="${t.id}" title="완료 표시" aria-pressed="${!!t.done}"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 12.5l4 4 8-9"/></svg></b><span data-edit-task="${t.id}" style="cursor:pointer">${bn(t)}${t.start&&t.start!==t.due?(ds===t.start?'▶ ':(ds===t.due?'■ ':'· ')):''}${esc(t.title)}</span></span>`).join('')}
+      ${evs.map(e=>`<span class="ev ${e.done?'ev--done':''} ${pos(e.date,e.end)}" draggable="true" data-drag="c:${e.id}" style="--h:${TYPE_HUE[e.type]??262};border-left-color:${hueBg(TYPE_HUE[e.type]||0,55)}"><b class="evchk" data-toggle-content="${e.id}" title="완료 표시" aria-pressed="${!!e.done}"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 12.5l4 4 8-9"/></svg></b><span data-content="${e.id}" style="cursor:pointer">${bn(e)}${(e.att&&e.att.length)||(e.attView&&e.attView.length)?'📎':''}${esc(e.type)} · ${esc(e.title||'')}</span></span>`).join('')}
+      ${tks.map(t=>`<span class="ev ev--task ${t.done?'ev--done':''} ${pos(t.start,t.due)}" draggable="true" data-drag="t:${t.id}" style="--h:214"><b class="evchk" data-toggle-task-btn="${t.id}" title="완료 표시" aria-pressed="${!!t.done}"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 12.5l4 4 8-9"/></svg></b><span data-edit-task="${t.id}" style="cursor:pointer">${bn(t)}${esc(t.title)}</span></span>`).join('')}
       <button class="cell__add" data-newdate="${ds}" aria-label="${d}일 추가">+</button>
     </div>`);
   }
