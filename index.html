@@ -1935,6 +1935,15 @@ html body .m .card__hd{flex-wrap:nowrap !important}
 .ddpop svg{width:14px;height:14px;fill:none;stroke:var(--accent);stroke-width:2.4;stroke-linecap:round;stroke-linejoin:round;visibility:hidden}
 .ddpop button[aria-selected="true"] svg{visibility:visible}
 @media(max-width:760px){.ddpop{padding:6px}.ddpop button{height:44px;font-size:15px;padding:0 12px}}
+
+/* 모바일: 앱처럼 화면 고정 — 상단 바·하단 탭은 움직이지 않고 가운데만 스크롤 */
+@media(max-width:760px){
+  html:has(.m),body:has(.m){height:100%;overflow:hidden !important;position:fixed;inset:0;width:100%}
+  .m{position:fixed;inset:0;display:flex;flex-direction:column;min-height:0;padding-bottom:0 !important;overflow:hidden}
+  .m .mtop{position:relative;flex:0 0 auto;top:auto}
+  .m .mmain{flex:1 1 auto;min-height:0;overflow-y:auto;overflow-x:hidden;-webkit-overflow-scrolling:touch;overscroll-behavior:contain;padding:12px 16px 96px}
+  .m .mnav{position:relative;flex:0 0 auto;left:auto;right:auto;bottom:auto}
+}
 </style>
 </head>
 <body>
@@ -2713,7 +2722,7 @@ function mBrandsView(){
 }
 function renderMobile(){
   const tab=UI.mTab||'tasks';
-  const key='m|'+tab+'|'+(UI.mBrand||'')+'|'+UI.tab; const keepY=window.__mKey===key?window.scrollY:0; window.__mKey=key;
+  const key='m|'+tab+'|'+(UI.mBrand||'')+'|'+UI.tab; const mm=document.querySelector('.mmain'); const keepY=(window.__mKey===key&&mm)?mm.scrollTop:0; window.__mKey=key;
   const detail = tab==='brands' && UI.mBrand && brandOf(UI.mBrand);
   let title={tasks:'업무',cal:'캘린더',brands:'브랜드',set:'설정'}[tab], body='';
   try{
@@ -2737,16 +2746,16 @@ function renderMobile(){
     <nav class="mnav">${nav('tasks','업무')}${nav('cal','캘린더')}${nav('brands','브랜드')}${nav('set','설정')}</nav>
   </div>`;
   bind();
-  document.querySelectorAll('[data-mtab]').forEach(el=>el.onclick=()=>{ UI.mTab=el.dataset.mtab; if(UI.mTab!=='brands') UI.mBrand=''; saveUI(); render(); window.scrollTo(0,0); });
+  document.querySelectorAll('[data-mtab]').forEach(el=>el.onclick=()=>{ UI.mTab=el.dataset.mtab; if(UI.mTab!=='brands') UI.mBrand=''; saveUI(); render(); });
   document.querySelectorAll('[data-mfilter]').forEach(el=>el.onclick=()=>{ UI.mFilter=el.dataset.mfilter; saveUI(); render(); });
   document.querySelectorAll('[data-msel]').forEach(el=>el.onclick=()=>{ UI.mCalSel=el.dataset.msel; saveUI(); render(); });
-  document.querySelectorAll('[data-mbrand]').forEach(el=>el.onclick=()=>{ UI.mBrand=el.dataset.mbrand; UI.tab='tasks'; saveUI(); render(); window.scrollTo(0,0); });
+  document.querySelectorAll('[data-mbrand]').forEach(el=>el.onclick=()=>{ UI.mBrand=el.dataset.mbrand; UI.tab='tasks'; saveUI(); render(); });
   document.querySelectorAll('[data-mbtab]').forEach(el=>el.onclick=()=>{ UI.tab=el.dataset.mbtab; saveUI(); render(); });
-  document.querySelectorAll('[data-mback]').forEach(el=>el.onclick=()=>{ UI.mBrand=''; saveUI(); render(); window.scrollTo(0,0); });
+  document.querySelectorAll('[data-mback]').forEach(el=>el.onclick=()=>{ UI.mBrand=''; saveUI(); render(); });
   document.querySelectorAll('[data-mfabcal]').forEach(el=>el.onclick=()=>addOnDate(($('#mCalSelDate')||{}).value||TODAY));
   /* 가로로 미는 칩 줄: 선택된 칩이 보이게 */
   document.querySelectorAll('.mrow').forEach(r=>{ const on=r.querySelector('[aria-pressed="true"]'); if(on&&on.offsetLeft>r.clientWidth-40) r.scrollLeft=on.offsetLeft-16; });
-  if(keepY) window.scrollTo(0,keepY);
+  const mm2=document.querySelector('.mmain'); if(mm2) mm2.scrollTop=keepY;
 }
 const MI_ME='<svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 20c1.5-4 4.5-6 8-6s6.5 2 8 6"/></svg>';
 
