@@ -2690,8 +2690,7 @@ function toMobileState(){
   else if(b==='__sched'){ UI.mTab='cal'; }
   else if(b==='__set'){ UI.mTab='set'; }
   else if(brandOf(b)){
-    if(UI.tab==='calendar'){ UI.mTab='cal'; UI.schedBrand=b; }
-    else { UI.mTab='brands'; UI.mBrand=b; }
+    UI.mTab='brands'; UI.mBrand=b;
   }
 }
 function toDesktopState(){
@@ -2761,10 +2760,10 @@ function mTasksView(){
     <div class="mlist">${body || `<div class="mempty"><b>${f==='done'?'이번 달 완료한 업무가 없어요':'할 일이 없어요'}</b><span>오른쪽 아래 + 로 업무를 추가하세요</span></div>`}</div>
   </section>`;
 }
-function mCalView(){
+function mCalView(forceBid){
   const ym=UI.ym, [y,m]=ym.split('-').map(Number);
   const first=new Date(y,m-1,1), dim=new Date(y,m,0).getDate(), lead=first.getDay();
-  const bf=UI.schedBrand&&brandOf(UI.schedBrand)?UI.schedBrand:'';
+  const bf=forceBid || (UI.schedBrand&&brandOf(UI.schedBrand)?UI.schedBrand:'');
   const live=new Set(mLiveBrands().map(b=>b.id));
   const inB=r=>live.has(r.brandId)&&(!bf||r.brandId===bf);
   const cs=(DB.contents||[]).filter(c=>inB(c));
@@ -2790,7 +2789,7 @@ function mCalView(){
       <div class="mt__b" ${isC?`data-content="${o.id}"`:`data-edit-task="${o.id}"`}><div class="mt__t">${esc(o.title||(isC?o.type:'(제목 없음)'))}</div>${meta?`<div class="mt__m">${meta}</div>`:''}</div>
       <span class="mc__tag">${isC?esc(o.type):'업무'}</span></div>`; };
   return `<section class="mv">
-    <div class="mbar">${mBrandSel('mCalBrand',bf)}${mMine()}</div>
+    <div class="mbar">${forceBid?'<span class="mbar__t">브랜드 캘린더</span>':mBrandSel('mCalBrand',bf)}${mMine()}</div>
     <div class="mcard mmonth">
       <div class="mmonth__hd"><button class="mico" data-mo="-1" aria-label="이전 달">${MI.prev}</button><b>${y}년 ${m}월</b><button class="mico" data-mo="1" aria-label="다음 달">${MI.next}</button></div>
       <div class="mmonth__g">${['일','월','화','수','목','금','토'].map((d,i)=>`<span class="w ${i===0?'is-sun':''}">${d}</span>`).join('')}${days.join('')}</div>
@@ -2804,9 +2803,10 @@ function mBrandsView(){
   const ym=TODAY.slice(0,7);
   if(UI.mBrand && brandOf(UI.mBrand)){
     const b=brandOf(UI.mBrand); UI.brand=b.id;
-    const tabs=[['tasks','업무'],['plans','콘텐츠'],['kpi','KPI'],['sales','매출·손익'],['products','제품']];
-    if(!tabs.some(([k])=>k===UI.tab)) UI.tab='tasks';
+    const tabs=[['calendar','캘린더'],['tasks','업무'],['plans','콘텐츠'],['kpi','KPI'],['sales','매출'],['products','제품']];
+    if(!tabs.some(([k])=>k===UI.tab)) UI.tab='calendar';
     let inner='';
+    if(UI.tab==='calendar'){ return mCalView(b.id).replace('<section class="mv">',`<section class="mv">${mSeg(tabs.map(([k,l])=>[k,l]),UI.tab,'data-mbtab')}`); }
     if(UI.tab==='tasks'){
       const who=myFilter(), all=DB.tasks.filter(t=>t.brandId===b.id&&(!who||hasOwner(t,who)));
       const open=all.filter(t=>!t.done).sort((x,y)=>(x.due||'9999-99-99').localeCompare(y.due||'9999-99-99'));
@@ -2842,7 +2842,7 @@ function renderMobile(){
     else { UI.brand='__set'; body=`<section class="mv"><div class="mlegacy">${settingsView()}</div></section>`; }
   }catch(e){ console.error(e); body='<section class="mv"><div class="mempty"><b>이 화면을 그리지 못했어요</b><span>'+esc(String(e.message||e))+'</span></div></section>'; }
   const fab = tab==='tasks' || (detail&&UI.tab==='tasks') ? `<button class="mfab" data-act="task-new" aria-label="업무 추가">${MI.plus}</button>`
-            : tab==='cal' ? `<button class="mfab" data-mfabcal aria-label="일정 추가">${MI.plus}</button>` : '';
+            : (tab==='cal' || (detail&&UI.tab==='calendar')) ? `<button class="mfab" data-mfabcal aria-label="일정 추가">${MI.plus}</button>` : '';
   const me=DB.settings.me||'';
   const nav=(k,l)=>`<button class="mnav__i" data-mtab="${k}" aria-current="${tab===k}">${MI[k]}<span>${l}</span></button>`;
   $('#app').innerHTML=`<div class="m">
@@ -2859,7 +2859,7 @@ function renderMobile(){
   document.querySelectorAll('[data-mtab]').forEach(el=>el.onclick=()=>{ UI.mTab=el.dataset.mtab; if(UI.mTab!=='brands') UI.mBrand=''; saveUI(); render(); });
   document.querySelectorAll('[data-mfilter]').forEach(el=>el.onclick=()=>{ UI.mFilter=el.dataset.mfilter; saveUI(); render(); });
   document.querySelectorAll('[data-msel]').forEach(el=>el.onclick=()=>{ UI.mCalSel=el.dataset.msel; saveUI(); render(); });
-  document.querySelectorAll('[data-mbrand]').forEach(el=>el.onclick=()=>{ UI.mBrand=el.dataset.mbrand; UI.tab='tasks'; saveUI(); render(); });
+  document.querySelectorAll('[data-mbrand]').forEach(el=>el.onclick=()=>{ UI.mBrand=el.dataset.mbrand; UI.tab='calendar'; saveUI(); render(); });
   document.querySelectorAll('[data-mbtab]').forEach(el=>el.onclick=()=>{ UI.tab=el.dataset.mbtab; saveUI(); render(); });
   document.querySelectorAll('[data-mback]').forEach(el=>el.onclick=()=>{ UI.mBrand=''; saveUI(); render(); });
   document.querySelectorAll('[data-mfabcal]').forEach(el=>el.onclick=()=>addOnDate(($('#mCalSelDate')||{}).value||TODAY));
