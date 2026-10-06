@@ -2333,7 +2333,6 @@ function sideNav(){
       const open = UI.navBrands!==false;
       return `<button class="snav__i snav__grp" data-act="nav-brands" aria-expanded="${open}">${ICON.tag}<span class="snav__l">브랜드</span>${ICON.chev}</button>
       <div class="snav__sub" ${open?'':'hidden'}>
-      ${item('data-act="home"','전체','',UI.brand==='__home')}
       ${list.map(br=>{
         const {goal,actual}=totals(br.id,UI.ym);
         const meta = goal? Math.round(actual/goal*100)+'%' : '';
@@ -2712,7 +2711,7 @@ function mTasksView(){
     all: open,
     done: sc.filter(t=>t.done&&(t.due||'').startsWith(ym))
   };
-  const f=UI.mFilter&&G[UI.mFilter]?UI.mFilter:'all';
+  const f=UI.mFilter&&UI.mFilter!=='today'&&G[UI.mFilter]?UI.mFilter:'all';
   const byDue=(x,y)=>(x.due||'9999-99-99').localeCompare(y.due||'9999-99-99')||PRIOS.indexOf(x.priority)-PRIOS.indexOf(y.priority);
   let body;
   if(f==='all'){
@@ -2724,7 +2723,7 @@ function mTasksView(){
   }
   const me=DB.settings.me||'';
   return `<section class="mv">
-    ${mSeg([['all','전체',G.all.length],['late','지연',G.late.length],['today','오늘',G.today.length],['week','이번 주',G.week.length],['done',Number(ym.slice(5))+'월 완료',G.done.length]],f,'data-mfilter')}
+    ${mSeg([['all','전체',G.all.length],['late','지연',G.late.length],['week','이번 주',G.week.length],['done',Number(ym.slice(5))+'월 완료',G.done.length]],f,'data-mfilter')}
     <div class="mbar">${mBrandSel('mBrand',bf,new Set(live.map(t=>t.brandId)))}${mMine()}</div>
     <div class="mlist">${body || `<div class="mempty"><b>${f==='done'?'이번 달 완료한 업무가 없어요':'할 일이 없어요'}</b><span>오른쪽 아래 + 로 업무를 추가하세요</span></div>`}</div>
   </section>`;
@@ -2901,7 +2900,7 @@ function taskBoard(bid){
   const [,wk1]=weekRange();
   const G={ late:open.filter(t=>t.due&&t.due<TODAY), today:open.filter(t=>t.due===TODAY),
     week:open.filter(t=>t.due&&t.due>TODAY&&t.due<=wk1), all:open, done:sc.filter(t=>t.done&&(t.due||'').startsWith(ym)) };
-  const f=UI.mFilter&&G[UI.mFilter]?UI.mFilter:'all';
+  const f=UI.mFilter&&UI.mFilter!=='today'&&G[UI.mFilter]?UI.mFilter:'all';
   const byDue=(x,y)=>(x.due||'9999-99-99').localeCompare(y.due||'9999-99-99')||PRIOS.indexOf(x.priority)-PRIOS.indexOf(y.priority);
   const grid=r=>`<div class="tcards">${r.map(t=>mTaskCard(t,!bid)).join('')}</div>`;
   let body;
@@ -2912,7 +2911,7 @@ function taskBoard(bid){
   const brands = DB.brands.filter(b=>!b.hidden&&live.some(t=>t.brandId===b.id));
   return `<div class="tboard">
     <div class="tboard__bar">
-      ${mSeg([['all','전체',G.all.length],['late','지연',G.late.length],['today','오늘',G.today.length],['week','이번 주',G.week.length],['done',Number(ym.slice(5))+'월 완료',G.done.length]],f,'data-mfilter')}
+      ${mSeg([['all','전체',G.all.length],['late','지연',G.late.length],['week','이번 주',G.week.length],['done',Number(ym.slice(5))+'월 완료',G.done.length]],f,'data-mfilter')}
       ${bid?'':dd('taskBrand',bf,[['','모든 브랜드'],...brands.map(b=>[b.id,b.name])],'dd--m')}
       ${mMine()}
       <div class="spacer" style="flex:1"></div>
