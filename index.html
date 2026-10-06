@@ -2032,6 +2032,26 @@ html body .modal__bd > label > input[type=checkbox]:checked{background:radial-gr
   html body .m .mtop__me svg{width:17px;height:17px}
   html body .m .mtop__me.has-name{background:rgba(17,18,20,.07);color:var(--ink)}
 }
+
+/* ===== 하위 탭·필터 칩 (콘텐츠 등) — 업무 화면과 같은 규칙 =====
+   1단계(레퍼런스/기획/업로드 계획/분석) = 세그먼트, 2단계 = 조용한 알약 */
+html body div:has(> [data-ptab]){display:flex !important;gap:18px !important;padding:0;border-radius:0;background:transparent;border-bottom:1px solid var(--line);margin-bottom:14px !important;flex-wrap:nowrap !important;overflow-x:auto;scrollbar-width:none}
+html body [data-ptab].sub{flex:0 0 auto;height:40px !important;border-radius:0 !important;background:transparent !important;box-shadow:none !important;color:var(--mut) !important;font-weight:600;padding:0 !important;margin-bottom:-1px;border-bottom:2px solid transparent !important}
+html body [data-ptab].sub[aria-pressed="true"]{color:var(--ink) !important;border-bottom-color:var(--ink) !important;background:transparent !important}
+html body .sub:not([data-ptab]){height:30px !important;padding:0 12px !important;border-radius:999px !important;background:transparent !important;box-shadow:none !important;color:var(--ink2) !important;font-weight:600 !important;flex:0 0 auto}
+html body .sub:not([data-ptab]):hover{color:var(--ink) !important;background:rgba(17,18,20,.05) !important}
+html body .sub:not([data-ptab])[aria-pressed="true"]{background:var(--ink) !important;color:#fff !important}
+html body div:has(> .sub:not([data-ptab])){display:flex;align-items:center;gap:2px !important;flex-wrap:nowrap !important;overflow-x:auto;scrollbar-width:none}
+html body div:has(> .sub:not([data-ptab]))::-webkit-scrollbar{display:none}
+.subrow{display:flex;align-items:center;gap:6px;margin-bottom:10px}
+.subrow .eyebrow{flex:0 0 auto;margin-right:4px}
+.subrow--act{margin-bottom:14px}
+@media(max-width:760px){
+  html body div:has(> [data-ptab]){gap:20px !important}
+  html body div:has(> .sub:not([data-ptab])){margin-left:-16px !important;margin-right:-16px !important;padding:0 16px !important}
+  .subrow--act .btn{height:34px !important}
+  .m .mlegacy .ustat{padding:14px 2px}
+}
 </style>
 </head>
 <body>
@@ -3223,7 +3243,7 @@ function plansView(){
   if(ptab==='upload'){
     const b=brandOf(UI.brand);
     const utab = EMBED? 'media' : (UI.upTab||'media');
-    const chip=(v,l,on)=>`<button class="btn btn--sm" data-uptab="${v}" style="border-radius:999px;${on?'background:var(--ink);border-color:var(--ink);color:#fff':''}">${l}</button>`;
+    const chip=(v,l,on)=>`<button class="btn btn--sm sub" data-uptab="${v}" aria-pressed="${!!(on)}">${l}</button>`;
     const sub = EMBED? '' : `<div style="display:flex;gap:6px;margin-bottom:14px">${chip('media','영상 / 이미지',utab==='media')}${chip('thread','스레드',utab==='thread')}</div>`;
     const body = utab==='thread'? threadsView(b,UI.ym,plansOf(b.id,UI.ym)) : uploadPlanView();
     return contentTabs(ptab)+sub+body;
@@ -3259,7 +3279,7 @@ function refsView(){
   const cat=UI.refCat||'릴스';
   const all=(DB.refs||[]).filter(r=>r.brandId===b.id);
   const list=all.filter(r=>(r.cat||'릴스')===cat);
-  const chip=(v,l,on,n)=>`<button class="btn btn--sm" data-refcat="${v}" style="border-radius:999px;${on?'background:var(--ink);border-color:var(--ink);color:#fff':''}">${l} ${n}</button>`;
+  const chip=(v,l,on,n)=>`<button class="btn btn--sm sub" data-refcat="${v}" aria-pressed="${!!(on)}">${l} ${n}</button>`;
   return `<div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin-bottom:14px">
       ${REF_CATS.map(k=>chip(k,k,cat===k,all.filter(r=>(r.cat||'릴스')===k).length)).join('')}
       <div class="spacer" style="flex:1"></div>
@@ -3513,9 +3533,11 @@ function statsView(){
   };
   const sum=k=>rows.reduce((a,s)=>a+Number(s[k]||0),0);
   return `
-    <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin-bottom:14px">
+    <div class="subrow subrow--metric">
       <span class="eyebrow">기준 지표</span>
-      ${Object.entries(mLabel).map(([k,l])=>`<button class="btn btn--sm" data-statmetric="${k}" style="border-radius:999px;${metric===k?'background:var(--ink);border-color:var(--ink);color:#fff':''}">${l}</button>`).join('')}
+      ${Object.entries(mLabel).map(([k,l])=>`<button class="btn btn--sm sub" data-statmetric="${k}" aria-pressed="${!!(metric===k)}">${l}</button>`).join('')}
+    </div>
+    <div class="subrow subrow--act">
       <div class="spacer" style="flex:1"></div>
       <button class="btn btn--sm" data-act="stat-xls">이 달 엑셀</button>
       <button class="btn btn--sm" data-act="stat-xls-all">전체 엑셀</button>
@@ -3593,7 +3615,7 @@ function statModal(id){
 }
 function contentTabs(ptab){
   if(EMBED) return '';
-  const chip=(v,l,on)=>`<button class="btn btn--sm" data-ptab="${v}" style="border-radius:999px;${on?'background:var(--ink);border-color:var(--ink);color:#fff':''}">${l}</button>`;
+  const chip=(v,l,on)=>`<button class="btn btn--sm sub" data-ptab="${v}" aria-pressed="${!!(on)}">${l}</button>`;
   return `<div style="display:flex;gap:6px;margin-bottom:12px">${chip('ref','레퍼런스',ptab==='ref')}${chip('plan','기획',ptab==='plan')}${chip('upload','업로드 계획',ptab==='upload')}${chip('stat','분석',ptab==='stat')}</div>`;
 }
 function plansPlanView(){
@@ -3606,7 +3628,7 @@ function plansPlanView(){
   return `<div style="display:flex;align-items:center;gap:10px;margin-bottom:12px">
       <div class="eyebrow">${ymLabel(ym)} 기획안 ${has}건</div>
       <div style="display:flex;gap:6px;flex-wrap:wrap">
-        ${PLAN_KINDS.filter(k=>k!=='텍스트').map(k=>[k,k]).map(([v,l])=>`<button class="btn btn--sm" data-plankind="${v}" style="border-radius:999px;${kind===v?'background:var(--ink);border-color:var(--ink);color:#fff':''}">${l} ${v? all.filter(x=>(x.kind||'영상')===v).length : all.length}</button>`).join('')}
+        ${PLAN_KINDS.filter(k=>k!=='텍스트').map(k=>[k,k]).map(([v,l])=>`<button class="btn btn--sm sub" data-plankind="${v}" aria-pressed="${!!(kind===v)}">${l} ${v? all.filter(x=>(x.kind||'영상')===v).length : all.length}</button>`).join('')}
       </div>
       <div class="spacer" style="flex:1"></div>
       <button class="btn btn--primary btn--sm" data-act="plan-new">기획안 추가</button>
