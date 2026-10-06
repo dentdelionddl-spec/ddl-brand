@@ -2088,6 +2088,29 @@ body.share .m .mmain{padding-bottom:32px}
   html body .calx .ev.ev--start .evchk{display:none}
   html body .calx .ev.ev--end > span{color:hsl(var(--h,214) 30% 40%)}
 }
+
+/* ===== 모바일 캘린더: 접힌 한 주 ↔ 펼친 한 달, 미니멀 ===== */
+html body .m .mmonth{padding:6px 8px 4px;background:rgba(255,255,255,.88)}
+.mmonth__hd{display:flex !important;align-items:center;justify-content:space-between;padding:2px 2px 2px 8px !important}
+.mmonth__t{display:inline-flex;align-items:center;gap:4px;height:40px;border:0;background:transparent;padding:0;font-family:var(--sans);color:var(--ink);cursor:pointer}
+.mmonth__t b{font-size:16px;font-weight:700}
+.mmonth__t svg{width:16px;height:16px;stroke-width:2.2;color:var(--mut);transition:transform .2s;transform:rotate(90deg)}
+.mmonth.is-open .mmonth__t svg{transform:rotate(-90deg)}
+.mmonth__nav{display:flex}
+.mmonth__nav .mico{width:40px;height:40px;color:var(--ink2)}
+.mmonth__nav .mico svg{width:18px;height:18px}
+html body .mmonth__g .w{font-size:12px;font-weight:500;color:#A6A9B0;padding:6px 0 4px}
+html body .mmonth__g .w.is-sun{color:#A6A9B0}
+html body .mday{height:46px;gap:2px;padding-top:3px}
+html body .mday .n{width:34px;height:34px;border-radius:50%;font-size:15px;font-weight:500;color:var(--ink2);box-shadow:none !important}
+html body .mday.is-sun .n{color:var(--ink2)}
+html body .mday.is-past .n{color:var(--ink2)}
+html body .mday.is-other .n{color:#C2C4C9}
+html body .mday.is-today .n{background:var(--accent-bg);color:var(--accent);font-weight:600}
+html body .mday.is-sel .n{background:var(--accent);color:#fff;font-weight:600}
+html body .mday .dots i{width:4px;height:4px}
+.mgrab{display:flex;justify-content:center;align-items:center;width:100%;height:18px;border:0;background:transparent;padding:0;cursor:pointer}
+.mgrab i{width:36px;height:4px;border-radius:999px;background:rgba(17,18,20,.14)}
 </style>
 </head>
 <body>
@@ -2865,6 +2888,12 @@ function mCalView(forceBid){
   const itemsOn=ds=>[...cs.filter(c=>spans(c,ds)).map(c=>({k:'c',o:c})), ...ts.filter(t=>spans({date:t.start||t.due,end:t.due},ds)).map(t=>({k:'t',o:t}))];
   const hueOf=it=>it.k==='c'?(TYPE_HUE[it.o.type]??262):214;
   const sel=(UI.mCalSel&&UI.mCalSel.slice(0,7)===ym)?UI.mCalSel:(TODAY.slice(0,7)===ym?TODAY:`${ym}-01`);
+  const open=UI.mCalOpen===true;
+  const dayBtn=ds=>{ const its=itemsOn(ds), dt=new Date(ds+'T00:00:00');
+    return `<button class="mday ${ds===sel?'is-sel':''} ${ds===TODAY?'is-today':''} ${dt.getDay()===0?'is-sun':''}" data-msel="${ds}"><span class="n">${dt.getDate()}</span><span class="dots">${its.slice(0,3).map(it=>`<i style="--h:${hueOf(it)}" class="${it.o.done?'is-done':''}"></i>`).join('')}</span></button>`; };
+  /* 접힌 상태: 선택한 날이 있는 한 주만 */
+  const ws=new Date(sel+'T00:00:00'); ws.setDate(ws.getDate()-ws.getDay());
+  const week=[...Array(7)].map((_,k)=>{ const d=new Date(ws); d.setDate(ws.getDate()+k); return dateStr(d); });
   const days=[];
   for(let i=0;i<lead;i++) days.push('<span class="mday is-out"></span>');
   for(let d=1;d<=dim;d++){
@@ -2883,9 +2912,13 @@ function mCalView(forceBid){
       <span class="mc__tag">${isC?esc(o.type):'업무'}</span></div>`; };
   return `<section class="mv">
     <div class="mbar">${forceBid?'<span class="mbar__t">브랜드 캘린더</span>':mBrandSel('mCalBrand',bf)}${mMine()}</div>
-    <div class="mcard mmonth">
-      <div class="mmonth__hd"><button class="mico" data-mo="-1" aria-label="이전 달">${MI.prev}</button><b>${y}년 ${m}월</b><button class="mico" data-mo="1" aria-label="다음 달">${MI.next}</button></div>
-      <div class="mmonth__g">${['일','월','화','수','목','금','토'].map((d,i)=>`<span class="w ${i===0?'is-sun':''}">${d}</span>`).join('')}${days.join('')}</div>
+    <div class="mcard mmonth ${open?'is-open':''}" data-mswipe>
+      <div class="mmonth__hd">
+        <button class="mmonth__t" data-mcaltoggle aria-expanded="${open}"><b>${y}년 ${m}월</b>${MI.next}</button>
+        <div class="mmonth__nav"><button class="mico" ${open?'data-mo="-1"':'data-mweek="-1"'} aria-label="${open?'이전 달':'이전 주'}">${MI.prev}</button><button class="mico" ${open?'data-mo="1"':'data-mweek="1"'} aria-label="${open?'다음 달':'다음 주'}">${MI.next}</button></div>
+      </div>
+      <div class="mmonth__g">${['일','월','화','수','목','금','토'].map((d,i)=>`<span class="w ${i===0?'is-sun':''}">${d}</span>`).join('')}${open?days.join(''):week.map(dayBtn).join('')}</div>
+      <button class="mgrab" data-mcaltoggle aria-label="${open?'접기':'펼치기'}"><i></i></button>
     </div>
     <div class="mday__hd"><b>${sd.getMonth()+1}월 ${sd.getDate()}일 ${WD_KO[sd.getDay()]}요일</b><span>${list.length}건</span></div>
     <div class="mlist">${list.length?list.map(card).join(''):`<div class="mempty"><b>일정이 없어요</b><span>+ 로 이 날에 추가하세요 · 날짜를 옮기려면 일정을 눌러 날짜를 바꾸세요</span></div>`}</div>
@@ -2952,7 +2985,18 @@ function renderMobile(){
   bind();
   document.querySelectorAll('[data-mtab]').forEach(el=>el.onclick=()=>{ UI.mTab=el.dataset.mtab; if(UI.mTab!=='brands') UI.mBrand=''; saveUI(); render(); });
   document.querySelectorAll('[data-mfilter]').forEach(el=>el.onclick=()=>{ UI.mFilter=el.dataset.mfilter; saveUI(); render(); });
-  document.querySelectorAll('[data-msel]').forEach(el=>el.onclick=()=>{ UI.mCalSel=el.dataset.msel; saveUI(); render(); });
+  document.querySelectorAll('[data-msel]').forEach(el=>el.onclick=()=>{ UI.mCalSel=el.dataset.msel; UI.ym=UI.mCalSel.slice(0,7); saveUI(); render(); });
+  document.querySelectorAll('[data-mcaltoggle]').forEach(el=>el.onclick=()=>{ UI.mCalOpen=!UI.mCalOpen; saveUI(); render(); });
+  const shiftWeek=n=>{ const base=($('#mCalSelDate')||{}).value||TODAY; const d=new Date(base+'T00:00:00'); d.setDate(d.getDate()+7*n); UI.mCalSel=dateStr(d); UI.ym=UI.mCalSel.slice(0,7); saveUI(); render(); };
+  const shiftMonth=n=>{ UI.ym=ymShift(UI.ym,n); UI.mCalSel=UI.ym+'-01'; saveUI(); render(); };
+  document.querySelectorAll('[data-mweek]').forEach(el=>el.onclick=()=>shiftWeek(Number(el.dataset.mweek)));
+  /* 옆으로 밀어 넘기기: 접힘 = 주, 펼침 = 달 */
+  document.querySelectorAll('[data-mswipe]').forEach(el=>{
+    let x0=null,y0=null;
+    el.addEventListener('touchstart',e=>{ x0=e.touches[0].clientX; y0=e.touches[0].clientY; },{passive:true});
+    el.addEventListener('touchend',e=>{ if(x0===null) return; const dx=e.changedTouches[0].clientX-x0, dy=e.changedTouches[0].clientY-y0; x0=null;
+      if(Math.abs(dx)>45 && Math.abs(dx)>Math.abs(dy)*1.3){ const n=dx<0?1:-1; UI.mCalOpen? shiftMonth(n) : shiftWeek(n); } },{passive:true});
+  });
   document.querySelectorAll('[data-mbrand]').forEach(el=>el.onclick=()=>{ UI.mBrand=el.dataset.mbrand; UI.tab='calendar'; saveUI(); render(); });
   document.querySelectorAll('[data-mbtab]').forEach(el=>el.onclick=()=>{ UI.tab=el.dataset.mbtab; saveUI(); render(); });
   document.querySelectorAll('[data-mback]').forEach(el=>el.onclick=()=>{ UI.mBrand=''; saveUI(); render(); });
