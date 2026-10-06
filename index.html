@@ -2085,7 +2085,7 @@ body.share .m .mmain{padding-bottom:32px}
   html body .calx .ev.ev--mid > *{visibility:hidden}
   html body .calx .ev.ev--mid:hover::before{height:6px;margin-top:-3px;background:hsl(var(--h,214) 60% 76%)}
   html body .calx .ev.ev--mid.ev--done::before{opacity:.5}
-  html body .calx .ev.ev--end .evchk{display:none}
+  html body .calx .ev.ev--start .evchk{display:none}
   html body .calx .ev.ev--end > span{color:hsl(var(--h,214) 30% 40%)}
 }
 </style>
@@ -2651,8 +2651,7 @@ function calendarView(all){
     const evs=cs.filter(c=>spans(c,ds)).sort((a,b)=>ord(a.date,a.end,b.date,b.end,a.id,b.id));
     const dow=new Date(y,m-1,d).getDay();
     const tks=dayTasks.filter(t=>spans({date:t.start||t.due,end:t.due},ds)).sort((a,b)=>ord(a.start,a.due,b.start,b.due,a.id,b.id));
-    /* 지난달에 시작한 기간 일정은 이번 달 1일에 이름을 한 번 보여줌 */
-    const pos=(a,b)=>!multi(a,b)?'':(ds===a?'ev--start':ds===b?'ev--end':(d===1&&a<ds?'ev--start ev--cont':'ev--mid'));
+    const pos=(a,b)=>!multi(a,b)?'':(ds===a?'ev--start':ds===b?'ev--end':'ev--mid');
     cells.push(`<div class="cell ${ds===TODAY?'cell--today':''} ${ds<TODAY?'cell--past':''}" data-date="${ds}">
       <div class="cell__d ${dow===0?'cell__sun':''}"><span class="cn">${d}</span></div>
       ${evs.map(e=>`<span class="ev ${e.done?'ev--done':''} ${pos(e.date,e.end)}" draggable="true" data-drag="c:${e.id}" style="--h:${TYPE_HUE[e.type]??262};border-left-color:${hueBg(TYPE_HUE[e.type]||0,55)}"><b class="evchk" data-toggle-content="${e.id}" title="완료 표시" aria-pressed="${!!e.done}"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 12.5l4 4 8-9"/></svg></b><span data-content="${e.id}" style="cursor:pointer">${bn(e)}${(e.att&&e.att.length)||(e.attView&&e.attView.length)?'📎':''}${esc(e.type)} · ${esc(e.title||'')}</span></span>`).join('')}
