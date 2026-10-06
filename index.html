@@ -2111,6 +2111,14 @@ html body .mday.is-sel .n{background:var(--accent);color:#fff;font-weight:600}
 html body .mday .dots i{width:4px;height:4px}
 .mgrab{display:flex;justify-content:center;align-items:center;width:100%;height:18px;border:0;background:transparent;padding:0;cursor:pointer}
 .mgrab i{width:36px;height:4px;border-radius:999px;background:rgba(17,18,20,.14)}
+
+/* 접힘/펼침 캘린더 여백 균형 + 스와이프 영역 */
+html body .m .mmonth{padding:4px 10px 6px;overflow:hidden;touch-action:pan-y}
+html body .m .mmonth__hd{padding:2px 2px 0 6px !important;height:44px}
+html body .m .mmonth__g{will-change:transform}
+html body .m .mmonth__g .w{padding:4px 0 6px}
+html body .m .mgrab{height:22px;margin-top:6px}
+html body .m .mgrab i{width:34px;height:4px}
 </style>
 </head>
 <body>
@@ -2915,7 +2923,6 @@ function mCalView(forceBid){
     <div class="mcard mmonth ${open?'is-open':''}" data-mswipe>
       <div class="mmonth__hd">
         <button class="mmonth__t" data-mcaltoggle aria-expanded="${open}"><b>${y}년 ${m}월</b>${MI.next}</button>
-        <div class="mmonth__nav"><button class="mico" ${open?'data-mo="-1"':'data-mweek="-1"'} aria-label="${open?'이전 달':'이전 주'}">${MI.prev}</button><button class="mico" ${open?'data-mo="1"':'data-mweek="1"'} aria-label="${open?'다음 달':'다음 주'}">${MI.next}</button></div>
       </div>
       <div class="mmonth__g">${['일','월','화','수','목','금','토'].map((d,i)=>`<span class="w ${i===0?'is-sun':''}">${d}</span>`).join('')}${open?days.join(''):week.map(dayBtn).join('')}</div>
       <button class="mgrab" data-mcaltoggle aria-label="${open?'접기':'펼치기'}"><i></i></button>
@@ -2992,10 +2999,15 @@ function renderMobile(){
   document.querySelectorAll('[data-mweek]').forEach(el=>el.onclick=()=>shiftWeek(Number(el.dataset.mweek)));
   /* 옆으로 밀어 넘기기: 접힘 = 주, 펼침 = 달 */
   document.querySelectorAll('[data-mswipe]').forEach(el=>{
-    let x0=null,y0=null;
-    el.addEventListener('touchstart',e=>{ x0=e.touches[0].clientX; y0=e.touches[0].clientY; },{passive:true});
-    el.addEventListener('touchend',e=>{ if(x0===null) return; const dx=e.changedTouches[0].clientX-x0, dy=e.changedTouches[0].clientY-y0; x0=null;
-      if(Math.abs(dx)>45 && Math.abs(dx)>Math.abs(dy)*1.3){ const n=dx<0?1:-1; UI.mCalOpen? shiftMonth(n) : shiftWeek(n); } },{passive:true});
+    const g=el.querySelector('.mmonth__g'); let x0=null,y0=null,dir=null;
+    el.addEventListener('touchstart',e=>{ x0=e.touches[0].clientX; y0=e.touches[0].clientY; dir=null; g.style.transition='none'; },{passive:true});
+    el.addEventListener('touchmove',e=>{ if(x0===null) return; const dx=e.touches[0].clientX-x0, dy=e.touches[0].clientY-y0;
+      if(!dir) dir = Math.abs(dx)>8 && Math.abs(dx)>Math.abs(dy) ? 'x' : (Math.abs(dy)>8 ? 'y' : null);
+      if(dir==='x'){ g.style.transform=`translateX(${dx}px)`; g.style.opacity=String(1-Math.min(.5,Math.abs(dx)/600)); } },{passive:true});
+    el.addEventListener('touchend',e=>{ if(x0===null) return; const dx=e.changedTouches[0].clientX-x0; x0=null;
+      if(dir==='x' && Math.abs(dx)>50){ const n=dx<0?1:-1; g.style.transition='transform .16s ease-out, opacity .16s'; g.style.transform=`translateX(${n>0?-100:100}%)`; g.style.opacity='0';
+        setTimeout(()=>{ UI.mCalOpen? shiftMonth(n) : shiftWeek(n); const ng=document.querySelector('[data-mswipe] .mmonth__g'); if(ng){ ng.style.transition='none'; ng.style.transform=`translateX(${n>0?40:-40}%)`; ng.style.opacity='0'; requestAnimationFrame(()=>{ ng.style.transition='transform .18s ease-out, opacity .18s'; ng.style.transform='none'; ng.style.opacity='1'; }); } },150);
+      } else { g.style.transition='transform .18s ease-out, opacity .18s'; g.style.transform='none'; g.style.opacity='1'; } },{passive:true});
   });
   document.querySelectorAll('[data-mbrand]').forEach(el=>el.onclick=()=>{ UI.mBrand=el.dataset.mbrand; UI.tab='calendar'; saveUI(); render(); });
   document.querySelectorAll('[data-mbtab]').forEach(el=>el.onclick=()=>{ UI.tab=el.dataset.mbtab; saveUI(); render(); });
