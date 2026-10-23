@@ -48,21 +48,68 @@ body{font-family:var(--sans);background:var(--paper);color:var(--ink);font-size:
 .day .ev{margin:6px 0 0;height:auto;min-height:30px;padding:6px 9px;white-space:normal}
 .day .sp{font-weight:500;opacity:.75;margin-left:4px}
 @media(max-width:700px){ body{padding:0} .card{border-radius:0} .cal{display:none} .list{display:block} }
+/* 편집: 체크·추가·수정·삭제 */
+.hr{display:flex;align-items:center;gap:8px}
+.add{border:0;background:var(--accent);color:#fff;font:inherit;font-size:12px;font-weight:600;height:32px;padding:0 12px;border-radius:8px;cursor:pointer}
+.ev{cursor:pointer}
+.ev .o{cursor:pointer;background:none;padding:0;color:inherit}
+.ev .o:hover{opacity:1}
+.cell{position:relative}
+.cell .plus{position:absolute;right:6px;top:6px;width:24px;height:24px;border:0;border-radius:7px;background:#EEF1F8;color:var(--mut);font-size:16px;line-height:1;cursor:pointer;opacity:0}
+.cell:hover .plus{opacity:1}
+.cell.out .plus{display:none}
+.modal{position:fixed;inset:0;background:rgba(18,18,20,.32);display:none;align-items:center;justify-content:center;padding:16px;z-index:10}
+.modal.on{display:flex}
+.box{background:#fff;border-radius:14px;width:100%;max-width:400px;padding:20px;box-shadow:0 24px 60px -20px rgba(20,22,28,.4)}
+.box h3{margin:0 0 14px;font-size:15px}
+.box label{display:block;margin-bottom:12px;font-size:12px;color:var(--mut)}
+.box input[type=text],.box input[type=date],.box select{display:block;width:100%;margin-top:4px;height:38px;padding:0 10px;border:1px solid var(--line);border-radius:8px;font:inherit;font-size:14px;color:var(--ink);background:#fff}
+.box .row{display:flex;gap:10px}.box .row label{flex:1}
+.box .chk{display:flex;align-items:center;gap:8px;color:var(--ink);font-size:14px}
+.box .btns{display:flex;gap:8px;margin-top:6px}
+.box .btns button{height:38px;padding:0 14px;border-radius:8px;border:1px solid var(--line);background:#fff;font:inherit;font-size:13px;font-weight:600;cursor:pointer}
+.box .btns .save{background:var(--accent);border-color:var(--accent);color:#fff;margin-left:auto}
+.box .btns .del{color:var(--sun)}
+.box .err{color:var(--sun);font-size:12px;min-height:18px;margin-bottom:4px}
+.toast{position:fixed;left:50%;bottom:20px;transform:translateX(-50%);background:#1D1F26;color:#fff;font-size:13px;padding:9px 14px;border-radius:10px;opacity:0;transition:opacity .2s;pointer-events:none;z-index:11}
+.toast.on{opacity:1}
 </style>
 </head>
 <body>
 <div class="card">
   <div class="head">
     <h1 id="title"></h1>
-    <div class="nav">
-      <button id="prev" aria-label="이전 달">‹</button>
-      <button id="now" class="today">오늘</button>
-      <button id="next" aria-label="다음 달">›</button>
+    <div class="hr">
+      <div class="nav">
+        <button id="prev" aria-label="이전 달">‹</button>
+        <button id="now" class="today">오늘</button>
+        <button id="next" aria-label="다음 달">›</button>
+      </div>
+      <button class="add" id="add">일정 추가</button>
     </div>
   </div>
   <div class="cal" id="cal"></div>
   <div class="list" id="list"></div>
 </div>
+<div class="modal" id="modal">
+  <form class="box" id="form">
+    <h3 id="mTitle">일정 추가</h3>
+    <label>제목<input type="text" id="fTitle" maxlength="200" required /></label>
+    <div class="row">
+      <label>시작일<input type="date" id="fDate" required /></label>
+      <label>종료일<input type="date" id="fEnd" /></label>
+    </div>
+    <label>구분<select id="fCat"></select></label>
+    <label class="chk"><input type="checkbox" id="fDone" /> 완료</label>
+    <div class="err" id="fErr"></div>
+    <div class="btns">
+      <button type="button" class="del" id="fDel">삭제</button>
+      <button type="button" id="fCancel">취소</button>
+      <button type="submit" class="save">저장</button>
+    </div>
+  </form>
+</div>
+<div class="toast" id="toast"></div>
 <script>
 const BRAND=(new URLSearchParams(location.search).get('brand')||'').toLowerCase();
 const HUE={'EGC':262,'UGC':330,'온라인':200,'오프라인':122,'이벤트':18,'제품 업로드':160,'제품 입고':38};
@@ -74,7 +121,7 @@ const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;',
 const endOf=e=>e.endDate||e.date;
 const spans=(e,ds)=>e.date<=ds && endOf(e)>=ds;
 const label=e=>(e.category?e.category+' · ':'')+e.title;
-const pill=e=>`<div class="ev ${e.status==='완료'?'done':''}" style="--h:${HUE[e.category]??262}" title="${esc(label(e))}"><i class="o"></i><span class="t">${esc(label(e))}</span></div>`;
+const pill=e=>`<div class="ev ${e.done?'done':''}" style="--h:${HUE[e.category]??262}" title="${esc(label(e))}" data-open="${e.id}"><button class="o" data-chk="${e.id}" aria-label="완료 표시" aria-pressed="${!!e.done}"></button><span class="t">${esc(label(e))}</span></div>`;
 const md=ds=>`${Number(ds.slice(5,7))}월 ${Number(ds.slice(8))}일`;
 
 function render(){
@@ -90,7 +137,7 @@ function render(){
   for(let d=1;d<=dim;d++){
     const ds=`${ym}-${pad(d)}`, dow=(lead+d-1)%7;
     const evs=mine.filter(e=>spans(e,ds));
-    h+=`<div class="cell ${dow===0?'sun':''} ${ds<TODAY?'past':''} ${ds===TODAY?'today':''}"><span class="d">${d}</span>${
+    h+=`<div class="cell ${dow===0?'sun':''} ${ds<TODAY?'past':''} ${ds===TODAY?'today':''}"><span class="d">${d}</span><button class="plus" data-new="${ds}" aria-label="${d}일 일정 추가">+</button>${
       evs.map(e=>(e.date===ds||(d===1)||dow===0)?pill(e):`<div class="bar" style="--h:${HUE[e.category]??262}"></div>`).join('')}</div>`;
   }
   document.getElementById('cal').innerHTML=h;
@@ -121,6 +168,73 @@ const shift=n=>{ const [y,m]=ym.split('-').map(Number); const d=new Date(y,m-1+n
 document.getElementById('prev').onclick=()=>shift(-1);
 document.getElementById('next').onclick=()=>shift(1);
 document.getElementById('now').onclick=()=>{ ym=TODAY.slice(0,7); render(); };
+
+/* ---------- 편집 (체크·추가·수정·삭제) — 처음 고칠 때 비밀번호를 한 번 묻고 이 브라우저에 기억 ---------- */
+const CATS=['피드','릴스','스레드','제품 업로드','제품 입고','공구','기획전','오프라인','EGC','온라인','이벤트','UGC'];
+const KEY_STORE='ddl-schedule-key:'+BRAND;
+const getKey=()=>{ try{ return localStorage.getItem(KEY_STORE)||''; }catch(e){ return window.__key||''; } };
+const setKey=v=>{ try{ v?localStorage.setItem(KEY_STORE,v):localStorage.removeItem(KEY_STORE); }catch(e){ window.__key=v; } };
+const $=id=>document.getElementById(id);
+let editing=null, busy=false;
+
+function toast(t){ const el=$('toast'); el.textContent=t; el.classList.add('on'); clearTimeout(toast.t); toast.t=setTimeout(()=>el.classList.remove('on'),2200); }
+
+async function save(payload, retried){
+  let key=getKey();
+  if(!key){ key=(prompt('일정을 고치려면 편집 비밀번호를 입력하세요')||'').trim(); if(!key) throw new Error('비밀번호를 입력하지 않았습니다'); setKey(key); }
+  const r=await fetch('/api/schedule?brand='+encodeURIComponent(BRAND),{method:'POST',headers:{'Content-Type':'application/json','X-Edit-Key':key},body:JSON.stringify(payload)});
+  const d=await r.json().catch(()=>({}));
+  if(r.status===401){ setKey(''); if(!retried){ alert(d.message||'편집 비밀번호가 맞지 않습니다'); return save(payload,true); } }
+  if(!r.ok) throw new Error(d.message||'저장하지 못했습니다');
+  return d;
+}
+
+$('fCat').innerHTML='<option value="">선택 안 함</option>'+CATS.map(c=>`<option>${c}</option>`).join('');
+function openForm(e, date){
+  editing=e||null;
+  $('mTitle').textContent=e?'일정 수정':'일정 추가';
+  $('fTitle').value=e?.title||''; $('fDate').value=e?.date||date||TODAY; $('fEnd').value=e?.endDate||'';
+  $('fCat').value=e?.category||''; $('fDone').checked=!!e?.done; $('fErr').textContent='';
+  $('fDel').style.display=e?'':'none';
+  $('modal').classList.add('on'); setTimeout(()=>$('fTitle').focus(),0);
+}
+const closeForm=()=>{ $('modal').classList.remove('on'); editing=null; };
+
+$('form').onsubmit=async ev=>{
+  ev.preventDefault(); if(busy) return;
+  const item={ title:$('fTitle').value.trim(), date:$('fDate').value, endDate:$('fEnd').value||null, category:$('fCat').value, done:$('fDone').checked };
+  busy=true; $('fErr').textContent='';
+  const was=editing;
+  try{
+    await save(was?{action:'update',id:was.id,item}:{action:'create',item});
+    closeForm(); toast(was?'수정했습니다':'저장했습니다'); await load();
+  }catch(e){ $('fErr').textContent=e.message; }
+  busy=false;
+};
+$('fDel').onclick=async()=>{
+  if(!editing || busy || !confirm('이 일정을 삭제할까요?')) return;
+  busy=true;
+  try{ await save({action:'delete',id:editing.id}); closeForm(); toast('삭제했습니다'); await load(); }
+  catch(e){ $('fErr').textContent=e.message; }
+  busy=false;
+};
+$('fCancel').onclick=closeForm;
+$('modal').onclick=ev=>{ if(ev.target.id==='modal') closeForm(); };
+$('add').onclick=()=>openForm(null, ym===TODAY.slice(0,7)?TODAY:`${ym}-01`);
+
+document.addEventListener('click',async ev=>{
+  const chk=ev.target.closest('[data-chk]');
+  if(chk){
+    ev.stopPropagation();
+    const e=items.find(x=>x.id===chk.dataset.chk); if(!e) return;
+    e.done=!e.done; render();
+    try{ await save({action:'update',id:e.id,item:{done:e.done}}); await load(); }
+    catch(err){ e.done=!e.done; render(); toast(err.message); }
+    return;
+  }
+  const add=ev.target.closest('[data-new]'); if(add) return openForm(null, add.dataset.new);
+  const open=ev.target.closest('[data-open]'); if(open){ const e=items.find(x=>x.id===open.dataset.open); if(e) openForm(e); }
+});
 
 render(); load();
 /* 운영페이지에서 고친 내용이 열어둔 화면에도 바로 보이도록 30초마다, 그리고 탭으로 돌아올 때 새로 불러옴 */

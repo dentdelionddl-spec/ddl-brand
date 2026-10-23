@@ -1,81 +1,166 @@
 // DDL 브랜드 관리 — 브랜드별 공개 일정 (Vercel 서버리스 함수)
 //
-// GET /api/schedule?brand=vivicate
-// 외부 사이트(ek-oem 등)에 보여줄 일정만 내보냅니다. 메모·첨부·담당자는 내보내지 않습니다.
-// 필요한 환경변수: NOTION_TOKEN
+// GET  /api/schedule?brand=vivicate          그 브랜드 일정 보기 (비밀번호 없음)
+// POST /api/schedule?brand=vivicate          추가·수정·삭제 (X-Edit-Key 헤더 = 브랜드 편집 비밀번호)
+//      { action:'create', item:{title,date,endDate,category,done} }
+//      { action:'update', id, item:{…바꿀 것만} }
+//      { action:'delete', id }
+// 외부 사이트(ek-oem 등)용이라 메모·첨부·담당자는 내보내지도, 고치지도 않습니다.
+// 필요한 환경변수: NOTION_TOKEN, EDIT_KEY_VIVICATE (비비케이트 편집 비밀번호)
+
+import { createHash, timingSafeEqual } from 'node:crypto';
 
 const NOTION = 'https://api.notion.com/v1';
 const VERSION = '2022-06-28';
 const CONTENTS_DB = '22c3381ad8e44f239be74fdd3243eba3';
 
-/* 공개를 허용한 브랜드만 (주소 값 → 노션 '브랜드' 선택값) */
+/* 공개를 허용한 브랜드만 (주소 값 → 노션 '브랜드' 선택값, 편집 비밀번호 환경변수) */
 const PUBLIC_BRANDS = {
-  vivicate: ['VIVICATE'],
+  vivicate: { name: 'VIVICATE', editKey: 'EDIT_KEY_VIVICATE' },
 };
+/* 노션 '유형' 선택지와 같은 값만 받음 */
+const CATEGORIES = ['피드', '릴스', '스레드', '제품 업로드', '제품 입고', '공구', '기획전', '오프라인', 'EGC', '온라인', '이벤트', 'UGC'];
 
 export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
-  res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
+  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, X-Edit-Key');
   res.setHeader('Access-Control-Max-Age', '86400');
 
   if (req.method === 'OPTIONS') return res.status(204).end();
-  if (req.method !== 'GET') return res.status(405).json({ message: 'GET만 받습니다' });
+  if (req.method !== 'GET' && req.method !== 'POST') return res.status(405).json({ message: 'GET·POST만 받습니다' });
 
   const brand = String(req.query.brand || '').toLowerCase();
-  const names = PUBLIC_BRANDS[brand];
-  if (!names) return res.status(404).json({ message: '공개되지 않은 브랜드입니다' });
+  const conf = PUBLIC_BRANDS[brand];
+  if (!conf) return res.status(404).json({ message: '공개되지 않은 브랜드입니다' });
   if (!process.env.NOTION_TOKEN)
     return res.status(500).json({ message: 'NOTION_TOKEN 환경변수가 설정되지 않았습니다' });
 
+  /* 운영페이지에서 고친 내용이 바로 보이도록 캐시하지 않음 */
+  res.setHeader('Cache-Control', 'no-store');
+  const head = {
+    Authorization: 'Bearer '+process.env.NOTION_TOKEN,
+    'Notion-Version': VERSION,
+    'Content-Type': 'application/json',
+  };
+
   try {
-    let pages = [];
-    let cursor;
-    do {
-      const r = await fetch(NOTION+'/databases/'+CONTENTS_DB+'/query', {
-        method: 'POST',
-        headers: {
-          Authorization: 'Bearer '+process.env.NOTION_TOKEN,
-          'Notion-Version': VERSION,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          filter: { or: names.map(n => ({ property: '브랜드', select: { equals: n } })) },
-          sorts: [{ property: '날짜', direction: 'ascending' }],
-          page_size: 100,
-          start_cursor: cursor,
-        }),
-      });
-      const d = await r.json();
-      if (!r.ok) return res.status(502).json({ message: d.message || '노션 조회 실패' });
-      pages = pages.concat(d.results || []);
-      cursor = d.has_more ? d.next_cursor : null;
-    } while (cursor);
+    if (req.method === 'GET') return res.status(200).json({ brand, updatedAt: new Date().toISOString(), items: await list(head, conf) });
 
-    const today = kstToday();
-    const items = pages
-      .filter(pg => pg.properties?.['날짜']?.date?.start)
-      .map(pg => {
-        const P = pg.properties;
-        const date = P['날짜'].date.start.slice(0, 10);
-        const end = P['날짜'].date.end ? P['날짜'].date.end.slice(0, 10) : null;
-        const done = !!P['완료']?.checkbox;
-        const status = done ? '완료' : (date <= today && (end || date) >= today ? '진행중' : '예정');
-        return {
-          id: pg.id.replace(/-/g, '').slice(-8),
-          date,
-          endDate: end && end !== date ? end : null,
-          title: (P['제목']?.title || []).map(t => t.plain_text).join(''),
-          category: P['유형']?.select?.name || '',
-          status,
-        };
-      });
+    const secret = process.env[conf.editKey];
+    if (!secret) return res.status(500).json({ message: conf.editKey+' 환경변수가 설정되지 않았습니다' });
+    const key = String(req.headers['x-edit-key'] || '');
+    if (!key) return res.status(401).json({ message: '편집 비밀번호가 필요합니다' });
+    if (!sameSecret(key, secret)) return res.status(401).json({ message: '편집 비밀번호가 맞지 않습니다' });
 
-    /* 운영페이지에서 고친 내용이 바로 보이도록 캐시하지 않음 */
-    res.setHeader('Cache-Control', 'no-store');
-    return res.status(200).json({ brand, updatedAt: new Date().toISOString(), items });
+    const body = typeof req.body === 'string' ? safeParse(req.body) : req.body || {};
+    if (!body) return res.status(400).json({ message: '요청 본문이 JSON이 아닙니다' });
+    const { action, id } = body;
+
+    if (action === 'create') {
+      const props = toProps(body.item || {}, true);
+      if (props.error) return res.status(400).json({ message: props.error });
+      const r = await notion(head, '/pages', 'POST', {
+        parent: { database_id: CONTENTS_DB },
+        properties: { ...props, '브랜드': { select: { name: conf.name } } },
+      });
+      if (r.error) return res.status(502).json({ message: r.error });
+      return res.status(200).json({ item: toItem(r.data) });
+    }
+
+    if (action === 'update' || action === 'delete') {
+      if (!id) return res.status(400).json({ message: 'id가 없습니다' });
+      /* 그 브랜드 일정 DB의 행인지 먼저 확인 — 다른 브랜드·다른 DB는 못 건드림 */
+      const cur = await notion(head, '/pages/'+id, 'GET');
+      if (cur.error) return res.status(404).json({ message: '없는 일정입니다' });
+      const pg = cur.data;
+      if (pg.archived || String(pg.parent?.database_id || '').replace(/-/g, '') !== CONTENTS_DB
+          || pg.properties?.['브랜드']?.select?.name !== conf.name)
+        return res.status(403).json({ message: '이 브랜드 일정이 아닙니다' });
+
+      if (action === 'delete') {
+        const r = await notion(head, '/pages/'+id, 'PATCH', { archived: true });
+        if (r.error) return res.status(502).json({ message: r.error });
+        return res.status(200).json({ ok: true });
+      }
+      const props = toProps({ ...fromPage(pg), ...(body.item || {}) }, false);
+      if (props.error) return res.status(400).json({ message: props.error });
+      const r = await notion(head, '/pages/'+id, 'PATCH', { properties: props });
+      if (r.error) return res.status(502).json({ message: r.error });
+      return res.status(200).json({ item: toItem(r.data) });
+    }
+
+    return res.status(400).json({ message: '모르는 action: '+action });
   } catch (e) {
     return res.status(500).json({ message: String(e) });
   }
+}
+
+async function list(head, conf) {
+  let pages = [];
+  let cursor;
+  do {
+    const r = await notion(head, '/databases/'+CONTENTS_DB+'/query', 'POST', {
+      filter: { property: '브랜드', select: { equals: conf.name } },
+      sorts: [{ property: '날짜', direction: 'ascending' }],
+      page_size: 100,
+      start_cursor: cursor,
+    });
+    if (r.error) throw new Error(r.error);
+    pages = pages.concat(r.data.results || []);
+    cursor = r.data.has_more ? r.data.next_cursor : null;
+  } while (cursor);
+  return pages.filter(pg => pg.properties?.['날짜']?.date?.start).map(toItem);
+}
+
+function fromPage(pg) {
+  const P = pg.properties || {};
+  const d = P['날짜']?.date || {};
+  return {
+    title: (P['제목']?.title || []).map(t => t.plain_text).join(''),
+    date: d.start ? d.start.slice(0, 10) : '',
+    endDate: d.end ? d.end.slice(0, 10) : null,
+    category: P['유형']?.select?.name || '',
+    done: !!P['완료']?.checkbox,
+  };
+}
+
+function toItem(pg) {
+  const f = fromPage(pg), today = kstToday();
+  const status = f.done ? '완료' : (f.date <= today && (f.endDate || f.date) >= today ? '진행중' : '예정');
+  return { id: pg.id, date: f.date, endDate: f.endDate && f.endDate !== f.date ? f.endDate : null,
+    title: f.title, category: f.category, done: f.done, status };
+}
+
+function toProps(it, creating) {
+  const day = /^\d{4}-\d{2}-\d{2}$/;
+  const title = String(it.title || '').trim();
+  if (!title) return { error: '제목을 입력하세요' };
+  if (!day.test(it.date || '')) return { error: '날짜 형식이 맞지 않습니다' };
+  const end = it.endDate && it.endDate !== it.date ? it.endDate : null;
+  if (end && (!day.test(end) || end < it.date)) return { error: '종료일이 시작일보다 빠릅니다' };
+  if (it.category && !CATEGORIES.includes(it.category)) return { error: '없는 구분입니다' };
+  return {
+    '제목': { title: [{ text: { content: title.slice(0, 200) } }] },
+    '날짜': { date: { start: it.date, ...(end ? { end } : {}) } },
+    ...(it.category ? { '유형': { select: { name: it.category } } } : (creating ? {} : { '유형': { select: null } })),
+    '완료': { checkbox: !!it.done },
+  };
+}
+
+async function notion(head, path, method, body) {
+  const r = await fetch(NOTION+path, { method, headers: head, ...(body ? { body: JSON.stringify(body) } : {}) });
+  const d = await r.json();
+  return r.ok ? { data: d } : { error: d.message || '노션 요청 실패' };
+}
+
+function sameSecret(a, b) {
+  const h = s => createHash('sha256').update(String(s)).digest();
+  return timingSafeEqual(h(a), h(b));
+}
+
+function safeParse(s) {
+  try { return JSON.parse(s); } catch { return null; }
 }
 
 function kstToday() {
