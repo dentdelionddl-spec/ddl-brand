@@ -4190,6 +4190,8 @@ function settingsView(){
     <div class="card__bd">
       <label class="f"><span>노션 프록시 주소 (Vercel)</span>
         <input type="text" id="setWorker" value="${esc(s.workerUrl)}" placeholder="https://ddl-brand.vercel.app/api/notion" /></label>
+      <label class="f"><span>관리자 비밀번호 (Vercel 환경변수 ADMIN_KEY와 같은 값)</span>
+        <input type="password" id="setAdminKey" value="${esc(adminKey())}" autocomplete="off" placeholder="이 브라우저에만 저장됩니다" /></label>
       <div class="row2">
         <label class="f"><span>콘텐츠 캘린더 DB ID</span><input type="text" id="db_contents" value="${esc(s.db.contents)}" /></label>
         <label class="f"><span>업무 DB ID (주간 플랜)</span><input type="text" id="db_tasks" value="${esc(s.db.tasks)}" /></label>
@@ -4211,7 +4213,7 @@ function settingsView(){
         <button class="btn" data-act="pull">노션에서 내려받기</button>
       </div>
       <p class="eyebrow" style="margin:12px 0 0;line-height:1.7">
-        토큰은 Vercel 환경변수(NOTION_TOKEN)에만 두고 이 화면에는 넣지 않습니다.<br>
+        토큰은 Vercel 환경변수(NOTION_TOKEN)에만 두고 이 화면에는 넣지 않습니다. 관리자 비밀번호는 이 브라우저에만 남고 내보내기 파일에도 들어가지 않습니다.<br>
         각 노션 DB에 필요한 속성은 저장소의 README.md에 정리돼 있습니다.
       </p>
     </div>
@@ -4582,11 +4584,37 @@ async function notionDrop(...recs){
   if(fail) toast(`노션에서 ${fail}건을 지우지 못했습니다`,3000);
   else toast(`노션에서도 삭제했습니다`,2000);
 }
-async function api(payload){
+/* 관리자 비밀번호: 이 브라우저에만 저장 (내보내기 파일·노션에는 들어가지 않음) */
+const ADMIN_STORE=KEY+':admin';
+const adminKey=()=>store.get(ADMIN_STORE)||'';
+const setAdminKey=v=>{ try{ v? localStorage.setItem(ADMIN_STORE,v) : localStorage.removeItem(ADMIN_STORE); }catch(e){ mem[ADMIN_STORE]=v||null; } };
+/* 공유·읽기전용 임베드는 비밀번호 없이 그 브랜드만 읽음 */
+const viewOnly=()=>!adminKey() && (!!SHARE_KEY || !!(EMBED&&EMBED.ro));
+let __keyAsk=null, __keyDeclined=false;
+function askAdminKey(){
+  if(__keyDeclined || SHARE_KEY || (EMBED&&EMBED.ro)) return Promise.resolve(false);
+  return __keyAsk ||= new Promise(r=>setTimeout(()=>{
+    const v=(prompt('노션 연동에 필요한 관리자 비밀번호를 입력하세요')||'').trim();
+    if(v) setAdminKey(v); else __keyDeclined=true;
+    __keyAsk=null; r(!!v);
+  }));
+}
+async function api(payload, retried){
   const url=DB.settings.workerUrl;
-  if(!url) throw new Error('Worker URL이 없습니다');
-  const res=await fetch(url,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});
+  if(!url) throw new Error('노션 프록시 주소가 없습니다');
+  const key=adminKey();
+  const headers={'Content-Type':'application/json'};
+  if(key) headers['X-Admin-Key']=key;
+  else if(SHARE_KEY) headers['X-Share-Key']=SHARE_KEY;
+  else if(EMBED&&EMBED.brand) headers['X-Embed-Brand']=EMBED.brand;
+  const res=await fetch(url,{method:'POST',headers,body:JSON.stringify(payload)});
   const json=await res.json().catch(()=>({}));
+  if(res.status===401 && !retried){
+    /* 그 사이 다른 요청에서 비밀번호를 새로 받았으면 그대로 다시 시도 */
+    if(adminKey() && adminKey()!==key) return api(payload,true);
+    if(key) setAdminKey('');
+    if(await askAdminKey()) return api(payload,true);
+  }
   if(!res.ok) throw new Error(json.message||`요청 실패 (${res.status})`);
   return json;
 }
@@ -4618,6 +4646,7 @@ async function pushAll(onlyDirty){
 let syncTimer=null, syncing=false;
 function autoSync(){
   if(!DB.settings.workerUrl || DB.settings.auto===false) return;
+  if(viewOnly()){ toast('보기 전용 링크라 노션에는 저장되지 않습니다',2400); return; }
   clearTimeout(syncTimer);
   syncTimer=setTimeout(async()=>{
     if(syncing) { autoSync(); return; }
@@ -4865,6 +4894,7 @@ function act(a){
   if(a==='brand-new') return brandModal(null);
   if(a==='save-sync'){
     DB.settings.workerUrl=$('#setWorker').value.trim().replace(/\/$/,'');
+    setAdminKey($('#setAdminKey').value.trim()); __keyDeclined=false;
     DB.settings.db={contents:$('#db_contents').value.trim(),tasks:$('#db_tasks').value.trim(),
                     sales:$('#db_sales').value.trim(),products:$('#db_products').value.trim(),
                     plans:$('#db_plans').value.trim(),costs:$('#db_costs').value.trim(),

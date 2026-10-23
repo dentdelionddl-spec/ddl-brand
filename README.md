@@ -1,42 +1,54 @@
 # DDL 브랜드커머스 관리
 
 브랜드를 고르면 그 브랜드의 **채널별 매출 목표·실적 / 운영 캘린더 / 업무 / 제품**이 한 화면에 뜹니다.
-깃허브 페이지(정적) + 노션(데이터 보관) 구조라 서버가 따로 필요 없습니다. EK OEM 통합관리와 같은 방식입니다.
+정적 페이지 + Vercel 함수(노션 프록시) + 노션(데이터 보관) 구조입니다.
 
 ```
-브라우저(깃허브 페이지)  ──POST──►  Cloudflare Worker  ──►  Notion API
-        ▲                              (토큰 보관)
+브라우저(ddl-brand.vercel.app)  ──POST──►  /api/notion (Vercel 함수)  ──►  Notion API
+        ▲                                 (토큰·관리자 비밀번호 확인)
         └── 평소엔 브라우저 로컬 저장으로 즉시 동작
 ```
 
 ---
 
-## 1. 깃허브에 올리기
+## 1. 배포
 
-새 저장소(예: `ddl-brand`)를 만들고 `index.html`을 루트에 올립니다.
+`index.html`과 `api/`를 Vercel 프로젝트 하나로 함께 배포합니다. 주소는 `https://ddl-brand.vercel.app`입니다.
 
-```bash
-git init && git add index.html README.md
-git commit -m "브랜드커머스 관리페이지"
-git branch -M main
-git remote add origin https://github.com/deun01-cloud/ddl-brand.git
-git push -u origin main
-```
+## 2. Vercel 환경변수
 
-Settings → Pages → Source `Deploy from a branch` → `main` / `(root)` → Save.
-1분 뒤 `https://deun01-cloud.github.io/ddl-brand/` 로 열립니다.
+Vercel → 프로젝트 → Settings → Environment Variables
 
-> ek-oem 저장소 안에 넣고 싶으면 `ek-oem/brand/index.html`로 올리면 `.../ek-oem/brand/`에서 열리고,
-> ek-oem 상단 메뉴의 **🛍 브랜드커머스**에서 이 주소로 링크만 걸면 됩니다.
+| 이름 | 필수 | 값 |
+|---|---|---|
+| `NOTION_TOKEN` | 필수 | 노션 인테그레이션 토큰 |
+| `ADMIN_KEY` | 필수 | 관리자 비밀번호. 길고 무작위로 (예: `openssl rand -base64 24`) |
+| `ALLOW_ORIGIN` | 선택 | CORS 허용 주소, 쉼표로 여러 개. 기본값 `https://ddl-brand.vercel.app` |
+| `EXTRA_DB_IDS` | 선택 | 아래 목록 밖의 노션 DB를 더 쓸 때 ID를 쉼표로 |
 
-## 2. Worker 올리기 (노션 연동을 쓸 때만)
+값을 바꾼 뒤에는 **Redeploy**해야 반영됩니다.
 
-1. Cloudflare → Workers & Pages → Create Worker → `worker.js` 내용 붙여넣기 → Deploy
-2. Settings → Variables → **Secret** `NOTION_TOKEN` = 노션 인테그레이션 토큰
-3. (선택) `ALLOW_ORIGIN` = `https://deun01-cloud.github.io`
-4. 배포 주소를 관리페이지 **설정 · 동기화 → Worker URL**에 붙여넣고 저장
+### 관리자 비밀번호 넣기
 
-토큰은 Worker에만 있고 브라우저에는 남지 않습니다. ek-oem에 이미 쓰는 Worker가 있어도, 이 앱은 요청 형식이 다르니 **따로 하나 더** 올리는 편이 안전합니다.
+운영 사이트에서 처음 노션과 연결할 때 비밀번호를 묻는 창이 뜹니다. `ADMIN_KEY`와 같은 값을 넣으면 그 브라우저에 저장되고, 이후엔 묻지 않습니다.
+**설정 → 노션 동기화 → 관리자 비밀번호**에서 바꾸거나 지울 수도 있습니다.
+비밀번호는 브라우저(localStorage)에만 남고 내보내기 파일·노션에는 들어가지 않습니다. 기기·브라우저마다 한 번씩 넣어야 합니다.
+
+정적 페이지라 코드에 비밀값을 숨길 수 없어서, 비밀값은 사람이 입력하고 서버가 `ADMIN_KEY`와 비교하는 방식을 씁니다.
+비밀번호가 새면 `ADMIN_KEY`를 바꾸고 Redeploy하면 됩니다(모든 기기에서 다시 입력).
+
+### 프록시가 받는 요청
+
+| 누구 | 보내는 헤더 | 할 수 있는 일 |
+|---|---|---|
+| 운영 사이트 (관리자) | `X-Admin-Key` | 허용 DB 안에서 조회·생성·수정·삭제·업로드 |
+| 공유 링크 `?s=키` | `X-Share-Key` | 그 브랜드 행만 조회 (콘텐츠·업무·매출·제품·기획·비용·액션·레퍼런스·성과). 공장 공유만 유입·문의 집계 |
+| 임베드 `?embed=1&brand=…` | `X-Embed-Brand` | 그 브랜드의 콘텐츠·업무·기획만 조회 |
+| 그 밖 | 없음 | `401` |
+
+- 허용 DB는 `api/notion.js` 위쪽 `DBS` 목록입니다(`index.html`의 `NOTION_DB`·`INQ_DB`·`TRAFFIC_DB`와 같은 값). 목록 밖 DB는 관리자라도 `403`입니다. 설정 화면에서 DB ID를 바꿨다면 `DBS`나 `EXTRA_DB_IDS`에도 넣으세요.
+- 공유·임베드에서는 쓰기가 막혀 있어, 그 화면에서 고친 내용은 노션에 올라가지 않습니다. 쓰기가 필요한 임베드(업로드 화면)는 처음 저장할 때 관리자 비밀번호를 묻습니다.
+- 공유 링크는 공유키가 비밀이라 안전하지만, 임베드 주소에는 비밀이 없어 브랜드 이름만 알면 그 브랜드 일정이 보입니다. 외부에 일정만 보일 땐 `/api/schedule?brand=…`를 쓰세요.
 
 ## 3. 노션 DB — 이미 만들어 뒀습니다
 
@@ -52,7 +64,7 @@ Settings → Pages → Source `Deploy from a branch` → `main` / `(root)` → S
 
 매출 DB에는 VIVICATE 8·9월 온라인 목표(자사몰 800·1,000 / ZVZO 200·200 / 29CM 900·1,200만원)를 넣어 뒀습니다.
 
-**남은 것 하나** — Worker를 만든 뒤 노션 인테그레이션을 위 DB 4개에 각각 연결(⋯ → 연결)해야 API가 읽고 씁니다.
+**남은 것 하나** — 노션 인테그레이션을 위 DB 4개에 각각 연결(⋯ → 연결)해야 API가 읽고 씁니다.
 `로컬ID` 속성은 관리페이지와 노션을 짝지어 주는 값이라 지우지 마세요.
 
 ---
