@@ -169,22 +169,16 @@ document.getElementById('prev').onclick=()=>shift(-1);
 document.getElementById('next').onclick=()=>shift(1);
 document.getElementById('now').onclick=()=>{ ym=TODAY.slice(0,7); render(); };
 
-/* ---------- 편집 (체크·추가·수정·삭제) — 처음 고칠 때 비밀번호를 한 번 묻고 이 브라우저에 기억 ---------- */
+/* ---------- 편집 (체크·추가·수정·삭제) ---------- */
 const CATS=['피드','릴스','스레드','제품 업로드','제품 입고','공구','기획전','오프라인','EGC','온라인','이벤트','UGC'];
-const KEY_STORE='ddl-schedule-key:'+BRAND;
-const getKey=()=>{ try{ return localStorage.getItem(KEY_STORE)||''; }catch(e){ return window.__key||''; } };
-const setKey=v=>{ try{ v?localStorage.setItem(KEY_STORE,v):localStorage.removeItem(KEY_STORE); }catch(e){ window.__key=v; } };
 const $=id=>document.getElementById(id);
 let editing=null, busy=false;
 
 function toast(t){ const el=$('toast'); el.textContent=t; el.classList.add('on'); clearTimeout(toast.t); toast.t=setTimeout(()=>el.classList.remove('on'),2200); }
 
-async function save(payload, retried){
-  let key=getKey();
-  if(!key){ key=(prompt('일정을 고치려면 편집 비밀번호를 입력하세요')||'').trim(); if(!key) throw new Error('비밀번호를 입력하지 않았습니다'); setKey(key); }
-  const r=await fetch('/api/schedule?brand='+encodeURIComponent(BRAND),{method:'POST',headers:{'Content-Type':'application/json','X-Edit-Key':key},body:JSON.stringify(payload)});
+async function save(payload){
+  const r=await fetch('/api/schedule?brand='+encodeURIComponent(BRAND),{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});
   const d=await r.json().catch(()=>({}));
-  if(r.status===401){ setKey(''); if(!retried){ alert(d.message||'편집 비밀번호가 맞지 않습니다'); return save(payload,true); } }
   if(!r.ok) throw new Error(d.message||'저장하지 못했습니다');
   return d;
 }

@@ -1,22 +1,20 @@
 // DDL 브랜드 관리 — 브랜드별 공개 일정 (Vercel 서버리스 함수)
 //
 // GET  /api/schedule?brand=vivicate          그 브랜드 일정 보기 (비밀번호 없음)
-// POST /api/schedule?brand=vivicate          추가·수정·삭제 (X-Edit-Key 헤더 = 브랜드 편집 비밀번호)
+// POST /api/schedule?brand=vivicate          추가·수정·삭제 (비밀번호 없음 — 그 브랜드 일정만, 삭제는 노션 휴지통으로)
 //      { action:'create', item:{title,date,endDate,category,done} }
 //      { action:'update', id, item:{…바꿀 것만} }
 //      { action:'delete', id }
 // 외부 사이트(ek-oem 등)용이라 메모·첨부·담당자는 내보내지도, 고치지도 않습니다.
-// 필요한 환경변수: NOTION_TOKEN, EDIT_KEY_VIVICATE (비비케이트 편집 비밀번호)
-
-import { createHash, timingSafeEqual } from 'node:crypto';
+// 필요한 환경변수: NOTION_TOKEN
 
 const NOTION = 'https://api.notion.com/v1';
 const VERSION = '2022-06-28';
 const CONTENTS_DB = '22c3381ad8e44f239be74fdd3243eba3';
 
-/* 공개를 허용한 브랜드만 (주소 값 → 노션 '브랜드' 선택값, 편집 비밀번호 환경변수) */
+/* 공개를 허용한 브랜드만 (주소 값 → 노션 '브랜드' 선택값) */
 const PUBLIC_BRANDS = {
-  vivicate: { name: 'VIVICATE', editKey: 'EDIT_KEY_VIVICATE' },
+  vivicate: { name: 'VIVICATE' },
 };
 /* 노션 '유형' 선택지와 같은 값만 받음 */
 const CATEGORIES = ['피드', '릴스', '스레드', '제품 업로드', '제품 입고', '공구', '기획전', '오프라인', 'EGC', '온라인', '이벤트', 'UGC'];
@@ -24,7 +22,7 @@ const CATEGORIES = ['피드', '릴스', '스레드', '제품 업로드', '제품
 export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, X-Edit-Key');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
   res.setHeader('Access-Control-Max-Age', '86400');
 
   if (req.method === 'OPTIONS') return res.status(204).end();
@@ -46,12 +44,6 @@ export default async function handler(req, res) {
 
   try {
     if (req.method === 'GET') return res.status(200).json({ brand, updatedAt: new Date().toISOString(), items: await list(head, conf) });
-
-    const secret = process.env[conf.editKey];
-    if (!secret) return res.status(500).json({ message: conf.editKey+' 환경변수가 설정되지 않았습니다' });
-    const key = String(req.headers['x-edit-key'] || '');
-    if (!key) return res.status(401).json({ message: '편집 비밀번호가 필요합니다' });
-    if (!sameSecret(key, secret)) return res.status(401).json({ message: '편집 비밀번호가 맞지 않습니다' });
 
     const body = typeof req.body === 'string' ? safeParse(req.body) : req.body || {};
     if (!body) return res.status(400).json({ message: '요청 본문이 JSON이 아닙니다' });
@@ -152,11 +144,6 @@ async function notion(head, path, method, body) {
   const r = await fetch(NOTION+path, { method, headers: head, ...(body ? { body: JSON.stringify(body) } : {}) });
   const d = await r.json();
   return r.ok ? { data: d } : { error: d.message || '노션 요청 실패' };
-}
-
-function sameSecret(a, b) {
-  const h = s => createHash('sha256').update(String(s)).digest();
-  return timingSafeEqual(h(a), h(b));
 }
 
 function safeParse(s) {
