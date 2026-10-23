@@ -6,11 +6,13 @@
 //      { action:'update', id, item:{…바꿀 것만} }
 //      { action:'delete', id }
 // 외부 사이트(ek-oem 등)용이라 메모·첨부·담당자는 내보내지도, 고치지도 않습니다.
+// 업무 DB(주간 플랜)의 그 브랜드 업무는 담당자·영역·상세까지 함께 내보내되(kind:'task'), 보기만 하고 고칠 수는 없습니다.
 // 필요한 환경변수: NOTION_TOKEN
 
 const NOTION = 'https://api.notion.com/v1';
 const VERSION = '2022-06-28';
 const CONTENTS_DB = '22c3381ad8e44f239be74fdd3243eba3';
+const TASKS_DB = '1b390d2a35db48d796e26edaa0834a6a';
 
 /* 공개를 허용한 브랜드만 (주소 값 → 노션 '브랜드' 선택값) */
 const PUBLIC_BRANDS = {
@@ -89,20 +91,40 @@ export default async function handler(req, res) {
 }
 
 async function list(head, conf) {
+  const [contents, tasks] = await Promise.all([
+    queryAll(head, CONTENTS_DB, { property: '브랜드', select: { equals: conf.name } }),
+    queryAll(head, TASKS_DB, { property: 'Brand', select: { equals: conf.name } }),
+  ]);
+  return [
+    ...contents.filter(pg => pg.properties?.['날짜']?.date?.start).map(toItem),
+    ...tasks.filter(pg => pg.properties?.['Due']?.date?.start).map(toTask),
+  ].sort((a, b) => a.date.localeCompare(b.date));
+}
+
+async function queryAll(head, db, filter) {
   let pages = [];
   let cursor;
   do {
-    const r = await notion(head, '/databases/'+CONTENTS_DB+'/query', 'POST', {
-      filter: { property: '브랜드', select: { equals: conf.name } },
-      sorts: [{ property: '날짜', direction: 'ascending' }],
-      page_size: 100,
-      start_cursor: cursor,
-    });
+    const r = await notion(head, '/databases/'+db+'/query', 'POST', { filter, page_size: 100, start_cursor: cursor });
     if (r.error) throw new Error(r.error);
     pages = pages.concat(r.data.results || []);
     cursor = r.data.has_more ? r.data.next_cursor : null;
   } while (cursor);
-  return pages.filter(pg => pg.properties?.['날짜']?.date?.start).map(toItem);
+  return pages;
+}
+
+/* 업무: 제목·기간·완료·담당자·영역·상세 */
+function toTask(pg) {
+  const P = pg.properties || {};
+  const d = P['Due'].date, today = kstToday();
+  const date = d.start.slice(0, 10), end = d.end ? d.end.slice(0, 10) : null;
+  const done = (P['Status']?.status?.name || P['Status']?.select?.name) === 'Done';
+  const status = done ? '완료' : (date <= today && (end || date) >= today ? '진행중' : '예정');
+  return { id: pg.id, kind: 'task', date, endDate: end && end !== date ? end : null,
+    title: (P['Task']?.title || []).map(t => t.plain_text).join(''), category: '업무', done, status,
+    owners: (P['담당자']?.multi_select || []).map(o => o.name),
+    area: P['영역']?.select?.name || '',
+    memo: (P['상세']?.rich_text || []).map(t => t.plain_text).join('') };
 }
 
 function fromPage(pg) {
@@ -120,7 +142,7 @@ function fromPage(pg) {
 function toItem(pg) {
   const f = fromPage(pg), today = kstToday();
   const status = f.done ? '완료' : (f.date <= today && (f.endDate || f.date) >= today ? '진행중' : '예정');
-  return { id: pg.id, date: f.date, endDate: f.endDate && f.endDate !== f.date ? f.endDate : null,
+  return { id: pg.id, kind: 'schedule', date: f.date, endDate: f.endDate && f.endDate !== f.date ? f.endDate : null,
     title: f.title, category: f.category, done: f.done, status };
 }
 

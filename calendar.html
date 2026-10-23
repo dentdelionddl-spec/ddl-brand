@@ -6,7 +6,7 @@
 <title>일정 캘린더</title>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable.min.css" />
 <style>
-/* 외부 공개용 캘린더 — /api/schedule 결과만 그림 (운영페이지 캘린더와 같은 모양) */
+/* 외부 공개용 캘린더 — /api/schedule 결과만 그림 (운영페이지 캘린더와 같은 모양). 업무(kind:'task')는 눌러서 담당자·상세를 보기만 */
 :root{
   --ink:#121214; --mut:#7A8194; --line:#ECEDF1; --paper:#F4F5F9; --accent:#2563EB; --sun:#D2452F;
   --sans:'Pretendard Variable',Pretendard,-apple-system,BlinkMacSystemFont,system-ui,'Apple SD Gothic Neo','Malgun Gothic',sans-serif;
@@ -36,6 +36,11 @@ body{font-family:var(--sans);background:var(--paper);color:var(--ink);font-size:
 .ev.done{opacity:.5}
 .ev.done .t{text-decoration:line-through}
 .ev.done .o{background:currentColor}
+.ev.task{border-style:dashed}
+.ev.task .o{border-radius:3px}
+.ev .who{flex:none;font-weight:500;opacity:.7}
+.info dt{font-size:12px;color:var(--mut);margin:0 0 2px}
+.info dd{margin:0 0 12px;font-size:14px;white-space:pre-wrap;word-break:break-word}
 .bar{height:26px;margin:4px 0 0;display:flex;align-items:center}
 .bar::before{content:'';display:block;width:100%;height:3px;border-radius:2px;background:hsl(var(--h) 42% 82%)}
 .empty{padding:28px;text-align:center;color:var(--mut);font-size:13px}
@@ -109,10 +114,17 @@ body{font-family:var(--sans);background:var(--paper);color:var(--ink);font-size:
     </div>
   </form>
 </div>
+<div class="modal" id="tModal">
+  <div class="box">
+    <h3 id="tTitle"></h3>
+    <dl class="info" id="tInfo"></dl>
+    <div class="btns"><button type="button" class="save" id="tClose">닫기</button></div>
+  </div>
+</div>
 <div class="toast" id="toast"></div>
 <script>
 const BRAND=(new URLSearchParams(location.search).get('brand')||'').toLowerCase();
-const HUE={'EGC':262,'UGC':330,'온라인':200,'오프라인':122,'이벤트':18,'제품 업로드':160,'제품 입고':38};
+const HUE={'EGC':262,'UGC':330,'온라인':200,'오프라인':122,'이벤트':18,'제품 업로드':160,'제품 입고':38,'업무':228};
 const pad=n=>String(n).padStart(2,'0');
 const kst=new Date(Date.now()+9*3600e3), TODAY=kst.toISOString().slice(0,10);
 let ym=TODAY.slice(0,7), items=[], loaded=false, failed=false;
@@ -121,7 +133,9 @@ const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;',
 const endOf=e=>e.endDate||e.date;
 const spans=(e,ds)=>e.date<=ds && endOf(e)>=ds;
 const label=e=>(e.category?e.category+' · ':'')+e.title;
-const pill=e=>`<div class="ev ${e.done?'done':''}" style="--h:${HUE[e.category]??262}" title="${esc(label(e))}" data-open="${e.id}"><button class="o" data-chk="${e.id}" aria-label="완료 표시" aria-pressed="${!!e.done}"></button><span class="t">${esc(label(e))}</span></div>`;
+const pill=e=>e.kind==='task'
+  ? `<div class="ev task ${e.done?'done':''}" style="--h:${HUE[e.category]??262}" title="${esc(label(e))}${e.owners?.length?' · '+esc(e.owners.join(', ')):''}" data-task="${e.id}"><span class="o"></span><span class="t">${esc(label(e))}</span>${e.owners?.length?`<span class="who">${esc(e.owners.join(', '))}</span>`:''}</div>`
+  : `<div class="ev ${e.done?'done':''}" style="--h:${HUE[e.category]??262}" title="${esc(label(e))}" data-open="${e.id}"><button class="o" data-chk="${e.id}" aria-label="완료 표시" aria-pressed="${!!e.done}"></button><span class="t">${esc(label(e))}</span></div>`;
 const md=ds=>`${Number(ds.slice(5,7))}월 ${Number(ds.slice(8))}일`;
 
 function render(){
@@ -216,6 +230,17 @@ $('fCancel').onclick=closeForm;
 $('modal').onclick=ev=>{ if(ev.target.id==='modal') closeForm(); };
 $('add').onclick=()=>openForm(null, ym===TODAY.slice(0,7)?TODAY:`${ym}-01`);
 
+/* 업무: 보기 전용 상세 (고치기는 운영 페이지에서) */
+function openTask(e){
+  $('tTitle').textContent=e.title;
+  const row=(k,v)=>v?`<dt>${k}</dt><dd>${esc(v)}</dd>`:'';
+  $('tInfo').innerHTML=row('기간', md(e.date)+(e.endDate?' ~ '+md(e.endDate):''))+row('상태', e.done?'완료':(e.status||'예정'))
+    +row('담당자', (e.owners||[]).join(', '))+row('영역', e.area)+row('상세', e.memo);
+  $('tModal').classList.add('on');
+}
+$('tClose').onclick=()=>$('tModal').classList.remove('on');
+$('tModal').onclick=ev=>{ if(ev.target.id==='tModal') $('tModal').classList.remove('on'); };
+
 document.addEventListener('click',async ev=>{
   const chk=ev.target.closest('[data-chk]');
   if(chk){
@@ -227,6 +252,7 @@ document.addEventListener('click',async ev=>{
     return;
   }
   const add=ev.target.closest('[data-new]'); if(add) return openForm(null, add.dataset.new);
+  const task=ev.target.closest('[data-task]'); if(task){ const e=items.find(x=>x.id===task.dataset.task); if(e) openTask(e); return; }
   const open=ev.target.closest('[data-open]'); if(open){ const e=items.find(x=>x.id===open.dataset.open); if(e) openForm(e); }
 });
 
