@@ -1,0 +1,131 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>일정 캘린더</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable.min.css" />
+<style>
+/* 외부 공개용 캘린더 — /api/schedule 결과만 그림 (운영페이지 캘린더와 같은 모양) */
+:root{
+  --ink:#121214; --mut:#7A8194; --line:#ECEDF1; --paper:#F4F5F9; --accent:#2563EB; --sun:#D2452F;
+  --sans:'Pretendard Variable',Pretendard,-apple-system,BlinkMacSystemFont,system-ui,'Apple SD Gothic Neo','Malgun Gothic',sans-serif;
+}
+*{box-sizing:border-box}
+html,body{margin:0;padding:0}
+body{font-family:var(--sans);background:var(--paper);color:var(--ink);font-size:14px;line-height:1.5;-webkit-font-smoothing:antialiased;padding:16px}
+.card{background:rgba(255,255,255,.66);border-radius:12px;box-shadow:inset 0 1px 0 rgba(255,255,255,.9),inset 0 0 0 1px rgba(255,255,255,.55),0 20px 40px -26px rgba(20,22,28,.28),0 2px 6px -2px rgba(20,22,28,.06);overflow:hidden}
+.head{display:flex;align-items:center;justify-content:space-between;padding:16px 14px 12px;border-bottom:1px solid var(--line)}
+.head h1{margin:0;font-size:15px;font-weight:700}
+.nav{display:flex;align-items:center;background:#fff;border:1px solid var(--line);border-radius:8px}
+.nav button{border:0;background:none;width:30px;height:30px;cursor:pointer;color:var(--mut);font:inherit;font-size:15px}
+.nav button:hover{color:var(--ink)}
+.nav .today{width:auto;padding:0 10px;font-size:12px;font-weight:600;color:var(--ink);border-left:1px solid var(--line);border-right:1px solid var(--line)}
+.cal{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));padding:0 12px 12px}
+.dow{font-size:12px;color:var(--mut);padding:12px 10px 8px}
+.dow.sun{color:var(--sun)}
+.cell{min-height:118px;padding:6px 0 8px;border-top:1px solid var(--line);min-width:0}
+.cell.out .d{visibility:hidden}
+.d{display:inline-flex;align-items:center;justify-content:center;min-width:24px;height:24px;margin:0 0 4px 6px;font-size:13px;font-weight:600;border-radius:7px}
+.cell.sun .d{color:var(--sun)}
+.cell.past .d{color:#A3A8B5}
+.cell.today .d{background:var(--accent);color:#fff;padding:0 6px}
+.ev{display:flex;align-items:center;gap:5px;height:26px;margin:4px 3px 0;padding:0 7px;border-radius:6px;border:1px solid hsl(var(--h) 42% 82%);background:hsl(var(--h) 45% 95%);color:hsl(var(--h) 45% 28%);font-size:12px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ev .t{overflow:hidden;text-overflow:ellipsis}
+.ev .o{flex:none;width:12px;height:12px;border-radius:50%;border:1.5px solid currentColor;opacity:.55}
+.ev.done{opacity:.5}
+.ev.done .t{text-decoration:line-through}
+.ev.done .o{background:currentColor}
+.bar{height:26px;margin:4px 0 0;display:flex;align-items:center}
+.bar::before{content:'';display:block;width:100%;height:3px;border-radius:2px;background:hsl(var(--h) 42% 82%)}
+.empty{padding:28px;text-align:center;color:var(--mut);font-size:13px}
+/* 모바일: 일정 있는 날 + 오늘만 목록으로 */
+.list{display:none;padding:4px 14px 14px}
+.day{padding:12px 0;border-top:1px solid var(--line)}
+.day:first-child{border-top:0}
+.day h2{margin:0 0 6px;font-size:13px;font-weight:700}
+.day.today h2{color:var(--accent)}
+.day .ev{margin:6px 0 0;height:auto;min-height:30px;padding:6px 9px;white-space:normal}
+.day .sp{font-weight:500;opacity:.75;margin-left:4px}
+@media(max-width:700px){ body{padding:0} .card{border-radius:0} .cal{display:none} .list{display:block} }
+</style>
+</head>
+<body>
+<div class="card">
+  <div class="head">
+    <h1 id="title"></h1>
+    <div class="nav">
+      <button id="prev" aria-label="이전 달">‹</button>
+      <button id="now" class="today">오늘</button>
+      <button id="next" aria-label="다음 달">›</button>
+    </div>
+  </div>
+  <div class="cal" id="cal"></div>
+  <div class="list" id="list"></div>
+</div>
+<script>
+const BRAND=(new URLSearchParams(location.search).get('brand')||'').toLowerCase();
+const HUE={'EGC':262,'UGC':330,'온라인':200,'오프라인':122,'이벤트':18,'제품 업로드':160,'제품 입고':38};
+const pad=n=>String(n).padStart(2,'0');
+const kst=new Date(Date.now()+9*3600e3), TODAY=kst.toISOString().slice(0,10);
+let ym=TODAY.slice(0,7), items=[], loaded=false, failed=false;
+
+const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const endOf=e=>e.endDate||e.date;
+const spans=(e,ds)=>e.date<=ds && endOf(e)>=ds;
+const label=e=>(e.category?e.category+' · ':'')+e.title;
+const pill=e=>`<div class="ev ${e.status==='완료'?'done':''}" style="--h:${HUE[e.category]??262}" title="${esc(label(e))}"><i class="o"></i><span class="t">${esc(label(e))}</span></div>`;
+const md=ds=>`${Number(ds.slice(5,7))}월 ${Number(ds.slice(8))}일`;
+
+function render(){
+  const [y,m]=ym.split('-').map(Number);
+  document.getElementById('title').textContent=`${y}년 ${m}월`;
+  const dim=new Date(y,m,0).getDate(), lead=new Date(y,m-1,1).getDay();
+  const mine=items.filter(e=>e.date<=`${ym}-31` && endOf(e)>=`${ym}-01`)
+    .sort((a,b)=>a.date.localeCompare(b.date)||a.id.localeCompare(b.id));
+
+  /* PC: 달력. 기간 일정은 시작일에 카드, 이어지는 날엔 얇은 선 — 같은 줄에 쌓이도록 순서를 고정 */
+  let h=['일','월','화','수','목','금','토'].map((d,i)=>`<div class="dow ${i===0?'sun':''}">${d}</div>`).join('');
+  for(let i=0;i<lead;i++) h+=`<div class="cell out"><span class="d"></span></div>`;
+  for(let d=1;d<=dim;d++){
+    const ds=`${ym}-${pad(d)}`, dow=(lead+d-1)%7;
+    const evs=mine.filter(e=>spans(e,ds));
+    h+=`<div class="cell ${dow===0?'sun':''} ${ds<TODAY?'past':''} ${ds===TODAY?'today':''}"><span class="d">${d}</span>${
+      evs.map(e=>(e.date===ds||(d===1)||dow===0)?pill(e):`<div class="bar" style="--h:${HUE[e.category]??262}"></div>`).join('')}</div>`;
+  }
+  document.getElementById('cal').innerHTML=h;
+
+  /* 모바일: 일정 있는 날 + 오늘 */
+  let L='';
+  for(let d=1;d<=dim;d++){
+    const ds=`${ym}-${pad(d)}`, evs=mine.filter(e=>e.date===ds);
+    if(!evs.length && ds!==TODAY) continue;
+    const wd=['일','월','화','수','목','금','토'][new Date(y,m-1,d).getDay()];
+    L+=`<div class="day ${ds===TODAY?'today':''}"><h2>${md(ds)} ${wd}요일${ds===TODAY?' · 오늘':''}</h2>${
+      evs.map(e=>pill(e).replace('</span></div>',`${e.endDate?`<span class="sp">~ ${md(e.endDate)}</span>`:''}</span></div>`)).join('')||'<div class="empty" style="padding:4px 0;text-align:left">일정 없음</div>'}</div>`;
+  }
+  if(!mine.length) L=`<div class="empty">${failed?'일정을 불러오지 못했습니다':loaded?'이번 달 일정이 없습니다':'불러오는 중…'}</div>`;
+  document.getElementById('list').innerHTML=L;
+}
+
+async function load(){
+  try{
+    const r=await fetch('/api/schedule?brand='+encodeURIComponent(BRAND),{cache:'no-store'});
+    if(!r.ok) throw new Error(r.status);
+    items=(await r.json()).items||[]; failed=false;
+  }catch(e){ failed=!loaded; }
+  loaded=true; render();
+}
+
+const shift=n=>{ const [y,m]=ym.split('-').map(Number); const d=new Date(y,m-1+n,1); ym=`${d.getFullYear()}-${pad(d.getMonth()+1)}`; render(); };
+document.getElementById('prev').onclick=()=>shift(-1);
+document.getElementById('next').onclick=()=>shift(1);
+document.getElementById('now').onclick=()=>{ ym=TODAY.slice(0,7); render(); };
+
+render(); load();
+/* 운영페이지에서 고친 내용이 열어둔 화면에도 바로 보이도록 30초마다, 그리고 탭으로 돌아올 때 새로 불러옴 */
+setInterval(load,30000);
+document.addEventListener('visibilitychange',()=>{ if(!document.hidden) load(); });
+</script>
+</body>
+</html>
