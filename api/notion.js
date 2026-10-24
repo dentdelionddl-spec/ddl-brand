@@ -252,7 +252,8 @@ function header(req, name) {
   try { return decodeURIComponent(v); } catch { return v; }
 }
 function sameSecret(a, b) {
-  const h = s => createHash('sha256').update(String(s)).digest();
+  /* 앞뒤 공백, 맥/윈도 한글 조합 방식(NFD/NFC) 차이는 같은 값으로 봄 */
+  const h = s => createHash('sha256').update(String(s).normalize('NFC').trim()).digest();
   return timingSafeEqual(h(a), h(b));
 }
 const normName = s => String(s || '').toLowerCase().replace(/\(.*?\)/g, '').replace(/[\s\-_.()（）]/g, '');
