@@ -247,8 +247,9 @@ function isAllowedDb(id) {
 }
 
 function header(req, name) {
-  const v = req.headers[name];
-  return String(Array.isArray(v) ? v[0] : v || '').trim();
+  const v = String(Array.isArray(req.headers[name]) ? req.headers[name][0] : req.headers[name] || '').trim();
+  /* 브라우저가 한글 비밀번호를 인코딩해 보냄 — 인코딩 안 된 옛 값도 그대로 통과 */
+  try { return decodeURIComponent(v); } catch { return v; }
 }
 function sameSecret(a, b) {
   const h = s => createHash('sha256').update(String(s)).digest();

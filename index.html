@@ -4604,9 +4604,10 @@ async function api(payload, retried){
   if(!url) throw new Error('노션 프록시 주소가 없습니다');
   const key=adminKey();
   const headers={'Content-Type':'application/json'};
-  if(key) headers['X-Admin-Key']=key;
-  else if(SHARE_KEY) headers['X-Share-Key']=SHARE_KEY;
-  else if(EMBED&&EMBED.brand) headers['X-Embed-Brand']=EMBED.brand;
+  /* 헤더에는 한글을 못 실으니 인코딩해서 보냄 (서버에서 되돌림) */
+  if(key) headers['X-Admin-Key']=encodeURIComponent(key);
+  else if(SHARE_KEY) headers['X-Share-Key']=encodeURIComponent(SHARE_KEY);
+  else if(EMBED&&EMBED.brand) headers['X-Embed-Brand']=encodeURIComponent(EMBED.brand);
   const res=await fetch(url,{method:'POST',headers,body:JSON.stringify(payload)});
   const json=await res.json().catch(()=>({}));
   if(res.status===401 && !retried){
