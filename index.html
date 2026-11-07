@@ -4191,7 +4191,7 @@ function lsCalc(p,s){
 function lsRows(bid,s){
   const q=(s.q||'').trim().toLowerCase();
   let rows=productsOf(bid).filter(p=>{
-    if(q && !((p.name||'')+' '+(p.sku||'')+' '+(p.line||'')).toLowerCase().includes(q)) return false;
+    if(q && !((p.name||'')+' '+(p.sku||'')).toLowerCase().includes(q)) return false;
     if(s.kind && (p.kind||'기타')!==s.kind) return false;
     if(s.mat && (p.mat||'소재 미확인')!==s.mat) return false;
     if(s.st && (p.status||'기획')!==s.st) return false;
@@ -4205,23 +4205,22 @@ function lsRows(bid,s){
   }
   return rows;
 }
-const lsW=n=>n==null||n===''?'—':'₩'+won(Math.round(n));
+const lsW=n=>n==null||n===''?'—':won(Math.round(n));
 function lsRow(x){
   const {p,c,L}=x;
   const mulCls=c.mul==null?'':c.mul<3?'ls-bad':c.mul<4?'ls-mid':'ls-good';
   const stock=Number(p.stock||0), stTag=stock<=0?['품절','tag--urgent']:stock<10?['부족','tag--high']:['충분',''];
   return `<tr>
     <td><div class="ls-item">${p.img?`<img src="${esc(p.img)}" alt="" loading="lazy">`:'<span class="ls-noimg"></span>'}
-      <div><b>${esc(p.name)}</b>${p.line||p.opts?`<span class="ls-sub">${esc([p.line,p.opts].filter(Boolean).join(' · '))}</span>`:''}</div></div></td>
+      <div><b>${esc(p.name)}</b>${p.opts||p.plating?`<span class="ls-sub">${esc([p.opts,p.plating].filter(Boolean).join(' · '))}</span>`:''}</div></div></td>
     <td><span class="ls-kind ls-k-${esc(p.kind||'기타')}">${esc(p.kind||'기타')}</span></td>
     <td class="ls-mat">${esc(p.mat||'소재 미확인')}</td>
     <td class="mono ls-code">${esc(p.sku||'—')}</td>
-    <td><span class="ls-q">${esc(L.y||'—')} ${esc(L.q||'')}</span>${p.migrated?'<span class="ls-mig" title="카페24 이관분 — 실제 출시일 확인 필요">이관</span>':''}<span class="ls-sub">${esc(p.launch||'')}</span></td>
+    <td><span class="ls-q">${esc(L.y||'—')} ${esc(L.q||'')}</span><span class="ls-sub">${esc(p.launch||'')}</span></td>
     <td class="num">${lsW(c.inP||null)}</td>
     <td class="num">${lsW(c.cost)}</td>
     <td class="num ${mulCls}"><b>${c.mul==null?'—':c.mul.toFixed(1)+'배'}</b></td>
     <td class="num">${lsW(c.rec)}</td>
-    <td class="num ls-list">${c.list&&c.list!==c.price?lsW(c.list):''}</td>
     <td class="num"><b>${lsW(c.price||null)}</b></td>
     <td class="num">${c.contrib==null?'<span class="ls-sub">원가 미입력</span>':`<b class="${c.contrib<0?'ls-bad':'ls-good'}">${lsW(c.contrib)}</b><span class="ls-sub">${Math.round(c.cpct*100)}%</span>`}</td>
     <td class="num"><b>${c.maxd==null?'—':Math.round(c.maxd*100)+'%'}</b></td>
@@ -4237,7 +4236,7 @@ function lsBody(bid,s){
   const avgMul=withC.length?withC.reduce((a,r)=>a+r.c.mul,0)/withC.length:0;
   const avgPct=withC.length?withC.reduce((a,r)=>a+r.c.cpct,0)/withC.length:0;
   const stock=rows.reduce((a,r)=>a+Number(r.p.stock||0),0);
-  return {rows, html: rows.length? rows.map(lsRow).join('') : `<tr><td colspan="17"><div class="empty"><b>조건에 맞는 제품이 없습니다</b>필터를 바꿔 보세요.</div></td></tr>`,
+  return {rows, html: rows.length? rows.map(lsRow).join('') : `<tr><td colspan="16"><div class="empty"><b>조건에 맞는 제품이 없습니다</b>필터를 바꿔 보세요.</div></td></tr>`,
     sum:`<span><b>${rows.length}</b>개 품목</span><span>원가 입력 <b>${withC.length}</b></span><span>평균 실배수 <b>${avgMul?avgMul.toFixed(1)+'배':'—'}</b></span><span>평균 기여이익률 <b>${withC.length?Math.round(avgPct*100)+'%':'—'}</b></span><span>재고 합계 <b>${won(stock)}</b></span>`};
 }
 function productsView(){
@@ -4249,7 +4248,7 @@ function productsView(){
   const B=lsBody(b.id,s);
   return `<section class="card ls">
     <div class="ls-bar">
-      <label class="ls-search"><input type="search" id="ls_q" placeholder="품목명·품목코드·라인 검색" value="${esc(s.q)}"></label>
+      <label class="ls-search"><input type="search" id="ls_q" placeholder="품목명·품목코드 검색" value="${esc(s.q)}"></label>
       <select id="ls_mat" data-native>${o(LS_MATS,s.mat,'소재 전체')}</select>
       <select id="ls_st" data-native>${o(PSTATUS,s.st,'상태 전체')}</select>
       <select id="ls_yr" data-native>${o(years,s.yr,'출시연도 전체')}</select>
@@ -4277,7 +4276,7 @@ function productsView(){
     </div>
     <div class="ls-sum" id="ls_sum">${B.sum}</div>
     <div class="ls-wrap"><table class="ls-t">
-      <thead><tr>${th('name','품목')}${th('kind','종류')}${th('mat','소재')}${th('','품목코드')}${th('launch','출시')}${th('inP','입고가',1)}${th('','원가',1)}${th('mul','실배수',1)}${th('','권장정가',1)}${th('','정가',1)}${th('','판매가',1)}${th('contrib','기여이익',1)}${th('maxd','최대할인',1)}${th('stock','현재고',1)}${th('','상태')}${th('upd','최종수정일')}<th></th></tr></thead>
+      <thead><tr>${th('name','품목')}${th('kind','종류')}${th('mat','소재')}${th('','품목코드')}${th('launch','출시')}${th('inP','입고가',1)}${th('','원가',1)}${th('mul','실배수',1)}${th('','권장정가',1)}${th('','판매가',1)}${th('contrib','기여이익',1)}${th('maxd','최대할인',1)}${th('stock','현재고',1)}${th('','상태')}${th('upd','최종수정일')}<th></th></tr></thead>
       <tbody id="ls_body">${B.html}</tbody></table></div>
   </section>`;
 }
@@ -4303,9 +4302,9 @@ function lsBind(){
 }
 function lsCsv(){
   const b=brandOf(UI.brand); const s=lsState(); const rows=lsRows(b.id,s);
-  const H=['품목','종류','소재','라인','옵션','품목코드','출시연도','출시분기','출시일','카페24 이관','입고가','원가','실배수','권장정가','정가','판매가','기여이익','기여이익률','최대할인','현재고','상태','최종수정일'];
+  const H=['품목','종류','소재','사이즈','도금','품목코드','출시연도','출시분기','출시일','입고가','원가','실배수','권장정가','판매가','기여이익','기여이익률','최대할인','현재고','상태','최종수정일'];
   const q=v=>{ const t=v==null?'':String(v); return /[",\n]/.test(t)?'"'+t.replace(/"/g,'""')+'"':t; };
-  const lines=[H.join(',')].concat(rows.map(({p,c,L})=>[p.name,p.kind,p.mat,p.line,p.opts,p.sku,L.y,L.q,p.launch,p.migrated?'Y':'',c.inP||'',c.cost??'',c.mul!=null?c.mul.toFixed(2):'',c.rec??'',c.list||'',c.price||'',c.contrib??'',c.cpct!=null&&c.contrib!=null?Math.round(c.cpct*100)+'%':'',c.maxd!=null?Math.round(c.maxd*100)+'%':'',p.stock??'',p.status,p.updated].map(q).join(',')));
+  const lines=[H.join(',')].concat(rows.map(({p,c,L})=>[p.name,p.kind,p.mat,p.opts,p.plating,p.sku,L.y,L.q,p.launch,c.inP||'',c.cost??'',c.mul!=null?c.mul.toFixed(2):'',c.rec??'',c.price||'',c.contrib??'',c.cpct!=null&&c.contrib!=null?Math.round(c.cpct*100)+'%':'',c.maxd!=null?Math.round(c.maxd*100)+'%':'',p.stock??'',p.status,p.updated].map(q).join(',')));
   const blob=new Blob(['﻿'+lines.join('\n')],{type:'text/csv;charset=utf-8'});
   const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download=`${b.name}_라인시트_${TODAY}.csv`; document.body.appendChild(a); a.click(); setTimeout(()=>{ URL.revokeObjectURL(a.href); a.remove(); },500);
 }
@@ -4643,7 +4642,6 @@ function prodModal(id){
         <label class="f"><span>종류</span><select id="p_kind"><option value="">선택</option>${opt(LS_KINDS,p.kind)}</select></label>
         <label class="f"><span>소재</span><select id="p_mat"><option value="">선택</option>${opt(LS_MATS,p.mat)}</select></label>
         <label class="f"><span>입고가</span><input type="number" id="p_in" value="${p.inPrice||''}" step="100" /></label>
-        <label class="f"><span>정가</span><input type="number" id="p_list" value="${p.listPrice||''}" step="1000" /></label>
         <label class="f"><span>입고 예정일</span><input type="date" id="p_eta" value="${p.eta||''}" /></label>
         <label class="f"><span>출시일 (연도·분기 자동)</span><input type="date" id="p_launch" value="${p.launch||''}" /></label>
       </div>
@@ -4652,8 +4650,8 @@ function prodModal(id){
       const v=$('#p_name').value.trim(); if(!v){ toast('제품명을 입력하세요'); return false; }
       p.name=v; p.sku=$('#p_sku').value.trim(); p.status=$('#p_status').value;
       p.price=$('#p_price').value; p.stock=$('#p_stock').value; p.eta=$('#p_eta').value; p.memo=$('#p_memo').value.trim();
-      p.kind=$('#p_kind').value; p.mat=$('#p_mat').value; p.inPrice=$('#p_in').value; p.listPrice=$('#p_list').value;
-      if($('#p_launch').value!==(p.launch||'')){ p.launch=$('#p_launch').value; p.year=''; p.quarter=''; p.migrated=false; }
+      p.kind=$('#p_kind').value; p.mat=$('#p_mat').value; p.inPrice=$('#p_in').value;
+      if($('#p_launch').value!==(p.launch||'')){ p.launch=$('#p_launch').value; p.year=''; p.quarter=''; }
       p.dirty=true; if(isNew) DB.products.push(p);
     },
     onDelete:isNew?null:()=>{ notionDrop(DB.products.find(x=>x.id===id)); DB.products=DB.products.filter(x=>x.id!==id); }
@@ -4773,7 +4771,6 @@ const KIND={
       ...(p.eta?{'입고예정':{date:{start:p.eta}}}:{}),
       ...(p.kind?{'종류':{select:{name:p.kind}}}:{}), ...(p.mat?{'소재':{select:{name:p.mat}}}:{}),
       ...(p.inPrice!==undefined&&p.inPrice!==''?{'입고가':{number:Number(p.inPrice)}}:{}),
-      ...(p.listPrice!==undefined&&p.listPrice!==''?{'정가':{number:Number(p.listPrice)}}:{}),
       ...(p.launch?{'출시일':{date:{start:p.launch}},'출시연도':{select:{name:p.launch.slice(0,4)}},'출시분기':{select:{name:'Q'+(Math.floor((+p.launch.slice(5,7)-1)/3)+1)}}}:{}),
       '로컬ID':{rich_text:[{text:{content:p.id}}]} }) }
 };
@@ -4964,10 +4961,10 @@ const brandByName=nm=>{
       if(kind==='products'){ Object.assign(rec,{brandId:brandByName(sel(P['브랜드'])), name:ttl(P['제품명']),
         sku:txt(P['SKU']), status:sel(P['상태'])||'기획', price:P['판매가']?.number||'', stock:P['재고']?.number??'',
         eta:P['입고예정']?.date?.start||'',
-        kind:sel(P['종류'])||'', mat:sel(P['소재'])||'', color:sel(P['컬러'])||'', line:txt(P['라인']), opts:txt(P['옵션']),
-        stones:(P['스톤']?.multi_select||[]).map(x=>x.name), listPrice:P['정가']?.number||'', inPrice:P['입고가']?.number||'',
+        kind:sel(P['종류'])||'', mat:sel(P['소재'])||'', color:sel(P['컬러'])||'', opts:txt(P['사이즈']), plating:txt(P['도금']),
+        inPrice:P['입고가']?.number||'',
         launch:P['출시일']?.date?.start||'', year:sel(P['출시연도'])||'', quarter:sel(P['출시분기'])||'',
-        migrated:!!P['카페24 이관']?.checkbox, img:P['이미지']?.url||'', link:P['쇼피파이 링크']?.url||'',
+        img:P['이미지']?.url||'',
         updated:P['최종수정일']?.date?.start||''}); }
       n++;
     }
