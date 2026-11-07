@@ -4245,7 +4245,7 @@ function productsView(){
   const cnt=k=>all.filter(p=>(p.kind||'기타')===k).length;
   const years=[...new Set(all.map(p=>lsQ(p).y).filter(Boolean))].sort();
   const o=(arr,v,ph)=>`<option value="">${ph}</option>`+arr.map(a=>`<option value="${esc(a)}" ${a===v?'selected':''}>${esc(a)}</option>`).join('');
-  const th=(k,t,r)=>`<th class="${k?'ls-sortable':''}${s.sort===k&&k?' is-on':''}${r?' ls-r':''}"${k?` data-lssort="${k}"`:''}>${t}${s.sort===k?(s.dir>0?' ↑':' ↓'):''}</th>`;
+  const th=(k,t,r)=>`<th class="${k?'ls-sortable':''}${s.sort===k&&k?' is-on':''}${r?' ls-r':''}"${k?` data-lssort="${k}"`:''}>${t}${k&&s.sort===k?(s.dir>0?' ↑':' ↓'):''}</th>`;
   const B=lsBody(b.id,s);
   return `<section class="card ls">
     <div class="ls-bar">
