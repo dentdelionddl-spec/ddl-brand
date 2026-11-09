@@ -2355,6 +2355,10 @@ html body .calx .cell .ev.ev--mid,html body .calx .cell .ev.ev--end,html body .c
 #view .dt.sv-grid tr.is-we .sv-day{color:#8A8F98}
 #view .dt.sv-grid tfoot td{font-weight:700;color:var(--ink);border-top:1px solid rgba(26,29,35,.85) !important;border-bottom:0 !important;padding:12px 12px !important}
 #view .dt.sv-grid tfoot td.sv-cc{font-weight:500;color:#6E737C}
+#keybar{position:sticky;top:0;z-index:999;display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding:10px 16px;background:#1A1D23;color:#fff;font-size:13px}
+#keybar span{flex:1 1 260px}
+#keybar input{height:34px;padding:0 12px;border-radius:8px;border:0;min-width:200px;font:inherit;color:#1A1D23}
+#keybar button{height:34px;padding:0 16px;border-radius:8px;border:0;background:#D4FF00;color:#1A1D23;font:600 13px/1 inherit;cursor:pointer}
 </style>
 </head>
 <body>
@@ -5166,8 +5170,7 @@ async function api(payload, retried){
   if(res.status===401 && !retried){
     /* 그 사이 다른 요청에서 비밀번호를 새로 받았으면 그대로 다시 시도 */
     if(adminKey() && adminKey()!==key) return api(payload,true);
-    if(key) setAdminKey('');
-    if(await askAdminKey()) return api(payload,true);
+    if(!key){ keyBar(); } else if(await askAdminKey()) return api(payload,true); /* 비밀번호가 아예 없으면 상단 입력 칸으로 */
   }
   if(!res.ok) throw new Error(json.message||`요청 실패 (${res.status})`);
   return json;
@@ -5212,7 +5215,28 @@ function autoSync(){
 async function bootSync(){
   if(!DB.settings.workerUrl || DB.settings.auto===false) return;
   try{ await pullAll(true); }catch(e){}
-  if(!adminKey() && !SHARE_KEY && !EMBED) toast('관리자 비밀번호가 없어 노션을 읽고 쓸 수 없어요 · 설정 > 노션 동기화에서 입력하세요',6000);
+  keyBar();
+}
+/* 이 브라우저에 관리자 비밀번호가 없으면 화면 맨 위에 입력 칸 — 한 번 넣으면 이 브라우저에 저장 */
+function keyBar(){
+  const old=document.getElementById('keybar');
+  if(adminKey() || SHARE_KEY || EMBED || !DB.settings.workerUrl){ if(old) old.remove(); return; }
+  if(old) return;
+  const bar=document.createElement('div'); bar.id='keybar';
+  bar.innerHTML=`<span>이 브라우저는 노션과 연결되지 않았어요. 관리자 비밀번호를 한 번만 넣어 주세요.</span>
+    <input type="password" id="keybar_in" placeholder="관리자 비밀번호" autocomplete="current-password">
+    <button type="button" id="keybar_ok">연결</button>`;
+  document.body.prepend(bar);
+  const go=async()=>{
+    const v=document.getElementById('keybar_in').value.trim(); if(!v) return;
+    setAdminKey(v); __keyDeclined=false;
+    try{ await api({action:'ping'},true); }catch(e){ setAdminKey(''); toast('비밀번호가 맞지 않아요: '+e.message,3200); return; }
+    bar.remove(); toast('노션과 연결됐어요. 내려받는 중…',2000);
+    try{ await pullAll(false); }catch(e){}
+    autoSync();
+  };
+  document.getElementById('keybar_ok').onclick=go;
+  document.getElementById('keybar_in').onkeydown=e=>{ if(e.key==='Enter') go(); };
 }
 async function pushBrands(){
   const s=DB.settings; const dbId=s.db&&s.db.config;
@@ -5272,6 +5296,11 @@ const brandByName=nm=>{
     for(const pg of (res.results||[])){
       const P=pg.properties||{}; const lid=txt(P['로컬ID'])||pg.id;
       let rec=DB[kind].find(r=>r.id===lid) || DB[kind].find(r=>r.notionId && r.notionId===pg.id);
+      if(!rec && kind==='daily'){ /* 브라우저에만 있던 같은 날짜·채널 행은 노션 행과 합침 (중복 생성 방지) */
+        const bid=brandByName(sel(P['브랜드'])), dt=P['날짜']?.date?.start||'', ch=sel(P['채널']);
+        rec=DB.daily.find(r=>!r.notionId && r.brandId===bid && r.date===dt && r.channel===ch);
+        if(rec){ rec.id=lid; rec.dirty=false; }
+      }
       if(!rec){ rec={id:lid}; DB[kind].push(rec); }
       rec.notionId=pg.id;
       if(kind==='contents'){ Object.assign(rec,{brandId:brandByName(sel(P['브랜드'])),type:sel(P['유형'])||'피드',
