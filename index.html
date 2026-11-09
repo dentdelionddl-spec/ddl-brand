@@ -2130,70 +2130,108 @@ html body .m .mstrip__d{flex:0 0 calc((100vw - 32px - 8px) / 7);height:auto;padd
 /* 캘린더 카드와 '10월 6일 화요일' 사이 여백 */
 html body .m .mv > .mday__hd{margin-top:14px !important}
 
-/* ---------- 제품 라인시트 ---------- */
-.ls{padding:16px !important}
-.ls-bar{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
-.ls-search{flex:1 1 240px;min-width:200px}
-.ls-search input{width:100%;height:36px;border:1px solid var(--line);border-radius:10px;padding:0 12px;font:inherit;font-size:13px;background:#fff}
-.ls-bar select{height:36px;border:1px solid var(--line);border-radius:10px;padding:0 10px;font:inherit;font-size:13px;background:#fff;color:var(--ink)}
-.ls-xls{background:#FBF4E8 !important;color:#8A5A12 !important;border:1px solid #EBD9B8 !important}
-.ls-chips{display:flex;flex-wrap:wrap;gap:6px;margin:12px 0}
-.ls-chip{height:30px;padding:0 12px;border-radius:999px;border:1px solid var(--line);background:#fff;font:inherit;font-size:12.5px;color:var(--ink2);cursor:pointer}
-.ls-chip i{font-style:normal;color:var(--mut);margin-left:4px;font-size:11.5px}
-.ls-chip.is-on{background:#111214;color:#fff;border-color:#111214}
-.ls-chip.is-on i{color:rgba(255,255,255,.65)}
-.ls-calc{border:1px solid #EFE6D4;background:#FCFAF5;border-radius:12px;padding:12px 16px;display:grid;gap:10px}
-.ls-calc__row{display:flex;flex-wrap:wrap;gap:8px 16px;align-items:center;font-size:12.5px;color:var(--ink2)}
-.ls-calc__row + .ls-calc__row{border-top:1px dashed #EADFC8;padding-top:10px}
-.ls-calc__t{color:#8A5A12;font-size:12.5px;min-width:64px}
-.ls-calc label{display:inline-flex;align-items:center;gap:6px}
-.ls-calc select{height:30px;border:1px solid var(--line);border-radius:8px;padding:0 8px;font:inherit;font-size:12.5px;background:#fff}
-.ls-n{width:52px;height:28px;border:1px solid var(--line);border-radius:8px;padding:0 6px;font:inherit;font-size:12.5px;text-align:right;background:#fff}
-.ls-n--w{width:68px}
-.ls-range input{width:180px;accent-color:#B07F26}
-.ls-range b{min-width:34px}
-.ls-mult{background:#fff;border:1px solid var(--line);border-radius:8px;padding:2px 4px 2px 10px}
-.ls-mult .ls-n{border:0;width:40px}
-.ls-note{color:var(--mut);font-size:11.5px}
-.ls-sum{display:flex;flex-wrap:wrap;gap:6px 18px;font-size:12px;color:var(--mut);margin:14px 2px 8px}
-.ls-sum b{color:var(--ink)}
-.ls-wrap{overflow-x:auto;border:1px solid var(--line);border-radius:12px;background:#fff}
-.ls-t{width:100%;border-collapse:collapse;font-size:12.5px;min-width:1500px}
-.ls-t th{position:sticky;top:0;background:#FAFAF8;text-align:left;font-size:11px;font-weight:600;color:var(--mut);padding:10px 10px;border-bottom:1px solid var(--line);white-space:nowrap}
-.ls-t td{padding:10px 10px;border-bottom:1px solid var(--line2);vertical-align:middle;white-space:nowrap}
-.ls-t tr:hover td{background:#FAFBFD}
-.ls-t .num{text-align:right;font-variant-numeric:tabular-nums}
-.ls-sortable{cursor:pointer}.ls-sortable:hover,.ls-sortable.is-on{color:var(--ink)}
-.ls-item{display:flex;align-items:center;gap:10px;min-width:260px}
-.ls-item img,.ls-noimg{width:36px;height:36px;border-radius:8px;object-fit:cover;background:#F1F2F5;flex:none}
-.ls-item b{display:block;font-weight:600;color:var(--ink)}
-.ls-sub{display:block;font-size:11px;color:var(--mut);font-weight:400;max-width:280px;overflow:hidden;text-overflow:ellipsis}
-.ls-sub2{color:var(--mut);font-size:11.5px}
-.ls-code{font-size:11.5px;color:var(--ink2)}
-.ls-mat{color:var(--ink2)}
-.ls-kind{display:inline-block;padding:3px 9px;border-radius:999px;font-size:11px;font-weight:600;border:1px solid}
-.ls-k-반지{background:#EEF3FD;color:#2E6BE6;border-color:#D3E0FA}
-.ls-k-귀걸이{background:#FDF3E7;color:#B5671A;border-color:#F3DDC1}
-.ls-k-목걸이{background:#F3EFFC;color:#6D4FC9;border-color:#E0D7F6}
-.ls-k-팔찌{background:#EAF6F1;color:#11845B;border-color:#CBE8DB}
-.ls-k-기타{background:#F2F3F5;color:#6B7080;border-color:#E3E5EA}
-.ls-q{display:inline-block;font-weight:600;color:var(--ink)}
-.ls-mig{display:inline-block;margin-left:6px;font-size:10px;padding:1px 6px;border-radius:6px;background:var(--warn-bg,#FEF4E3);color:var(--warn,#9A6B0E)}
-.ls-list{color:var(--mut);text-decoration:line-through}
-.ls-bad{color:var(--alert,#D2452F)}.ls-mid{color:#C27A12}.ls-good{color:var(--ok,#11845B)}
-@media (max-width:720px){ .ls{padding:12px !important} .ls-range input{width:120px} }
-.ls label{display:inline-flex !important;width:auto !important;margin:0 !important;flex-direction:row !important;align-items:center;gap:6px;font-size:12.5px;color:var(--ink2);white-space:nowrap}
-.ls .ls-search{display:block !important;flex:1 1 240px !important}
-.ls input,.ls select{width:auto !important;min-height:0 !important;margin:0 !important;box-shadow:none !important}
-.ls .ls-search input{width:100% !important}
-.ls .ls-bar select{width:auto !important;flex:0 0 auto}
-.ls .ls-n{width:52px !important;height:28px !important;padding:0 6px !important}
-.ls .ls-n--w{width:68px !important}
-.ls .ls-mult .ls-n{width:40px !important}
-.ls .ls-range input{width:180px !important;height:auto !important;padding:0 !important;border:0 !important;background:none !important}
-.ls .ls-note{display:inline-flex;flex-wrap:wrap;align-items:center;gap:4px}
-.ls .ls-t th{text-align:left !important}
-.ls .ls-t th.ls-r,.ls .ls-t td.num{text-align:right !important}
+/* ---------- 제품 라인시트 (흰 카드 · 얇은 선 · 라벨/값 정렬) ---------- */
+#view .pv{--pv-line:#ECEEF3;--pv-line2:#F3F4F8;--pv-ink:#14161C;--pv-ink2:#4A4F5C;--pv-mut:#8A8FA0;--pv-acc:#6A4CF5;--pv-acc-bg:#F4F1FF;
+  --pv-ok:#12925F;--pv-warn:#C27A12;--pv-bad:#D2452F;display:grid;gap:16px;color:var(--pv-ink)}
+#view .pv *{box-sizing:border-box}
+#view .pv-hd{display:flex;align-items:flex-end;justify-content:space-between;gap:12px;flex-wrap:wrap}
+#view .pv-hd h2{margin:0;font-size:20px;font-weight:700;letter-spacing:-.01em}
+#view .pv-hd p{margin:4px 0 0;font-size:12.5px;color:var(--pv-mut)}
+#view .pv-actions{display:flex;gap:8px}
+#view .pv-btn{all:unset;box-sizing:border-box;display:inline-flex;align-items:center;gap:6px;height:36px;padding:0 14px;border-radius:10px;font-size:13px;font-weight:600;
+  color:var(--pv-ink);background:#fff;border:1px solid var(--pv-line);cursor:pointer;transition:background .15s,border-color .15s}
+#view .pv-btn:hover{background:#F8F8FB;border-color:#DFE2EA}
+#view .pv-btn svg{width:15px;height:15px;stroke:currentColor;fill:none;stroke-width:1.8}
+#view .pv-btn--pri{background:var(--pv-acc);border-color:var(--pv-acc);color:#fff}
+#view .pv-btn--pri:hover{background:#5B3DE6;border-color:#5B3DE6}
+#view .pv-card{background:#fff;border:1px solid var(--pv-line);border-radius:14px;box-shadow:0 1px 2px rgba(16,20,32,.03)}
+#view .pv-card__hd{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:14px 18px;border-bottom:1px solid var(--pv-line2)}
+#view .pv-card__hd h3{margin:0;font-size:13.5px;font-weight:650}
+#view .pv-card__hd small{font-size:11.5px;color:var(--pv-mut)}
+#view .pv-card__bd{padding:6px 18px 12px}
+#view .pv{min-width:0}
+#view .pv-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:16px;align-items:start;min-width:0}
+#view .pv-card{min-width:0}
+#view .pv-kv{display:flex;align-items:center;justify-content:space-between;gap:12px;min-height:44px;padding:6px 0;border-bottom:1px solid var(--pv-line2);font-size:13px}
+#view .pv-kv:last-child{border-bottom:0}
+#view .pv-kv > span{color:var(--pv-mut);font-size:12.5px;white-space:nowrap}
+#view .pv-kv > b{font-weight:550;font-variant-numeric:tabular-nums}
+#view .pv-field{display:inline-flex;align-items:center;height:32px;border:1px solid var(--pv-line);border-radius:8px;background:#fff;overflow:hidden;transition:border-color .15s,box-shadow .15s}
+#view .pv-field:focus-within{border-color:var(--pv-acc);box-shadow:0 0 0 3px var(--pv-acc-bg)}
+#view .pv-field input{all:unset;box-sizing:border-box;width:64px;height:100%;padding:0 4px 0 10px;text-align:right;font-size:13px;font-variant-numeric:tabular-nums;color:var(--pv-ink)}
+#view .pv-field--w input{width:84px}
+#view .pv-field i{font-style:normal;font-size:12px;color:var(--pv-mut);padding:0 10px 0 2px}
+#view .pv-field input::-webkit-inner-spin-button{display:none}
+#view .pv select{appearance:none;-webkit-appearance:none;width:auto !important;min-width:0;height:36px !important;margin:0 !important;padding:0 32px 0 12px !important;border:1px solid var(--pv-line) !important;border-radius:10px !important;
+  background:#fff url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M1 1l4 4 4-4' fill='none' stroke='%238A8FA0' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E") no-repeat right 12px center !important;
+  font:inherit;font-size:13px !important;color:var(--pv-ink);box-shadow:none !important;cursor:pointer}
+#view .pv select:focus{border-color:var(--pv-acc) !important;box-shadow:0 0 0 3px var(--pv-acc-bg) !important;outline:none}
+#view .pv-kv select{height:32px !important;border-radius:8px !important}
+#view .pv-slider{display:flex;align-items:center;gap:10px}
+#view .pv-slider input[type=range]{width:130px;accent-color:var(--pv-acc);margin:0}
+#view .pv-slider b{min-width:36px;text-align:right;font-weight:600;font-variant-numeric:tabular-nums}
+#view .pv-note{margin:10px 0 2px;font-size:11.5px;color:var(--pv-mut);line-height:1.5}
+/* 손익 구조 (선택한 제품) */
+#view .pv-break .pv-card__hd{gap:10px;justify-content:flex-start}
+#view .pv-thumb{width:32px;height:32px;border-radius:8px;object-fit:cover;background:#F1F2F6;flex:none}
+#view .pv-break__name{min-width:0}
+#view .pv-break__name h3{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#view .pv-break__name small{display:block}
+#view .pv-line{display:flex;justify-content:space-between;gap:12px;padding:7px 0;font-size:13px;font-variant-numeric:tabular-nums}
+#view .pv-line span{color:var(--pv-mut)}
+#view .pv-line b{font-weight:500}
+#view .pv-line--sub{border-top:1px solid var(--pv-line2);margin-top:4px;padding-top:11px}
+#view .pv-line--sub span,#view .pv-line--sub b{color:var(--pv-ink);font-weight:600}
+#view .pv-line--minus b{color:var(--pv-ink2)}
+#view .pv-total{display:flex;justify-content:space-between;align-items:baseline;margin-top:6px;padding-top:12px;border-top:1px solid var(--pv-line)}
+#view .pv-total span{font-size:13px;font-weight:650}
+#view .pv-total b{font-size:18px;font-weight:700;font-variant-numeric:tabular-nums}
+#view .pv-total em{font-style:normal;font-size:12px;font-weight:600;margin-left:6px;padding:2px 7px;border-radius:6px;background:#EAF7F1;color:var(--pv-ok)}
+#view .pv-total.is-bad b{color:var(--pv-bad)} #view .pv-total.is-bad em{background:#FDECEA;color:var(--pv-bad)}
+#view .pv-hint{margin-top:10px;padding:9px 11px;border-radius:8px;background:#F8F8FB;font-size:12px;color:var(--pv-ink2)}
+#view .pv-empty{padding:28px 6px;text-align:center;font-size:12.5px;color:var(--pv-mut)}
+/* 목록 */
+#view .pv-list__hd{display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding:14px 18px;border-bottom:1px solid var(--pv-line2)}
+#view .pv-seg{display:inline-flex;padding:3px;border-radius:10px;background:#F3F4F8;gap:2px}
+#view .pv-seg button{all:unset;box-sizing:border-box;height:30px;padding:0 12px;border-radius:8px;font-size:12.5px;font-weight:550;color:var(--pv-ink2);cursor:pointer;white-space:nowrap}
+#view .pv-seg button i{font-style:normal;color:var(--pv-mut);margin-left:5px;font-size:11.5px;font-weight:500}
+#view .pv-seg button.is-on{background:#fff;color:var(--pv-ink);box-shadow:0 1px 2px rgba(16,20,32,.08),0 0 0 1px rgba(16,20,32,.04)}
+#view .pv-search{position:relative;flex:1 1 200px;min-width:180px;max-width:320px;margin-left:auto}
+#view .pv-search svg{position:absolute;left:11px;top:50%;width:15px;height:15px;transform:translateY(-50%);stroke:var(--pv-mut);fill:none;stroke-width:1.8}
+#view .pv-search input{all:unset;box-sizing:border-box;width:100%;height:36px;padding:0 12px 0 34px;border:1px solid var(--pv-line);border-radius:10px;font-size:13px;background:#fff;color:var(--pv-ink)}
+#view .pv-search input:focus{border-color:var(--pv-acc);box-shadow:0 0 0 3px var(--pv-acc-bg)}
+#view .pv-kpis{display:grid;grid-template-columns:repeat(5,1fr);border-bottom:1px solid var(--pv-line2)}
+#view .pv-kpi{padding:14px 18px}
+#view .pv-kpi + .pv-kpi{border-left:1px solid var(--pv-line2)}
+#view .pv-kpi span{display:block;font-size:11.5px;color:var(--pv-mut)}
+#view .pv-kpi b{display:block;margin-top:4px;font-size:17px;font-weight:650;font-variant-numeric:tabular-nums}
+@media (max-width:720px){ #view .pv-kpis{grid-template-columns:repeat(2,1fr)} #view .pv-kpi + .pv-kpi{border-left:0} }
+#view .pv-tw{overflow-x:auto}
+#view .pv-t{width:100%;border-collapse:collapse;min-width:1360px;font-size:13px}
+#view .pv-t th{position:sticky;top:0;z-index:1;background:#FBFBFD;padding:11px 12px !important;font-size:11.5px !important;font-weight:550 !important;color:var(--pv-mut) !important;text-align:left;white-space:nowrap;border-bottom:1px solid var(--pv-line)}
+#view .pv-t th.r,#view .pv-t td.r{text-align:right !important}
+#view .pv-t th[data-lssort]{cursor:pointer;user-select:none}
+#view .pv-t th[data-lssort]:hover,#view .pv-t th.is-on{color:var(--pv-ink) !important}
+#view .pv-t td{padding:12px 12px;border-bottom:1px solid var(--pv-line2);vertical-align:middle;white-space:nowrap;font-variant-numeric:tabular-nums}
+#view .pv-t tbody tr{cursor:pointer;transition:background .12s}
+#view .pv-t tbody tr:hover td{background:#FAFAFD}
+#view .pv-t tbody tr.is-sel td{background:var(--pv-acc-bg)}
+#view .pv-t tbody tr.is-sel td:first-child{box-shadow:inset 3px 0 0 var(--pv-acc)}
+#view .pv-t tbody tr:last-child td{border-bottom:0}
+#view .pv-item{display:flex;align-items:center;gap:12px;min-width:250px}
+#view .pv-item img,#view .pv-item .pv-noimg{width:40px;height:40px;border-radius:10px;object-fit:cover;background:#F1F2F6;flex:none;border:1px solid var(--pv-line2)}
+#view .pv-item b{display:block;font-weight:600;max-width:260px;overflow:hidden;text-overflow:ellipsis}
+#view .pv-sub{display:block;margin-top:2px;font-size:11.5px;color:var(--pv-mut);font-weight:400;max-width:260px;overflow:hidden;text-overflow:ellipsis}
+#view .pv-dot{display:inline-flex;align-items:center;gap:6px;font-size:12.5px;color:var(--pv-ink2)}
+#view .pv-dot::before{content:'';width:6px;height:6px;border-radius:50%;background:var(--c,#B7BBC7)}
+#view .pv-code{font-family:var(--mono);font-size:12px;color:var(--pv-ink2)}
+#view .pv-pill{display:inline-flex;align-items:center;gap:5px;height:22px;padding:0 8px;border-radius:6px;font-size:11.5px;font-weight:600;background:#F2F3F7;color:var(--pv-ink2)}
+#view .pv-pill::before{content:'';width:5px;height:5px;border-radius:50%;background:currentColor;opacity:.8}
+#view .pv-pill--ok{background:#EAF7F1;color:var(--pv-ok)} #view .pv-pill--warn{background:#FEF4E3;color:var(--pv-warn)} #view .pv-pill--bad{background:#FDECEA;color:var(--pv-bad)}
+#view .pv-bad{color:var(--pv-bad) !important}#view .pv-mid{color:var(--pv-warn) !important}#view .pv-good{color:var(--pv-ok) !important}
+#view .pv-edit{all:unset;cursor:pointer;width:30px;height:30px;border-radius:8px;display:inline-flex;align-items:center;justify-content:center;color:var(--pv-mut)}
+#view .pv-edit:hover{background:#F1F2F6;color:var(--pv-ink)}
+#view .pv-edit svg{width:15px;height:15px;stroke:currentColor;fill:none;stroke-width:1.8}
 </style>
 </head>
 <body>
@@ -4168,24 +4206,42 @@ function salesView(){
 /* ---------- 제품 (라인시트) ---------- */
 const LS_KINDS=['반지','귀걸이','목걸이','팔찌','기타'];
 const LS_MATS=['14K-18K','925 실버','서지컬 스틸','신주·브라스','소재 미확인'];
-const LS_CH={'자사몰':100,'29CM':70,'W컨셉':68,'ZVZO':75,'쿠팡':85,'오프라인 팝업':96};
-const LS_DEF={q:'',kind:'',mat:'',st:'',yr:'',qt:'',ch:'자사몰',settle:100,disc:0,pack:3000,extra:21,target:25,
-  mult:{'14K-18K':2,'925 실버':4,'서지컬 스틸':6,'신주·브라스':6,'소재 미확인':6},sort:'',dir:1};
-function lsState(){ if(!UI.ls||typeof UI.ls!=='object') UI.ls={}; for(const k in LS_DEF) if(UI.ls[k]===undefined) UI.ls[k]=(k==='mult'?{...LS_DEF.mult}:LS_DEF[k]); for(const m in LS_DEF.mult) if(UI.ls.mult[m]===undefined) UI.ls.mult[m]=LS_DEF.mult[m]; return UI.ls; }
+/* 채널별 판매 수수료(%) 기본값 — 화면에서 고치면 채널마다 따로 기억 */
+const LS_CH={'자사몰':3.3,'29CM':30,'W컨셉':32,'ZVZO':25,'쿠팡':15,'오프라인 팝업':4};
+const LS_DEF={q:'',kind:'',mat:'',st:'',yr:'',qt:'',ch:'자사몰',fees:{...LS_CH},disc:0,pack:3000,extra:21,target:25,
+  mult:{'14K-18K':2,'925 실버':4,'서지컬 스틸':6,'신주·브라스':6,'소재 미확인':6},sort:'',dir:1,sel:''};
+function lsState(){
+  if(!UI.ls||typeof UI.ls!=='object') UI.ls={};
+  const s=UI.ls;
+  /* 예전 '정산 %' 값은 그 채널의 수수료(100-정산)로 옮김 */
+  if(!s.fees && s.settle!=null){ s.fees={...LS_CH}; s.fees[s.ch||'자사몰']=Math.max(0,100-Number(s.settle)); }
+  delete s.settle;
+  for(const k in LS_DEF) if(s[k]===undefined) s[k]=(k==='mult'||k==='fees'?{...LS_DEF[k]}:LS_DEF[k]);
+  for(const m in LS_DEF.mult) if(s.mult[m]===undefined) s.mult[m]=LS_DEF.mult[m];
+  for(const c in LS_CH) if(s.fees[c]===undefined) s.fees[c]=LS_CH[c];
+  return s;
+}
+const lsFee=s=>Number(s.fees[s.ch]??LS_CH[s.ch]??0);
 const lsQ=p=>{ const d=p.launch||''; if(!d) return {y:p.year||'',q:p.quarter||''}; const m=+d.slice(5,7); return {y:p.year||d.slice(0,4), q:p.quarter||('Q'+(Math.floor((m-1)/3)+1))}; };
+/* 판매가 → 할인 → 채널 수수료 → 부가세 → 부대비 → 원가 = 기여이익 */
 function lsCalc(p,s){
   const inP=Number(p.inPrice||0), price=Number(p.price||0), list=Number(p.listPrice||0)||price;
   const r={inP,price,list,cost:null,mul:null,rec:null,contrib:null,cpct:null,maxd:null};
   if(!inP) return r;
-  r.cost=inP+Number(s.pack||0);
+  const pack=Number(s.pack||0), fee=lsFee(s)/100, extra=Number(s.extra||0)/100, target=Number(s.target||0)/100;
+  r.cost=inP+pack;
   const m=Number(s.mult[p.mat||'소재 미확인']||6);
-  r.rec=Math.floor((inP*m+Number(s.pack||0))/1000)*1000;
+  r.rec=Math.floor((inP*m+pack)/1000)*1000;
   if(!price) return r;
   r.mul=price/r.cost;
-  const eff=price*(1-Number(s.disc||0)/100), net=eff*Number(s.settle||0)/100/1.1;
-  r.contrib=Math.round(net*(1-Number(s.extra||0)/100)-r.cost); r.cpct=net?r.contrib/net:0;
-  const k=1-Number(s.extra||0)/100-Number(s.target||0)/100;
-  if(k>0 && s.settle>0){ const needNet=r.cost/k, needP=needNet*1.1/(Number(s.settle)/100); r.maxd=Math.max(0,1-needP/price); }
+  r.discAmt=price*Number(s.disc||0)/100; r.eff=price-r.discAmt;
+  r.feeAmt=r.eff*fee;
+  r.vat=(r.eff-r.feeAmt)/11;
+  r.net=r.eff-r.feeAmt-r.vat;
+  r.extraAmt=r.net*extra;
+  r.contrib=Math.round(r.net-r.extraAmt-r.cost); r.cpct=r.net?r.contrib/r.net:0;
+  const k=1-extra-target;
+  if(k>0 && fee<1){ const needNet=r.cost/k, needP=needNet*1.1/(1-fee); r.maxd=Math.max(0,1-needP/price); }
   return r;
 }
 function lsRows(bid,s){
@@ -4206,29 +4262,60 @@ function lsRows(bid,s){
   return rows;
 }
 const lsW=n=>n==null||n===''?'—':won(Math.round(n));
-function lsRow(x){
+const LS_KIND_C={'반지':'#4C7CF0','귀걸이':'#E08A2E','목걸이':'#8A63E0','팔찌':'#1E9E6E','기타':'#A3A8B5'};
+const LS_ICO={
+  edit:'<svg viewBox="0 0 24 24"><path d="M4 20h4L19 9l-4-4L4 16v4z"/><path d="M13.5 6.5l4 4"/></svg>',
+  plus:'<svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>',
+  down:'<svg viewBox="0 0 24 24"><path d="M12 4v11m0 0l-4-4m4 4l4-4M5 19h14"/></svg>',
+  search:'<svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="6.5"/><path d="M16 16l4 4"/></svg>'};
+function lsRow(x,s,selId){
   const {p,c,L}=x;
-  const mulCls=c.mul==null?'':c.mul<3?'ls-bad':c.mul<4?'ls-mid':'ls-good';
-  const stock=Number(p.stock||0), stTag=stock<=0?['품절','tag--urgent']:stock<10?['부족','tag--high']:['충분',''];
-  return `<tr>
-    <td><div class="ls-item">${p.img?`<img src="${esc(p.img)}" alt="" loading="lazy">`:'<span class="ls-noimg"></span>'}
-      <div><b>${esc(p.name)}</b>${p.opts||p.plating?`<span class="ls-sub">${esc([p.opts,p.plating].filter(Boolean).join(' · '))}</span>`:''}</div></div></td>
-    <td><span class="ls-kind ls-k-${esc(p.kind||'기타')}">${esc(p.kind||'기타')}</span></td>
-    <td class="ls-mat">${esc(p.mat||'소재 미확인')}</td>
-    <td class="mono ls-code">${esc(p.sku||'—')}</td>
-    <td><span class="ls-q">${esc(L.y||'—')} ${esc(L.q||'')}</span><span class="ls-sub">${esc(p.launch||'')}</span></td>
-    <td class="num">${lsW(c.inP||null)}</td>
-    <td class="num">${lsW(c.cost)}</td>
-    <td class="num ${mulCls}"><b>${c.mul==null?'—':c.mul.toFixed(1)+'배'}</b></td>
-    <td class="num">${lsW(c.rec)}</td>
-    <td class="num"><b>${lsW(c.price||null)}</b></td>
-    <td class="num">${c.contrib==null?'<span class="ls-sub">원가 미입력</span>':`<b class="${c.contrib<0?'ls-bad':'ls-good'}">${lsW(c.contrib)}</b><span class="ls-sub">${Math.round(c.cpct*100)}%</span>`}</td>
-    <td class="num"><b>${c.maxd==null?'—':Math.round(c.maxd*100)+'%'}</b></td>
-    <td class="num">${won(stock)}</td>
-    <td><span class="tag ${stTag[1]}">${stTag[0]}</span> <span class="tag ${p.status==='판매중'?'tag--ok':p.status==='드랍'?'tag--urgent':''}">${esc(p.status||'기획')}</span></td>
-    <td class="mono ls-sub2">${esc(p.updated||'')}</td>
-    <td style="text-align:right"><button class="btn btn--ghost btn--sm" data-edit-prod="${p.id}">편집</button></td>
+  const mulCls=c.mul==null?'':c.mul<3?'pv-bad':c.mul<4?'pv-mid':'pv-good';
+  const stock=Number(p.stock||0), stk=stock<=0?['품절','pv-pill--bad']:stock<10?['부족','pv-pill--warn']:null;
+  const st=p.status||'기획', stCls=st==='판매중'?'pv-pill--ok':st==='드랍'?'pv-pill--bad':'';
+  return `<tr data-lssel="${p.id}" class="${selId===p.id?'is-sel':''}">
+    <td><div class="pv-item">${p.img?`<img src="${esc(p.img)}" alt="" loading="lazy">`:'<span class="pv-noimg"></span>'}
+      <div><b>${esc(p.name)}</b>${p.opts||p.plating?`<span class="pv-sub">${esc([p.opts,p.plating].filter(Boolean).join(' · '))}</span>`:''}</div></div></td>
+    <td><span class="pv-dot" style="--c:${LS_KIND_C[p.kind||'기타']||'#A3A8B5'}">${esc(p.kind||'기타')}</span></td>
+    <td>${esc(p.mat||'소재 미확인')}</td>
+    <td class="pv-code">${esc(p.sku||'—')}</td>
+    <td>${esc(L.y||'—')} ${esc(L.q||'')}<span class="pv-sub">${esc(p.launch||'')}</span></td>
+    <td class="r">${lsW(c.inP||null)}</td>
+    <td class="r">${lsW(c.cost)}</td>
+    <td class="r ${mulCls}">${c.mul==null?'—':c.mul.toFixed(1)+'배'}</td>
+    <td class="r">${lsW(c.rec)}</td>
+    <td class="r"><b>${lsW(c.price||null)}</b></td>
+    <td class="r">${c.contrib==null?'<span class="pv-sub">원가 미입력</span>':`<b class="${c.contrib<0?'pv-bad':''}">${lsW(c.contrib)}</b><span class="pv-sub">${Math.round(c.cpct*100)}%</span>`}</td>
+    <td class="r">${c.maxd==null?'—':Math.round(c.maxd*100)+'%'}</td>
+    <td class="r">${won(stock)}</td>
+    <td>${stk?`<span class="pv-pill ${stk[1]}">${stk[0]}</span> `:''}<span class="pv-pill ${stCls}">${esc(st)}</span></td>
+    <td class="pv-sub" style="margin:0">${esc(p.updated||'')}</td>
+    <td class="r"><button class="pv-edit" data-edit-prod="${p.id}" aria-label="편집">${LS_ICO.edit}</button></td>
   </tr>`;
+}
+/* 선택한 제품 손익 구조 (선택 없으면 목록 첫 제품 중 판매가·입고가 있는 것) */
+const lsPick=(rows,s)=>rows.find(r=>r.p.id===s.sel) || rows.find(r=>r.c.contrib!=null);
+function lsBreak(rows,s){
+  const pick=lsPick(rows,s);
+  const hd=t=>`<div class="pv-card__hd"><div class="pv-break__name"><h3>손익 구조</h3><small>${t}</small></div></div>`;
+  if(!pick) return hd('제품을 고르면 여기에 계산됩니다')+`<div class="pv-card__bd"><div class="pv-empty">입고가와 판매가가 있는 제품이 없습니다</div></div>`;
+  const {p,c}=pick, fee=lsFee(s);
+  const head=`<div class="pv-card__hd">${p.img?`<img class="pv-thumb" src="${esc(p.img)}" alt="">`:'<span class="pv-thumb"></span>'}<div class="pv-break__name"><h3>${esc(p.name)}</h3><small>${esc(s.ch)} · 수수료 ${fee}% · 할인 ${s.disc}%</small></div></div>`;
+  if(c.contrib==null) return head+`<div class="pv-card__bd"><div class="pv-empty">${c.inP?'판매가':'입고가'}를 입력하면 계산됩니다</div></div>`;
+  const L=(k,v,cls='')=>`<div class="pv-line ${cls}"><span>${k}</span><b>${v}</b></div>`;
+  const neg=n=>n?'−'+won(Math.round(n)):'0';
+  return head+`<div class="pv-card__bd">
+    ${L('판매가',won(c.price))}
+    ${L(`할인 ${s.disc}%`,neg(c.discAmt),'pv-line--minus')}
+    ${L('실판매가',won(Math.round(c.eff)),'pv-line--sub')}
+    ${L(`채널 수수료 ${fee}%`,neg(c.feeAmt),'pv-line--minus')}
+    ${L('부가세',neg(c.vat),'pv-line--minus')}
+    ${L('정산액 (부가세 제외)',won(Math.round(c.net)),'pv-line--sub')}
+    ${L(`부대비 ${s.extra}%`,neg(c.extraAmt),'pv-line--minus')}
+    ${L('원가 (입고가 + 포장)',neg(c.cost),'pv-line--minus')}
+    <div class="pv-total ${c.contrib<0?'is-bad':''}"><span>기여이익</span><div><b>${won(c.contrib)}</b><em>${Math.round(c.cpct*100)}%</em></div></div>
+    <div class="pv-hint">${c.maxd==null?'이 조건에서는 목표 기여이익을 맞출 수 없습니다':`목표 기여이익 ${s.target}%를 지키는 최대 할인 <b>${Math.round(c.maxd*100)}%</b>`}</div>
+  </div>`;
 }
 function lsBody(bid,s){
   const rows=lsRows(bid,s);
@@ -4236,69 +4323,91 @@ function lsBody(bid,s){
   const avgMul=withC.length?withC.reduce((a,r)=>a+r.c.mul,0)/withC.length:0;
   const avgPct=withC.length?withC.reduce((a,r)=>a+r.c.cpct,0)/withC.length:0;
   const stock=rows.reduce((a,r)=>a+Number(r.p.stock||0),0);
-  return {rows, html: rows.length? rows.map(lsRow).join('') : `<tr><td colspan="16"><div class="empty"><b>조건에 맞는 제품이 없습니다</b>필터를 바꿔 보세요.</div></td></tr>`,
-    sum:`<span><b>${rows.length}</b>개 품목</span><span>원가 입력 <b>${withC.length}</b></span><span>평균 실배수 <b>${avgMul?avgMul.toFixed(1)+'배':'—'}</b></span><span>평균 기여이익률 <b>${withC.length?Math.round(avgPct*100)+'%':'—'}</b></span><span>재고 합계 <b>${won(stock)}</b></span>`};
+  const K=(k,v)=>`<div class="pv-kpi"><span>${k}</span><b>${v}</b></div>`;
+  const selId=lsPick(rows,s)?.p.id;
+  return {rows, html: rows.length? rows.map(r=>lsRow(r,s,selId)).join('') : `<tr><td colspan="16"><div class="pv-empty">조건에 맞는 제품이 없습니다</div></td></tr>`,
+    sum:K('품목',rows.length+'개')+K('원가 입력',withC.length+'개')+K('평균 실배수',avgMul?avgMul.toFixed(1)+'배':'—')+K('평균 기여이익률',withC.length?Math.round(avgPct*100)+'%':'—')+K('재고 합계',won(stock)),
+    brk:lsBreak(rows,s)};
 }
 function productsView(){
   const b=brandOf(UI.brand); const all=productsOf(b.id); const s=lsState();
   const cnt=k=>all.filter(p=>(p.kind||'기타')===k).length;
   const years=[...new Set(all.map(p=>lsQ(p).y).filter(Boolean))].sort();
   const o=(arr,v,ph)=>`<option value="">${ph}</option>`+arr.map(a=>`<option value="${esc(a)}" ${a===v?'selected':''}>${esc(a)}</option>`).join('');
-  const th=(k,t,r)=>`<th class="${k?'ls-sortable':''}${s.sort===k&&k?' is-on':''}${r?' ls-r':''}"${k?` data-lssort="${k}"`:''}>${t}${k&&s.sort===k?(s.dir>0?' ↑':' ↓'):''}</th>`;
+  const th=(k,t,r)=>`<th class="${r?'r':''}${s.sort===k&&k?' is-on':''}"${k?` data-lssort="${k}"`:''}>${t}${k&&s.sort===k?(s.dir>0?' ↑':' ↓'):''}</th>`;
+  const num=(id,v,suf,step,w)=>`<label class="pv-field${w?' pv-field--w':''}"><input type="number" id="${id}" value="${v}" step="${step||1}" min="0"><i>${suf}</i></label>`;
   const B=lsBody(b.id,s);
-  return `<section class="card ls">
-    <div class="ls-bar">
-      <label class="ls-search"><input type="search" id="ls_q" placeholder="품목명·품목코드 검색" value="${esc(s.q)}"></label>
-      <select id="ls_mat" data-native>${o(LS_MATS,s.mat,'소재 전체')}</select>
-      <select id="ls_st" data-native>${o(PSTATUS,s.st,'상태 전체')}</select>
-      <select id="ls_yr" data-native>${o(years,s.yr,'출시연도 전체')}</select>
-      <select id="ls_qt" data-native>${o(['Q1','Q2','Q3','Q4'],s.qt,'분기 전체')}</select>
-      <button class="btn btn--sm ls-xls" data-act="ls-csv">엑셀 출력</button>
-      <button class="btn btn--primary btn--sm" data-act="prod-new">제품 추가</button>
-    </div>
-    <div class="ls-chips">
-      <button class="ls-chip${!s.kind?' is-on':''}" data-lskind="">전체 <i>${all.length}</i></button>
-      ${LS_KINDS.filter(k=>cnt(k)).map(k=>`<button class="ls-chip${s.kind===k?' is-on':''}" data-lskind="${k}">${k} <i>${cnt(k)}</i></button>`).join('')}
-    </div>
-    <div class="ls-calc">
-      <div class="ls-calc__row">
-        <b class="ls-calc__t">판가·손익</b>
-        <label>채널 <select id="ls_ch" data-native>${Object.keys(LS_CH).map(k=>`<option ${k===s.ch?'selected':''}>${k}</option>`).join('')}</select></label>
-        <label>정산 <input type="number" id="ls_settle" value="${s.settle}" min="0" max="100" class="ls-n">%</label>
-        <label class="ls-range">할인 <input type="range" id="ls_disc" min="0" max="70" step="1" value="${s.disc}"><b id="ls_disc_v">${s.disc}%</b></label>
-        <span class="ls-note">원가 = 입고가 + 포장 <input type="number" id="ls_pack" value="${s.pack}" step="500" class="ls-n ls-n--w">원 · 손익은 부가세 제외 · 부대비 <input type="number" id="ls_extra" value="${s.extra}" class="ls-n">% · 목표 기여이익 <input type="number" id="ls_target" value="${s.target}" class="ls-n">%</span>
+  return `<section class="pv">
+    <header class="pv-hd">
+      <div><h2>제품</h2><p>${esc(b.name)} 라인시트 · 전체 ${all.length}개</p></div>
+      <div class="pv-actions">
+        <button class="pv-btn" data-act="ls-csv">${LS_ICO.down}엑셀 출력</button>
+        <button class="pv-btn pv-btn--pri" data-act="prod-new">${LS_ICO.plus}제품 추가</button>
       </div>
-      <div class="ls-calc__row">
-        <b class="ls-calc__t">배수</b>
-        ${LS_MATS.map(m=>`<label class="ls-mult">${m} × <input type="number" step="0.5" min="0" data-lsmult="${m}" value="${s.mult[m]}" class="ls-n"></label>`).join('')}
-        <span class="ls-note">권장정가 = 입고가 × 배수 + 포장비</span>
+    </header>
+    <div class="pv-grid">
+      <div class="pv-card">
+        <div class="pv-card__hd"><h3>판매 조건</h3><small>손익은 부가세 제외</small></div>
+        <div class="pv-card__bd">
+          <div class="pv-kv"><span>판매 채널</span><select id="ls_ch" data-native>${Object.keys(LS_CH).map(k=>`<option ${k===s.ch?'selected':''}>${k}</option>`).join('')}</select></div>
+          <div class="pv-kv"><span>채널 수수료</span>${num('ls_fee',lsFee(s),'%',0.1)}</div>
+          <div class="pv-kv"><span>할인율</span><div class="pv-slider"><input type="range" id="ls_disc" min="0" max="70" step="1" value="${s.disc}"><b id="ls_disc_v">${s.disc}%</b></div></div>
+          <div class="pv-kv"><span>포장비</span>${num('ls_pack',s.pack,'원',500,1)}</div>
+          <div class="pv-kv"><span>부대비</span>${num('ls_extra',s.extra,'%')}</div>
+          <div class="pv-kv"><span>목표 기여이익</span>${num('ls_target',s.target,'%')}</div>
+        </div>
       </div>
+      <div class="pv-card">
+        <div class="pv-card__hd"><h3>소재별 배수</h3><small>권장정가 기준</small></div>
+        <div class="pv-card__bd">
+          ${LS_MATS.map(m=>`<div class="pv-kv"><span>${m}</span><label class="pv-field"><input type="number" step="0.5" min="0" data-lsmult="${m}" value="${s.mult[m]}"><i>배</i></label></div>`).join('')}
+          <p class="pv-note">권장정가 = 입고가 × 배수 + 포장비 (천 원 단위 내림)</p>
+        </div>
+      </div>
+      <div class="pv-card pv-break" id="ls_break">${B.brk}</div>
     </div>
-    <div class="ls-sum" id="ls_sum">${B.sum}</div>
-    <div class="ls-wrap"><table class="ls-t">
-      <thead><tr>${th('name','품목')}${th('kind','종류')}${th('mat','소재')}${th('','품목코드')}${th('launch','출시')}${th('inP','입고가',1)}${th('','원가',1)}${th('mul','실배수',1)}${th('','권장정가',1)}${th('','판매가',1)}${th('contrib','기여이익',1)}${th('maxd','최대할인',1)}${th('stock','현재고',1)}${th('','상태')}${th('upd','최종수정일')}<th></th></tr></thead>
-      <tbody id="ls_body">${B.html}</tbody></table></div>
+    <div class="pv-card pv-list">
+      <div class="pv-list__hd">
+        <div class="pv-seg">
+          <button class="${!s.kind?'is-on':''}" data-lskind="">전체<i>${all.length}</i></button>
+          ${LS_KINDS.filter(k=>cnt(k)).map(k=>`<button class="${s.kind===k?'is-on':''}" data-lskind="${k}">${k}<i>${cnt(k)}</i></button>`).join('')}
+        </div>
+        <select id="ls_mat" data-native>${o(LS_MATS,s.mat,'소재 전체')}</select>
+        <select id="ls_st" data-native>${o(PSTATUS,s.st,'상태 전체')}</select>
+        <select id="ls_yr" data-native>${o(years,s.yr,'출시연도')}</select>
+        <select id="ls_qt" data-native>${o(['Q1','Q2','Q3','Q4'],s.qt,'분기')}</select>
+        <label class="pv-search">${LS_ICO.search}<input type="search" id="ls_q" placeholder="품목명·품목코드 검색" value="${esc(s.q)}"></label>
+      </div>
+      <div class="pv-kpis" id="ls_sum">${B.sum}</div>
+      <div class="pv-tw"><table class="pv-t">
+        <thead><tr>${th('name','품목')}${th('kind','종류')}${th('mat','소재')}${th('','품목코드')}${th('launch','출시')}${th('inP','입고가',1)}${th('','원가',1)}${th('mul','실배수',1)}${th('','권장정가',1)}${th('','판매가',1)}${th('contrib','기여이익',1)}${th('maxd','최대할인',1)}${th('stock','현재고',1)}${th('','상태')}${th('upd','최종수정일')}<th></th></tr></thead>
+        <tbody id="ls_body">${B.html}</tbody></table></div>
+    </div>
   </section>`;
 }
 function lsRefresh(){
   const b=brandOf(UI.brand); const s=lsState(); const B=lsBody(b.id,s);
-  const tb=document.getElementById('ls_body'), sm=document.getElementById('ls_sum');
-  if(tb) tb.innerHTML=B.html; if(sm) sm.innerHTML=B.sum;
-  document.querySelectorAll('#ls_body [data-edit-prod]').forEach(el=>el.onclick=()=>prodModal(el.dataset.editProd));
+  const tb=document.getElementById('ls_body'), sm=document.getElementById('ls_sum'), bk=document.getElementById('ls_break');
+  if(tb) tb.innerHTML=B.html; if(sm) sm.innerHTML=B.sum; if(bk) bk.innerHTML=B.brk;
+  document.querySelectorAll('#ls_body [data-edit-prod]').forEach(el=>el.onclick=e=>{ e.stopPropagation(); prodModal(el.dataset.editProd); });
   saveUI();
 }
 function lsBind(){
-  if(!document.querySelector('.ls')) return;
+  if(!document.querySelector('.pv')) return;
   const s=lsState(); const $id=id=>document.getElementById(id);
   const on=(id,ev,fn)=>{ const el=$id(id); if(el) el.addEventListener(ev,fn); };
   on('ls_q','input',e=>{ s.q=e.target.value; lsRefresh(); });
   [['ls_mat','mat'],['ls_st','st'],['ls_yr','yr'],['ls_qt','qt']].forEach(([id,k])=>on(id,'change',e=>{ s[k]=e.target.value; lsRefresh(); }));
-  on('ls_ch','change',e=>{ s.ch=e.target.value; s.settle=LS_CH[s.ch]??100; const st=$id('ls_settle'); if(st) st.value=s.settle; lsRefresh(); });
-  [['ls_settle','settle'],['ls_pack','pack'],['ls_extra','extra'],['ls_target','target']].forEach(([id,k])=>on(id,'input',e=>{ s[k]=Number(e.target.value||0); lsRefresh(); }));
+  on('ls_ch','change',e=>{ s.ch=e.target.value; const f=$id('ls_fee'); if(f) f.value=lsFee(s); lsRefresh(); });
+  on('ls_fee','input',e=>{ s.fees[s.ch]=Math.min(100,Math.max(0,Number(e.target.value||0))); lsRefresh(); });
+  [['ls_pack','pack'],['ls_extra','extra'],['ls_target','target']].forEach(([id,k])=>on(id,'input',e=>{ s[k]=Number(e.target.value||0); lsRefresh(); }));
   on('ls_disc','input',e=>{ s.disc=Number(e.target.value||0); const v=$id('ls_disc_v'); if(v) v.textContent=s.disc+'%'; lsRefresh(); });
   document.querySelectorAll('[data-lsmult]').forEach(el=>el.addEventListener('input',()=>{ s.mult[el.dataset.lsmult]=Number(el.value||0); lsRefresh(); }));
   document.querySelectorAll('[data-lskind]').forEach(el=>el.onclick=()=>{ s.kind=el.dataset.lskind; saveUI(); render(); });
   document.querySelectorAll('[data-lssort]').forEach(el=>el.onclick=()=>{ const k=el.dataset.lssort; if(s.sort===k) s.dir=-s.dir; else { s.sort=k; s.dir=1; } saveUI(); render(); });
+  /* 행을 누르면 그 제품의 손익 구조를 보여줌 */
+  on('ls_body','click',e=>{ const tr=e.target.closest('[data-lssel]'); if(!tr||e.target.closest('[data-edit-prod]')) return; s.sel=tr.dataset.lssel; lsRefresh(); });
+  document.querySelectorAll('#ls_body [data-edit-prod]').forEach(el=>el.onclick=e=>{ e.stopPropagation(); prodModal(el.dataset.editProd); });
 }
 function lsCsv(){
   const b=brandOf(UI.brand); const s=lsState(); const rows=lsRows(b.id,s);
