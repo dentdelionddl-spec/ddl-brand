@@ -2279,16 +2279,15 @@ html body .mday.is-today .n{background:var(--neon) !important;color:#14161C !imp
 .sv-col span{font-size:10.5px;color:var(--mut);font-variant-numeric:tabular-nums}
 .sv-col span.sun{color:var(--alert)}
 .sv-col.is-today span{background:var(--neon);color:#14161C;border-radius:4px;padding:0 3px;font-weight:700}
-.sv-gridwrap{overflow:auto;max-height:560px}
-.sv-grid thead th{position:sticky;top:0;background:#FBFBFD;z-index:1;white-space:nowrap}
+.sv-gridwrap{overflow-x:auto}
+.sv-grid thead th{white-space:nowrap}
 .sv-grid td{padding-top:4px !important;padding-bottom:4px !important}
-.sv-grid tr.is-we td{background:#FAFAFB}
-.sv-grid tr.is-today td{background:#FBFFE6}
+.sv-grid tr.is-today td{background:rgba(212,255,0,.12)}
 .sv-grid .sv-day{white-space:nowrap;font-variant-numeric:tabular-nums}
 .sv-grid .sv-day em{font-style:normal;color:var(--mut);font-size:11.5px;margin-left:4px}
 .sv-grid .sv-day.sun em{color:var(--alert)}
 .sv-grid .numin{width:100%;min-width:90px;text-align:right}
-.sv-grid tfoot td{position:sticky;bottom:0;background:#fff;font-weight:700;border-top:1px solid var(--line)}
+.sv-grid tfoot td{font-weight:700;border-top:1px solid var(--line)}
 /* 기간 일정: 시작일에만 카드(체크·제목), 이후 날짜는 끝날까지 얇은 선 */
 html body .calx .ev.ev--start{border-radius:8px !important;margin-right:0 !important;width:100% !important}
 html body .calx .ev.ev--start .evchk{display:inline-grid !important}
@@ -2300,20 +2299,7 @@ html body .calx .ev.ev--mid:hover::before,html body .calx .ev.ev--end:hover::bef
 html body .calx .ev.ev--end.ev--done::before{opacity:.5}
 html body .calx .ev.ev--task.ev--mid::before,html body .calx .ev.ev--task.ev--end::before{background:#D9DCE2 !important}
 html body .calx .cell .ev.ev--mid,html body .calx .cell .ev.ev--end,html body .calx .cell .ev.ev--task.ev--mid,html body .calx .cell .ev.ev--task.ev--end{background:transparent !important;box-shadow:none !important}
-/* 일별 입력표: 고정 제목줄·합계줄이 날짜와 겹쳐 보이지 않게 흰 배경 */
-#view .sv-grid{border-collapse:separate !important;border-spacing:0}
-#view .sv-grid thead th{position:sticky !important;top:0;z-index:3;background:#fff !important;box-shadow:inset 0 -1px 0 var(--line)}
-#view .sv-grid tfoot td{position:sticky !important;bottom:0;z-index:3;background:#fff !important;box-shadow:inset 0 1px 0 var(--line);border-top:0 !important}
-#view .sv-grid td:first-child,#view .sv-grid th:first-child{position:sticky;left:0;z-index:2;background:#fff}
-#view .sv-grid thead th:first-child,#view .sv-grid tfoot td:first-child{z-index:4}
-#view .sv-grid tr.is-we td:first-child{background:#FAFAFB}
-#view .sv-grid tr.is-today td:first-child{background:#FBFFE6}
 #view .sv-grid td:first-child,#view .sv-grid th:first-child{min-width:92px;width:92px;white-space:nowrap;overflow:visible;text-overflow:clip}
-/* 일별 입력표 카드: 한 가지 흰색으로 — 고정 칸과 나머지 칸 색이 갈라지지 않게 */
-#view .sv-card{background:#fff !important;backdrop-filter:none !important}
-#view .sv-card .card__hd,#view .sv-card .sv-gridwrap,#view .sv-grid th,#view .sv-grid td,#view .sv-grid thead th,#view .sv-grid tfoot td{background:#fff !important}
-#view .sv-grid tr.is-we td,#view .sv-grid tr.is-we td:first-child{background:#fff !important}
-#view .sv-grid tr.is-today td,#view .sv-grid tr.is-today td:first-child{background:#FBFFE6 !important}
 </style>
 </head>
 <body>
