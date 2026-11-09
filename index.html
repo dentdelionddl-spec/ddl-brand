@@ -2231,6 +2231,7 @@ html body .m .mv > .mday__hd{margin-top:14px !important}
 #view .pv-code{font-family:var(--mono);font-size:12px;color:var(--pv-ink2)}
 #view .pv-pill{display:inline-flex;align-items:center;gap:5px;height:22px;padding:0 8px;border-radius:6px;font-size:11.5px;font-weight:600;background:#F2F3F7;color:var(--pv-ink2)}
 #view .pv-pill::before{content:'';width:5px;height:5px;border-radius:50%;background:currentColor;opacity:.8}
+#view .pv-se--0{background:#EAF7EC;color:#2F8A47} #view .pv-se--1{background:#FFF6D6;color:#9A7400} #view .pv-se--2{background:#F3ECE4;color:#7A5232}
 #view .pv-pill--ok{background:#EAF7F1;color:var(--pv-ok)} #view .pv-pill--warn{background:#FEF4E3;color:var(--pv-warn)} #view .pv-pill--bad{background:#FDECEA;color:var(--pv-bad)}
 #view .pv-bad{color:var(--pv-bad) !important}#view .pv-mid{color:var(--pv-warn) !important}#view .pv-good{color:var(--pv-ok) !important}
 #view .pv-edit{all:unset;cursor:pointer;width:30px;height:30px;border-radius:8px;display:inline-flex;align-items:center;justify-content:center;color:var(--pv-mut)}
@@ -4219,9 +4220,10 @@ const LS_KINDS=['반지','귀걸이','목걸이','팔찌','기타'];
 const LS_MATS=['14K-18K','925 실버','서지컬 스틸','신주·브라스','소재 미확인'];
 /* 채널별 판매 수수료(%) 기본값 — 화면에서 고치면 채널마다 따로 기억 */
 const LS_CH={'자사몰':3.3,'29CM':30,'W컨셉':32,'ZVZO':25,'쿠팡':15,'오프라인 팝업':4};
-const LS_DEF={q:'',kind:'',mat:'',st:'',yr:'',qt:'',ch:'자사몰',fees:{...LS_CH},disc:0,pack:3000,extra:21,target:25,
+const LS_DEF={q:'',kind:'',mat:'',st:'',yr:'',qt:'',se:'',ch:'자사몰',fees:{...LS_CH},disc:0,pack:3000,extra:21,target:25,
   mult:{'14K-18K':2,'925 실버':4,'서지컬 스틸':6,'신주·브라스':6,'소재 미확인':6},catMult:{},sort:'',dir:1,sel:''};
 const LS_CAT_MULT=3; /* 옷 브랜드 카테고리별 배수 기본값 */
+const LS_SEASONS=['26 SPRING','26 SUMMER','26 FW'];
 function lsState(){
   if(!UI.ls||typeof UI.ls!=='object') UI.ls={};
   const s=UI.ls;
@@ -4266,11 +4268,12 @@ function lsRows(bid,s){
     if(s.kind && (p.kind||'기타')!==s.kind) return false;
     if(!s.app && s.mat && (p.mat||'소재 미확인')!==s.mat) return false;
     if(s.st && (p.status||'기획')!==s.st) return false;
-    const L=lsQ(p); if(s.yr && L.y!==s.yr) return false; if(s.qt && L.q!==s.qt) return false;
+    if(s.app){ if(s.se && (p.season||'')!==s.se) return false; }
+    else { const L=lsQ(p); if(s.yr && L.y!==s.yr) return false; if(s.qt && L.q!==s.qt) return false; }
     return true;
   }).map(p=>({p,c:lsCalc(p,s),L:lsQ(p)}));
   if(s.sort){
-    const key={name:x=>x.p.name||'',kind:x=>x.p.kind||'',mat:x=>x.p.mat||'',launch:x=>x.p.launch||'',
+    const key={name:x=>x.p.name||'',kind:x=>x.p.kind||'',mat:x=>x.p.mat||'',launch:x=>s.app?(LS_SEASONS.indexOf(x.p.season)+1||null):(x.p.launch||''),
       inP:x=>x.c.inP||null,mul:x=>x.c.mul,contrib:x=>x.c.contrib,maxd:x=>x.c.maxd,stock:x=>Number(x.p.stock||0),upd:x=>x.p.updated||''}[s.sort];
     if(key) rows.sort((a,b)=>{ const A=key(a),B=key(b); if(A==null&&B==null) return 0; if(A==null) return 1; if(B==null) return -1; return (A>B?1:A<B?-1:0)*s.dir; });
   }
@@ -4295,7 +4298,7 @@ function lsRow(x,s,selId){
     <td><span class="pv-dot" style="--c:${lsKindC(p.kind||'기타')}">${esc(p.kind||'기타')}</span></td>
     ${s.app?'':`<td>${esc(p.mat||'소재 미확인')}</td>`}
     <td class="pv-code">${esc(p.sku||'—')}</td>
-    <td>${esc(L.y||'—')} ${esc(L.q||'')}<span class="pv-sub">${esc(p.launch||'')}</span></td>
+    <td>${s.app?(p.season?`<span class="pv-pill pv-se pv-se--${LS_SEASONS.indexOf(p.season)}">${esc(p.season)}</span>`:'<span class="pv-sub" style="margin:0">시즌 미정</span>'):`${esc(L.y||'—')} ${esc(L.q||'')}`}<span class="pv-sub">${esc(p.launch||'')}</span></td>
     <td class="r">${lsW(c.inP||null)}</td>
     <td class="r">${lsW(c.cost)}</td>
     <td class="r ${mulCls}">${c.mul==null?'—':c.mul.toFixed(1)+'배'}</td>
@@ -4392,13 +4395,13 @@ function productsView(){
         </div>
         ${s.app?'':`<select id="ls_mat" data-native>${o(LS_MATS,s.mat,'소재 전체')}</select>`}
         <select id="ls_st" data-native>${o(PSTATUS,s.st,'상태 전체')}</select>
-        <select id="ls_yr" data-native>${o(years,s.yr,'출시연도')}</select>
-        <select id="ls_qt" data-native>${o(['Q1','Q2','Q3','Q4'],s.qt,'분기')}</select>
+        ${s.app?`<select id="ls_se" data-native>${o(LS_SEASONS,s.se,'시즌 전체')}</select>`:`<select id="ls_yr" data-native>${o(years,s.yr,'출시연도')}</select>
+        <select id="ls_qt" data-native>${o(['Q1','Q2','Q3','Q4'],s.qt,'분기')}</select>`}
         <label class="pv-search">${LS_ICO.search}<input type="search" id="ls_q" placeholder="품목명·품목코드 검색" value="${esc(s.q)}"></label>
       </div>
       <div class="pv-kpis" id="ls_sum">${B.sum}</div>
       <div class="pv-tw"><table class="pv-t">
-        <thead><tr>${th('name','품목')}${th('kind',s.app?'카테고리':'종류')}${s.app?'':th('mat','소재')}${th('','품목코드')}${th('launch','출시')}${th('inP','입고가',1)}${th('','원가',1)}${th('mul','실배수',1)}${th('','권장정가',1)}${th('','판매가',1)}${th('contrib','공헌이익',1)}${th('maxd','최대할인',1)}${th('stock','현재고',1)}${th('','상태')}${th('upd','최종수정일')}<th></th></tr></thead>
+        <thead><tr>${th('name','품목')}${th('kind',s.app?'카테고리':'종류')}${s.app?'':th('mat','소재')}${th('','품목코드')}${th('launch',s.app?'시즌':'출시')}${th('inP','입고가',1)}${th('','원가',1)}${th('mul','실배수',1)}${th('','권장정가',1)}${th('','판매가',1)}${th('contrib','공헌이익',1)}${th('maxd','최대할인',1)}${th('stock','현재고',1)}${th('','상태')}${th('upd','최종수정일')}<th></th></tr></thead>
         <tbody id="ls_body">${B.html}</tbody></table></div>
     </div>
   </section>`;
@@ -4415,7 +4418,7 @@ function lsBind(){
   const s=lsState(); const $id=id=>document.getElementById(id);
   const on=(id,ev,fn)=>{ const el=$id(id); if(el) el.addEventListener(ev,fn); };
   on('ls_q','input',e=>{ s.q=e.target.value; lsRefresh(); });
-  [['ls_mat','mat'],['ls_st','st'],['ls_yr','yr'],['ls_qt','qt']].forEach(([id,k])=>on(id,'change',e=>{ s[k]=e.target.value; lsRefresh(); }));
+  [['ls_mat','mat'],['ls_st','st'],['ls_yr','yr'],['ls_qt','qt'],['ls_se','se']].forEach(([id,k])=>on(id,'change',e=>{ s[k]=e.target.value; lsRefresh(); }));
   on('ls_ch','change',e=>{ s.ch=e.target.value; const f=$id('ls_fee'); if(f) f.value=lsFee(s); lsRefresh(); });
   on('ls_fee','input',e=>{ s.fees[s.ch]=Math.min(100,Math.max(0,Number(e.target.value||0))); lsRefresh(); });
   [['ls_pack','pack'],['ls_extra','extra'],['ls_target','target']].forEach(([id,k])=>on(id,'input',e=>{ s[k]=Number(e.target.value||0); lsRefresh(); }));
@@ -4430,9 +4433,9 @@ function lsBind(){
 }
 function lsCsv(){
   const b=brandOf(UI.brand); const s=lsState(); const rows=lsRows(b.id,s);
-  const H=['품목','종류','소재','사이즈','도금','품목코드','출시연도','출시분기','출시일','입고가','원가','실배수','권장정가','판매가','공헌이익','공헌이익률','최대할인','현재고','상태','최종수정일'];
+  const H=['품목','종류','소재','시즌','사이즈','도금','품목코드','출시연도','출시분기','출시일','입고가','원가','실배수','권장정가','판매가','공헌이익','공헌이익률','최대할인','현재고','상태','최종수정일'];
   const q=v=>{ const t=v==null?'':String(v); return /[",\n]/.test(t)?'"'+t.replace(/"/g,'""')+'"':t; };
-  const lines=[H.join(',')].concat(rows.map(({p,c,L})=>[p.name,p.kind,p.mat,p.opts,p.plating,p.sku,L.y,L.q,p.launch,c.inP||'',c.cost??'',c.mul!=null?c.mul.toFixed(2):'',c.rec??'',c.price||'',c.contrib??'',c.cpct!=null&&c.contrib!=null?Math.round(c.cpct*100)+'%':'',c.maxd!=null?Math.round(c.maxd*100)+'%':'',p.stock??'',p.status,p.updated].map(q).join(',')));
+  const lines=[H.join(',')].concat(rows.map(({p,c,L})=>[p.name,p.kind,p.mat,p.season,p.opts,p.plating,p.sku,L.y,L.q,p.launch,c.inP||'',c.cost??'',c.mul!=null?c.mul.toFixed(2):'',c.rec??'',c.price||'',c.contrib??'',c.cpct!=null&&c.contrib!=null?Math.round(c.cpct*100)+'%':'',c.maxd!=null?Math.round(c.maxd*100)+'%':'',p.stock??'',p.status,p.updated].map(q).join(',')));
   const blob=new Blob(['﻿'+lines.join('\n')],{type:'text/csv;charset=utf-8'});
   const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download=`${b.name}_라인시트_${TODAY}.csv`; document.body.appendChild(a); a.click(); setTimeout(()=>{ URL.revokeObjectURL(a.href); a.remove(); },500);
 }
@@ -4757,6 +4760,8 @@ function prodModal(id){
   const isNew=!id;
   const p=isNew? {id:uid(),brandId:UI.brand,name:'',sku:'',status:'기획',price:'',stock:'',eta:'',memo:''}
                : DB.products.find(x=>x.id===id);
+  /* 옷 브랜드면 카테고리·시즌, 주얼리면 종류·소재 */
+  const app=lsApparel(p.brandId), APP_KINDS=lsKinds(p.brandId,true);
   modal({
     title:isNew?'제품 추가':'제품 편집',
     body:`<label class="f"><span>제품명</span><input type="text" id="p_name" value="${esc(p.name)}" /></label>
@@ -4767,8 +4772,10 @@ function prodModal(id){
         <label class="f"><span>재고</span><input type="number" id="p_stock" value="${p.stock??''}" /></label>
       </div>
       <div class="row2">
-        <label class="f"><span>종류</span><select id="p_kind"><option value="">선택</option>${opt(LS_KINDS,p.kind)}</select></label>
-        <label class="f"><span>소재</span><select id="p_mat"><option value="">선택</option>${opt(LS_MATS,p.mat)}</select></label>
+        ${app?`<label class="f"><span>카테고리</span><select id="p_kind"><option value="">선택</option>${opt([...new Set([...APP_KINDS,...(p.kind?[p.kind]:[])])],p.kind)}</select></label>
+        <label class="f"><span>시즌</span><select id="p_season"><option value="">선택</option>${opt(LS_SEASONS,p.season)}</select></label>`
+        :`<label class="f"><span>종류</span><select id="p_kind"><option value="">선택</option>${opt(LS_KINDS,p.kind)}</select></label>
+        <label class="f"><span>소재</span><select id="p_mat"><option value="">선택</option>${opt(LS_MATS,p.mat)}</select></label>`}
         <label class="f"><span>입고가</span><input type="number" id="p_in" value="${p.inPrice||''}" step="100" /></label>
         <label class="f"><span>입고 예정일</span><input type="date" id="p_eta" value="${p.eta||''}" /></label>
         <label class="f"><span>출시일 (연도·분기 자동)</span><input type="date" id="p_launch" value="${p.launch||''}" /></label>
@@ -4778,7 +4785,7 @@ function prodModal(id){
       const v=$('#p_name').value.trim(); if(!v){ toast('제품명을 입력하세요'); return false; }
       p.name=v; p.sku=$('#p_sku').value.trim(); p.status=$('#p_status').value;
       p.price=$('#p_price').value; p.stock=$('#p_stock').value; p.eta=$('#p_eta').value; p.memo=$('#p_memo').value.trim();
-      p.kind=$('#p_kind').value; p.mat=$('#p_mat').value; p.inPrice=$('#p_in').value;
+      p.kind=$('#p_kind').value; if(app) p.season=$('#p_season').value; else p.mat=$('#p_mat').value; p.inPrice=$('#p_in').value;
       if($('#p_launch').value!==(p.launch||'')){ p.launch=$('#p_launch').value; p.year=''; p.quarter=''; }
       p.dirty=true; if(isNew) DB.products.push(p);
     },
@@ -4897,7 +4904,7 @@ const KIND={
       '상태':{select:{name:p.status}}, 'SKU':{rich_text:[{text:{content:p.sku||''}}]},
       '판매가':{number:Number(p.price||0)}, '재고':{number:Number(p.stock||0)},
       ...(p.eta?{'입고예정':{date:{start:p.eta}}}:{}),
-      ...(p.kind?{'종류':{select:{name:p.kind}}}:{}), ...(p.mat?{'소재':{select:{name:p.mat}}}:{}),
+      ...(p.kind?{'종류':{select:{name:p.kind}}}:{}), ...(p.mat?{'소재':{select:{name:p.mat}}}:{}), ...(p.season?{'시즌':{select:{name:p.season}}}:{}),
       ...(p.inPrice!==undefined&&p.inPrice!==''?{'입고가':{number:Number(p.inPrice)}}:{}),
       ...(p.launch?{'출시일':{date:{start:p.launch}},'출시연도':{select:{name:p.launch.slice(0,4)}},'출시분기':{select:{name:'Q'+(Math.floor((+p.launch.slice(5,7)-1)/3)+1)}}}:{}),
       '로컬ID':{rich_text:[{text:{content:p.id}}]} }) }
@@ -5092,7 +5099,7 @@ const brandByName=nm=>{
         kind:sel(P['종류'])||'', mat:sel(P['소재'])||'', color:sel(P['컬러'])||'', opts:txt(P['사이즈']), plating:txt(P['도금']),
         inPrice:P['입고가']?.number||'',
         launch:P['출시일']?.date?.start||'', year:sel(P['출시연도'])||'', quarter:sel(P['출시분기'])||'',
-        img:P['이미지']?.url||'',
+        img:P['이미지']?.url||'', season:sel(P['시즌'])||'',
         updated:P['최종수정일']?.date?.start||''}); }
       n++;
     }
