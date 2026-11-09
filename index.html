@@ -2433,6 +2433,13 @@ html body #view .ux div:has(> .sub:not([data-ptab])){gap:4px !important;margin-l
 html body #view .ux .sub:not([data-ptab]):not([aria-pressed="true"]):hover{background:rgba(20,22,28,.05) !important}
 html body #view .ux .sub:not([data-ptab]){height:30px !important;border-radius:8px !important;color:var(--pv-ink2) !important;font-weight:550 !important}
 html body #view .ux .sub:not([data-ptab])[aria-pressed="true"]{background:#fff !important;color:var(--pv-ink) !important;box-shadow:0 1px 2px rgba(16,20,32,.08),0 0 0 1px rgba(16,20,32,.04) !important}
+/* 배수 카드: 옆 카드 중 가장 긴 높이에 맞추고, 항목이 넘치면 그 안에서 스크롤 · 적으면 내용만큼 */
+@media (min-width:1101px){
+  #view .pv-grid{align-items:stretch}
+  #view .pv-card--fill{display:flex;flex-direction:column;min-height:0}
+  #view .pv-card--fill .pv-fillbd{flex:1 1 0;min-height:0;overflow:auto}
+}
+@media (max-width:1100px){ #view .pv-card--fill .pv-fillbd{max-height:360px;overflow:auto} }
 </style>
 </head>
 <body>
@@ -4683,9 +4690,9 @@ function productsView(){
           <div class="pv-kv"><span>목표 공헌이익</span>${num('ls_target',s.target,'%')}</div>
         </div>
       </div>
-      <div class="pv-card">
+      <div class="pv-card pv-card--fill">
         <div class="pv-card__hd"><h3>${s.app?'카테고리별 배수':'소재별 배수'}</h3><small>권장정가 기준</small></div>
-        <div class="pv-card__bd${s.app?' pv-scroll':''}">
+        <div class="pv-card__bd pv-fillbd">
           ${s.app
             ? kinds.map(k=>`<div class="pv-kv"><span>${esc(k)} <i class="pv-cnt">${cnt(k)}</i></span><label class="pv-field"><input type="number" step="0.5" min="0" data-lscat="${esc(k)}" value="${s.catMult[k]??LS_CAT_MULT}"><i>배</i></label></div>`).join('')
             : LS_MATS.map(m=>`<div class="pv-kv"><span>${m}</span><label class="pv-field"><input type="number" step="0.5" min="0" data-lsmult="${m}" value="${s.mult[m]}"><i>배</i></label></div>`).join('')}
