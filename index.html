@@ -2359,6 +2359,11 @@ html body .calx .cell .ev.ev--mid,html body .calx .cell .ev.ev--end,html body .c
 #keybar span{flex:1 1 260px}
 #keybar input{height:34px;padding:0 12px;border-radius:8px;border:0;min-width:200px;font:inherit;color:#1A1D23}
 #keybar button{height:34px;padding:0 16px;border-radius:8px;border:0;background:#D4FF00;color:#1A1D23;font:600 13px/1 inherit;cursor:pointer}
+#view .synclog{margin-top:14px;padding:12px 14px;border-radius:12px;background:rgba(26,29,35,.035)}
+#view .synclog__r{display:flex;justify-content:space-between;gap:12px;font-size:12.5px;padding:4px 0;border-top:1px solid rgba(26,29,35,.06)}
+#view .synclog__r:first-of-type{border-top:0}
+#view .synclog__r b{font-weight:600;font-variant-numeric:tabular-nums}
+#view .synclog__r.is-bad b{color:var(--alert)}
 </style>
 </head>
 <body>
@@ -4749,6 +4754,8 @@ function settingsView(){
         <button class="btn" data-act="push">노션으로 올리기</button>
         <button class="btn" data-act="pull">노션에서 내려받기</button>
       </div>
+      ${s.pullLog?`<div class="synclog"><div class="eyebrow">DB별 내려받기 결과 · ${esc(s.pullLog.at)}</div>
+        ${Object.entries(s.pullLog.kinds).map(([k,v])=>`<div class="synclog__r ${v.err?'is-bad':''}"><span>${esc(KIND_LABEL[k]||k)}</span><b>${v.err?esc(v.err):v.n+'건'}</b></div>`).join('')}</div>`:''}
       <p class="eyebrow" style="margin:12px 0 0;line-height:1.7">
         토큰은 Vercel 환경변수(NOTION_TOKEN)에만 두고 이 화면에는 넣지 않습니다. 관리자 비밀번호는 이 브라우저에만 남고 내보내기 파일에도 들어가지 않습니다.<br>
         각 노션 DB에 필요한 속성은 저장소의 README.md에 정리돼 있습니다.
@@ -5267,6 +5274,7 @@ async function pullBrands(){
     }
   }catch(e){}
 }
+const KIND_LABEL={contents:'콘텐츠',tasks:'업무',sales:'매출',daily:'일별 매출',plans:'기획',actions:'액션플랜',stats:'성과',refs:'레퍼런스',costs:'비용',products:'제품'};
 async function pullAll(quiet){
   await pullBrands(); await pullConfig(); await pullTraffic(); await pullInquiries();
   const s=DB.settings; let n=0;
@@ -5287,7 +5295,12 @@ const brandByName=nm=>{
 };
   const __kinds = Object.keys(KIND).filter(k=>s.db[KIND[k].db]);
   const __res = {};
-  await Promise.all(__kinds.map(async k=>{ try{ __res[k] = await api({action:'query', database_id:s.db[KIND[k].db]}); }catch(e){} }));
+  const __err={};
+  await Promise.all(__kinds.map(async k=>{ try{ __res[k] = await api({action:'query', database_id:s.db[KIND[k].db]}); }catch(e){ __err[k]=String(e.message||e); } }));
+  /* DB별로 몇 건 읽었는지·왜 실패했는지 남김 (설정 > 노션 동기화에 표시) */
+  DB.settings.pullLog={at:new Date().toLocaleString('ko-KR'), kinds:Object.fromEntries(__kinds.map(k=>[k, __err[k]?{err:__err[k]}:{n:(__res[k]?.results||[]).length}]))};
+  const __bad=Object.keys(__err);
+  if(__bad.length) toast(`노션에서 못 읽은 DB: ${__bad.map(k=>(KIND_LABEL[k]||k)+' ('+__err[k]+')').join(', ')}`,8000);
   for(const kind of __kinds){
     const dbId=s.db[KIND[kind].db]; if(!dbId) continue;
     const res = __res[kind]; if(!res) continue;
@@ -5501,7 +5514,7 @@ function act(a){
   if(a==='save-sync'){
     DB.settings.workerUrl=$('#setWorker').value.trim().replace(/\/$/,'');
     setAdminKey($('#setAdminKey').value.trim()); __keyDeclined=false;
-    DB.settings.db={contents:$('#db_contents').value.trim(),tasks:$('#db_tasks').value.trim(),
+    DB.settings.db={...NOTION_DB, ...DB.settings.db, contents:$('#db_contents').value.trim(),tasks:$('#db_tasks').value.trim(),
                     sales:$('#db_sales').value.trim(),products:$('#db_products').value.trim(),
                     plans:$('#db_plans').value.trim(),costs:$('#db_costs').value.trim(),
                     actions:$('#db_actions').value.trim()};
