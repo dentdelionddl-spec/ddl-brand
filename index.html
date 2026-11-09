@@ -4355,7 +4355,7 @@ function salesView(){
   <section class="card pl">
     <div class="pl__c"><p>매출 <em>부가세 포함</em></p><b>${won(P.gross)}</b><span>목표 ${won(goal)}원 · 달성 ${pct}%</span></div>
     <i class="pl__op">−</i>
-    <div class="pl__c"><p>부가세</p><b>${won(P.vat)}</b><span>${P.vatAuto?'매출의 1/11':'직접 넣은 금액'}</span></div>
+    <div class="pl__c"><p>부가세</p><b>${won(P.vat)}</b><span>${P.vatAuto?'매출의 부가세':'직접 넣은 금액'}</span></div>
     <i class="pl__op">−</i>
     <div class="pl__c"><p>매출원가</p><b>${won(P.cogs)}</b><span>원가율 ${PR(P.cogs)}</span></div>
     <i class="pl__op">=</i>
@@ -4425,7 +4425,7 @@ function salesView(){
       <thead><tr><th>구분</th><th>항목</th><th class="num">금액</th></tr></thead>
       <tbody>
         <tr class="sv-grp"><td colspan="2">부가세</td><td class="num">${won(P.vat)}</td></tr>
-        ${P.vatAuto?`<tr class="sv-auto"><td><span class="st st--plan">부가세</span></td><td>매출의 1/11 <small>'부가세'로 비용을 넣으면 그 금액으로 바뀌어요</small></td><td class="num">${won(P.vat)}</td></tr>`:P.vatRows.map(c=>`<tr class="dt__click" data-edit-cost="${c.id}"><td><span class="st st--plan">부가세</span></td><td>${esc(c.name)}</td><td class="num">${won(c.amount)}</td></tr>`).join('')}
+        ${P.vatAuto?`<tr class="sv-auto"><td><span class="st st--plan">부가세</span></td><td>매출의 부가세</td><td class="num">${won(P.vat)}</td></tr>`:P.vatRows.map(c=>`<tr class="dt__click" data-edit-cost="${c.id}"><td><span class="st st--plan">부가세</span></td><td>${esc(c.name)}</td><td class="num">${won(c.amount)}</td></tr>`).join('')}
         <tr class="sv-grp"><td colspan="2">매출원가</td><td class="num">${won(P.cogs)}</td></tr>
         ${P.dCogs?`<tr class="sv-auto"><td><span class="st st--plan">원가</span></td><td>일별 · 유통사별 입력 원가 합계</td><td class="num">${won(P.dCogs)}</td></tr>`:''}
         ${P.cogsRows.map(c=>`<tr class="dt__click" data-edit-cost="${c.id}"><td><span class="st st--plan">원가</span></td><td>${esc(c.name)}</td><td class="num">${won(c.amount)}</td></tr>`).join('')}
