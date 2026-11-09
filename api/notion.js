@@ -33,9 +33,10 @@ const DBS = {
   stats:    '691bda8c1aec4253964f2adda0e18c05',
   inquiries:'b400cf41ae804765b1b15e3a4b004ba1',
   traffic:  '22b96ecfb203408295a3f8755c6935b6',
+  daily:    'c0a051c168524e599f630c949a78f985',
 };
 /* 공유·임베드에서 브랜드별로 걸러 읽을 수 있는 DB */
-const SHARE_DBS = ['contents', 'tasks', 'sales', 'products', 'plans', 'costs', 'actions', 'refs', 'stats'];
+const SHARE_DBS = ['contents', 'tasks', 'sales', 'products', 'plans', 'costs', 'actions', 'refs', 'stats', 'daily'];
 const EMBED_DBS = ['contents', 'tasks', 'plans'];
 /* 문의·유입 DB는 공장 브랜드 공유에서만, 문의는 집계용 속성만 */
 const TRAFFIC_BRAND = 'factory';

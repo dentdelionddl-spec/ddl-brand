@@ -2268,6 +2268,27 @@ html body .calx .cell--today .cn,html body .cell--today .cell__d .cn{background:
 html body .cell--today .cell__d,html body.ro .cell--today .cell__d{color:#14161C !important}
 html body .cell--today .cell__d[style],html body .cell--today .cell__d:not(:has(.cn)){background:var(--neon) !important}
 html body .mday.is-today .n{background:var(--neon) !important;color:#14161C !important;box-shadow:none !important}
+/* ---------- 매출·손익: 일별 차트·입력표 ---------- */
+.sv-dot{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:7px;vertical-align:middle}
+.sv-legend{margin-left:auto;display:flex;gap:12px;flex-wrap:wrap;font-size:12px;color:var(--mut)}
+.sv-chart{display:flex;align-items:flex-end;gap:4px;height:180px;padding:16px 18px 10px}
+.sv-col{flex:1;min-width:0;height:100%;display:flex;flex-direction:column;align-items:center;gap:6px;cursor:default}
+.sv-col.is-we{background:linear-gradient(transparent 0,transparent 100%);}
+.sv-stack{flex:1;width:100%;max-width:22px;display:flex;flex-direction:column-reverse;border-radius:4px 4px 0 0;overflow:hidden;background:#F3F4F7}
+.sv-stack i{display:block;width:100%}
+.sv-col span{font-size:10.5px;color:var(--mut);font-variant-numeric:tabular-nums}
+.sv-col span.sun{color:var(--alert)}
+.sv-col.is-today span{background:var(--neon);color:#14161C;border-radius:4px;padding:0 3px;font-weight:700}
+.sv-gridwrap{overflow:auto;max-height:560px}
+.sv-grid thead th{position:sticky;top:0;background:#FBFBFD;z-index:1;white-space:nowrap}
+.sv-grid td{padding-top:4px !important;padding-bottom:4px !important}
+.sv-grid tr.is-we td{background:#FAFAFB}
+.sv-grid tr.is-today td{background:#FBFFE6}
+.sv-grid .sv-day{white-space:nowrap;font-variant-numeric:tabular-nums}
+.sv-grid .sv-day em{font-style:normal;color:var(--mut);font-size:11.5px;margin-left:4px}
+.sv-grid .sv-day.sun em{color:var(--alert)}
+.sv-grid .numin{width:100%;min-width:90px;text-align:right}
+.sv-grid tfoot td{position:sticky;bottom:0;background:#fff;font-weight:700;border-top:1px solid var(--line)}
 </style>
 </head>
 <body>
@@ -2337,7 +2358,8 @@ const NOTION_DB={
   actions:'21f72c37590f48dba49455f0c705b4ab',
   config:'46b8ab2d1ddc47f7b5f8c0bfa4748ab9',
   refs:'ae4c78c3a8324090b2617774d9ae3f01',
-  stats:'691bda8c1aec4253964f2adda0e18c05'
+  stats:'691bda8c1aec4253964f2adda0e18c05',
+  daily:'c0a051c168524e599f630c949a78f985' /* 일별 매출 (유통사별) */
 };
 const NOTION_HUB='https://app.notion.com/p/3bd4f7cd6b86816cbc56ef161bf47379';
 const PROXY_URL='https://ddl-brand.vercel.app/api/notion';
@@ -2346,12 +2368,12 @@ const blank = () => ({
   v:1,
   settings:{ workerUrl:PROXY_URL, db:{...NOTION_DB}, lastSync:null },
   brands: JSON.parse(JSON.stringify(SEED_BRANDS)),
-  contents:[], tasks:[], sales:[], products:[], plans:[], costs:[], actions:[], refs:[], stats:[]
+  contents:[], tasks:[], sales:[], products:[], plans:[], costs:[], actions:[], refs:[], stats:[], daily:[]
 });
 
 let DB;
 try{ DB = JSON.parse(store.get(KEY)) || blank(); }catch(e){ DB = blank(); }
-for(const k of ['contents','tasks','sales','products','plans','costs','actions','refs','stats']) if(!Array.isArray(DB[k])) DB[k]=[];
+for(const k of ['contents','tasks','sales','products','plans','costs','actions','refs','stats','daily']) if(!Array.isArray(DB[k])) DB[k]=[];
 if(!DB.settings) DB.settings=blank().settings;
 if(!DB.settings.db) DB.settings.db={...NOTION_DB};
 if(DB.settings.dbv!==3){ DB.settings.db={...DB.settings.db, ...NOTION_DB}; DB.settings.dbv=3; }
@@ -2427,10 +2449,18 @@ function actionProgress(a){
   const done=ids.filter(t=>t.done).length;
   return { cur:done, goal:ids.length, pct: ids.length? done/ids.length*100 : 0, byTask:true };
 }
+/* 일별 매출(유통사별) — 월 실적은 일별 합계, 그 달 그 채널에 일별 기록이 없으면 예전 월 입력값 */
+const dailyOf=(bid,ym)=>DB.daily.filter(d=>d.brandId===bid&&inMonth(d.date,ym));
+const dayAmt=(bid,ds,ch)=>Number(DB.daily.find(d=>d.brandId===bid&&d.date===ds&&d.channel===ch)?.amount||0);
+function chActual(bid,ym,ch){
+  const ds=dailyOf(bid,ym).filter(d=>d.channel===ch);
+  if(ds.length) return {v:ds.reduce((a,d)=>a+Number(d.amount||0),0), daily:true};
+  return {v:Number(salesOf(bid,ym).find(s=>s.channel===ch)?.actual||0), daily:false};
+}
 function totals(bid,ym){
   const chs=brandOf(bid)?.channels||[];
-  const rows=salesOf(bid,ym).filter(r=>!chs.length||chs.includes(r.channel));
-  return { goal:rows.reduce((a,r)=>a+Number(r.goal||0),0), actual:rows.reduce((a,r)=>a+Number(r.actual||0),0) };
+  const goal=salesOf(bid,ym).filter(r=>!chs.length||chs.includes(r.channel)).reduce((a,r)=>a+Number(r.goal||0),0);
+  return { goal, actual:chs.reduce((a,ch)=>a+chActual(bid,ym,ch).v,0) };
 }
 function paceRatio(ym){
   const [y,m]=ym.split('-').map(Number);
@@ -4181,39 +4211,49 @@ function costModal(id){
 
 /* ---------- 매출 · 손익 ---------- */
 function salesView(){
-  const b=brandOf(UI.brand), ym=UI.ym;
-  const rows=b.channels.map(ch=>salesOf(b.id,ym).find(s=>s.channel===ch)||{channel:ch,goal:0,actual:0});
-  const goal=rows.reduce((a,r)=>a+Number(r.goal||0),0), actual=rows.reduce((a,r)=>a+Number(r.actual||0),0);
-  const cs=costsOf(b.id,ym), cost=costTotal(b.id,ym), profit=actual-cost;
+  const b=brandOf(UI.brand), ym=UI.ym, chs=b.channels||[];
+  const [y,m]=ym.split('-').map(Number), dim=new Date(y,m,0).getDate();
+  const rows=chs.map(ch=>{ const s=salesOf(b.id,ym).find(x=>x.channel===ch)||{}; const a=chActual(b.id,ym,ch); return {channel:ch,goal:Number(s.goal||0),actual:a.v,daily:a.daily}; });
+  const goal=rows.reduce((a,r)=>a+r.goal,0), actual=rows.reduce((a,r)=>a+r.actual,0);
+  const cs=costsOf(b.id,ym), cost=costTotal(b.id,ym);
+  /* 매출은 결제 금액(부가세 포함), 이익은 부가세를 뺀 매출에서 비용을 뺀 금액 */
+  const net=Math.round(actual/1.1), profit=net-cost;
   const pct=goal? Math.round(actual/goal*100) : 0;
-  const trend=[-5,-4,-3,-2,-1,0].map(n=>ymShift(ym,n)).map(m=>({m, ...totals(b.id,m)}));
+  const trend=[-5,-4,-3,-2,-1,0].map(n=>ymShift(ym,n)).map(mm=>({m:mm, ...totals(b.id,mm)}));
   const max=Math.max(1,...trend.map(t=>Math.max(t.goal,t.actual)));
   const bar=(v,g)=>`<span class="pbar"><i style="width:${g?Math.min(100,v/g*100):0}%"></i></span>`;
   const money=v=>`<input class="numin" type="text" inputmode="numeric" value="${v?won(v):''}" placeholder="0"`;
+  const days=Array.from({length:dim},(_,i)=>`${ym}-${pad(i+1)}`);
+  const dTot=ds=>chs.reduce((a,ch)=>a+dayAmt(b.id,ds,ch),0);
+  const dmax=Math.max(1,...days.map(dTot));
+  const CC=['#8E9BB8','#B7A6D9','#9CC3B4','#E3B98F','#D9A3B5','#A9C7E0','#C9C29A'];
+  const cc=i=>CC[i%CC.length];
+  const wd=ds=>new Date(ds+'T00:00:00').getDay();
+  const entered=days.filter(ds=>dTot(ds)>0).length;
 
   return `
   <section class="kstrip card">
-    <div class="kst"><p>${Number(ym.slice(5))}월 목표</p><b>${man(goal)}</b><span>만원</span></div>
-    <div class="kst"><p>실적</p><b>${man(actual)}</b><span>만원 · 달성 ${pct}%</span></div>
+    <div class="kst"><p>${m}월 목표</p><b>${man(goal)}</b><span>만원</span></div>
+    <div class="kst"><p>매출</p><b>${man(actual)}</b><span>만원 · 달성 ${pct}%</span></div>
     <div class="kst"><p>비용</p><b>${man(cost)}</b><span>만원</span></div>
-    <div class="kst"><p>영업이익</p><b class="${profit<0?'is-bad':''}">${profit<0?'-':''}${man(Math.abs(profit))}</b><span>만원 · 이익률 ${actual?Math.round(profit/actual*100):0}%</span></div>
+    <div class="kst"><p>영업이익</p><b class="${profit<0?'is-bad':''}">${profit<0?'-':''}${man(Math.abs(profit))}</b><span>만원 · 이익률 ${net?Math.round(profit/net*100):0}%</span></div>
   </section>
 
   <div class="grid g2">
     <section class="card">
-      <div class="card__hd"><h3>채널별 목표 · 실적</h3><span class="eyebrow" style="margin-left:auto">단위 원 · 입력하면 자동 저장</span></div>
+      <div class="card__hd"><h3>채널별 목표 · 실적</h3><span class="eyebrow" style="margin-left:auto">실적 = 일별 입력 합계</span></div>
       <table class="dt">
         <colgroup><col><col style="width:26%"><col style="width:26%"><col style="width:150px"></colgroup>
         <thead><tr><th>채널</th><th class="num">목표</th><th class="num">실적</th><th class="num">달성률</th></tr></thead>
-        <tbody>${rows.map(r=>`<tr>
-          <td><b>${esc(r.channel)}</b></td>
+        <tbody>${rows.map((r,i)=>`<tr>
+          <td><b><i class="sv-dot" style="background:${cc(i)}"></i>${esc(r.channel)}</b></td>
           <td class="num">${money(r.goal)} data-sale="${esc(r.channel)}" data-f="goal" /></td>
-          <td class="num">${money(r.actual)} data-sale="${esc(r.channel)}" data-f="actual" /></td>
-          <td class="num"><span class="pct">${r.goal?Math.round((r.actual||0)/r.goal*100)+'%':'—'}</span>${bar(r.actual||0,r.goal)}</td></tr>`).join('')}
+          <td class="num">${r.daily||!r.actual?`<b>${won(r.actual)}</b>`:`${money(r.actual)} data-sale="${esc(r.channel)}" data-f="actual" title="일별 입력 전 월 합계값" />`}</td>
+          <td class="num"><span class="pct">${r.goal?Math.round(r.actual/r.goal*100)+'%':'—'}</span>${bar(r.actual,r.goal)}</td></tr>`).join('')}
         </tbody>
         <tfoot><tr><td>합계</td><td class="num">${won(goal)}</td><td class="num">${won(actual)}</td><td class="num">${goal?pct+'%':'—'}</td></tr></tfoot>
       </table>
-      <div class="dt__note">채널 구성은 설정에서 브랜드별로 바꿀 수 있어요</div>
+      <div class="dt__note">매출은 결제 금액(부가세 포함) · 이익은 부가세를 뺀 매출 ${won(net)}원에서 비용을 뺀 금액 · 채널은 설정에서 바꿔요</div>
     </section>
 
     <section class="card">
@@ -4227,6 +4267,27 @@ function salesView(){
       </div>
     </section>
   </div>
+
+  <section class="card">
+    <div class="card__hd"><h3>일별 매출</h3><span class="eyebrow">${entered}일 입력</span>
+      <span class="sv-legend">${chs.map((ch,i)=>`<span><i class="sv-dot" style="background:${cc(i)}"></i>${esc(ch)}</span>`).join('')}</span></div>
+    <div class="sv-chart">${days.map(ds=>{ const t=dTot(ds); const d=Number(ds.slice(8));
+      return `<div class="sv-col ${ds===TODAY?'is-today':''} ${wd(ds)===0||wd(ds)===6?'is-we':''}" title="${m}/${d} · ${won(t)}원${chs.map(ch=>{const v=dayAmt(b.id,ds,ch); return v?`\n${ch} ${won(v)}`:'';}).join('')}">
+        <div class="sv-stack">${chs.map((ch,i)=>{const v=dayAmt(b.id,ds,ch); return v?`<i style="height:${v/dmax*100}%;background:${cc(i)}"></i>`:'';}).join('')}</div>
+        <span class="${wd(ds)===0?'sun':''}">${d}</span></div>`; }).join('')}</div>
+  </section>
+
+  <section class="card">
+    <div class="card__hd"><h3>일별 · 유통사별 입력</h3><span class="eyebrow" style="margin-left:auto">결제 금액(부가세 포함) · 입력하면 자동 저장</span></div>
+    <div class="sv-gridwrap"><table class="dt sv-grid">
+      <thead><tr><th>날짜</th>${chs.map((ch,i)=>`<th class="num"><i class="sv-dot" style="background:${cc(i)}"></i>${esc(ch)}</th>`).join('')}<th class="num">합계</th></tr></thead>
+      <tbody>${days.map(ds=>{ const t=dTot(ds), w=wd(ds);
+        return `<tr class="${ds===TODAY?'is-today':''} ${w===0||w===6?'is-we':''}"><td class="sv-day ${w===0?'sun':''}">${Number(ds.slice(5,7))}/${Number(ds.slice(8))} <em>${'일월화수목금토'[w]}</em></td>
+          ${chs.map(ch=>{const v=dayAmt(b.id,ds,ch); return `<td class="num"><input class="numin" type="text" inputmode="numeric" value="${v?won(v):''}" placeholder="" data-day="${ds}" data-ch="${esc(ch)}" /></td>`;}).join('')}
+          <td class="num"><b>${t?won(t):''}</b></td></tr>`; }).join('')}</tbody>
+      <tfoot><tr><td>합계</td>${rows.map(r=>`<td class="num">${won(r.actual)}</td>`).join('')}<td class="num">${won(actual)}</td></tr></tfoot>
+    </table></div>
+  </section>
 
   <section class="card">
     <div class="card__hd"><h3>비용</h3><span class="eyebrow">${cs.length}건</span><button class="btn btn--sm" data-act="cost-new" style="margin-left:auto">비용 추가</button></div>
@@ -4893,6 +4954,11 @@ const KIND={
       '브랜드':{select:{name:brandOf(s.brandId)?.name||''}}, '월':{rich_text:[{text:{content:s.ym}}]},
       '채널':{select:{name:s.channel}}, '목표':{number:Number(s.goal||0)}, '실적':{number:Number(s.actual||0)},
       '로컬ID':{rich_text:[{text:{content:s.id}}]} }) },
+  daily:{ db:'daily',
+    props:d=>({ '항목':{title:[{text:{content:`${brandOf(d.brandId)?.name||''} ${d.date} ${d.channel}`}}]},
+      '브랜드':{select:{name:brandOf(d.brandId)?.name||''}}, '날짜':{date:{start:d.date}},
+      '채널':{select:{name:d.channel}}, '매출':{number:Number(d.amount||0)},
+      '로컬ID':{rich_text:[{text:{content:d.id}}]} }) },
   plans:{ db:'plans',
     props:p=>({ '주제':{title:[{text:{content:p.title||''}}]}, '브랜드':{select:{name:brandOf(p.brandId)?.name||''}},
       '월':{rich_text:[{text:{content:p.ym||''}}]}, '주차':{select:{name:p.week||'1주차'}},
@@ -5069,7 +5135,7 @@ async function pullBrands(){
 async function pullAll(quiet){
   await pullBrands(); await pullConfig(); await pullTraffic(); await pullInquiries();
   const s=DB.settings; let n=0;
-  const snap=()=>JSON.stringify(['contents','tasks','sales','products','plans','costs','actions','refs'].map(k=>DB[k]));
+  const snap=()=>JSON.stringify(['contents','tasks','sales','products','plans','costs','actions','refs','daily'].map(k=>DB[k]));
   const before=snap();
   const txt=p=>p?.rich_text?.[0]?.plain_text||'';
   const sel=p=>p?.select?.name||'';
@@ -5135,6 +5201,8 @@ const brandByName=nm=>{
         chars:P['글자수']?.number||0, hasImg:!!P['이미지 유무']?.checkbox, slot:sel(P['발행시간대'])||'', body:txt(P['본문'])}); }
       if(kind==='refs'){ Object.assign(rec,{brandId:brandByName(sel(P['브랜드'])), cat:sel(P['분류'])||'릴스',
         title:ttl(P['제목']), url:P['링크']?.url||'', memo:txt(P['메모'])}); }
+      if(kind==='daily'){ Object.assign(rec,{brandId:brandByName(sel(P['브랜드'])), date:P['날짜']?.date?.start||'',
+        channel:sel(P['채널']), amount:P['매출']?.number||0}); }
       if(kind==='costs'){ Object.assign(rec,{brandId:brandByName(sel(P['브랜드'])), ym:txt(P['월']),
         kind:sel(P['구분'])||'기타', name:ttl(P['항목']), amount:P['금액']?.number||0}); }
       if(kind==='products'){ Object.assign(rec,{brandId:brandByName(sel(P['브랜드'])), name:ttl(P['제품명']),
@@ -5250,6 +5318,17 @@ function bind(){
     let r=DB.sales.find(s=>s.brandId===UI.brand&&s.ym===UI.ym&&s.channel===ch);
     if(!r){ r={id:uid(),brandId:UI.brand,ym:UI.ym,channel:ch,goal:0,actual:0}; DB.sales.push(r); }
     r[f]=Number(String(el.value||'').replace(/[^\d.-]/g,''))||0; r.dirty=true; save(); render();
+  });
+  /* 일별·유통사별 매출 입력 */
+  document.querySelectorAll('[data-day]').forEach(el=>{
+    el.onfocus=()=>{ el.value=el.value.replace(/[^\d.-]/g,''); el.select(); };
+    el.onchange=()=>{
+      const ds=el.dataset.day, ch=el.dataset.ch, v=Number(String(el.value||'').replace(/[^\d.-]/g,''))||0;
+      let r=DB.daily.find(d=>d.brandId===UI.brand&&d.date===ds&&d.channel===ch);
+      if(!r){ if(!v) return; r={id:uid(),brandId:UI.brand,date:ds,channel:ch,amount:0}; DB.daily.push(r); }
+      r.amount=v; r.dirty=true; save(); render();
+    };
+    el.onkeydown=e=>{ if(e.key==='Enter'){ e.preventDefault(); const all=[...document.querySelectorAll('[data-day]')]; const i=all.indexOf(el), cols=(brandOf(UI.brand).channels||[]).length||1; el.blur(); setTimeout(()=>{ const nx=document.querySelectorAll('[data-day]')[i+cols]; if(nx) nx.focus(); },30); } };
   });
   document.querySelectorAll('[data-act]').forEach(el=>el.onclick=()=>act(el.dataset.act));
   if(UI.tab==='calendar') bindCalendar();
