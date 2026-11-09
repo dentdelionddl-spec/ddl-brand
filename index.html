@@ -2372,6 +2372,66 @@ html body .calx .cell .ev.ev--mid,html body .calx .cell .ev.ev--end,html body .c
 #layer .chrow__x:hover{color:var(--alert);border-color:var(--alert)}
 #view .sv-old{font-size:10.5px;font-weight:500;color:#9A9EA6;margin-left:4px}
 #view .sv-costtbl tr.sv-grp td{font-weight:700 !important;color:var(--ink) !important;background:rgba(26,29,35,.035) !important}
+/* ===== KPI·업무·콘텐츠: 제품·매출 탭과 같은 톤 (무채색 · 흰 카드 · 작은 분절 버튼) ===== */
+#view .ux{--pv-line:#ECEEF3;--pv-line2:#F3F4F8;--pv-ink:#14161C;--pv-ink2:#4A4F5C;--pv-mut:#8A8FA0;--pv-acc:#D4FF00;display:flex;flex-direction:column;gap:14px;min-width:0}
+#view .ux-hd{margin-bottom:2px}
+#view .ux-hd .pv-actions{display:flex;gap:8px}
+#view .ux .pv-seg button{display:inline-flex;align-items:center}
+#view .ux .card{background:#fff !important;border:1px solid var(--pv-line) !important;border-radius:14px !important;box-shadow:0 1px 2px rgba(16,20,32,.03) !important;backdrop-filter:none !important}
+#view .ux .card + .card{margin-top:0}
+#view .ux .card__hd{padding:14px 18px !important;border-bottom:1px solid var(--pv-line2) !important}
+#view .ux .card__hd h3{font-size:13.5px !important;font-weight:650 !important}
+#view .ux .tag,#view .ux .st{background:#F3F4F8 !important;color:var(--pv-ink2) !important;border:0 !important;border-radius:6px !important;font-weight:550 !important}
+#view .ux .tag--ok{background:#F7FFD9 !important;color:#4B5A00 !important}
+#view .ux .st--today{background:var(--pv-acc) !important;color:var(--pv-ink) !important}
+#view .ux .st--late{background:#FDECEC !important;color:#B4232A !important}
+#view .ux .st--soon{background:#ECEEF3 !important;color:var(--pv-ink) !important}
+#view .ux .st--done{background:#F3F4F8 !important;color:var(--pv-mut) !important}
+#view .ux .track i,#view .ux .pbar i{background:var(--pv-ink) !important}
+#view .ux .btn--primary{background:var(--pv-acc) !important;border-color:var(--pv-acc) !important;color:var(--pv-ink) !important}
+/* KPI */
+#view .ux-kpis{grid-template-columns:repeat(5,1fr)}
+#view .ux-bar{padding:16px 18px 18px}
+#view .ux-bar__t{position:relative;height:10px;border-radius:99px;background:#F3F4F8}
+#view .ux-bar__t i{position:absolute;inset:0 auto 0 0;border-radius:99px;background:var(--pv-ink)}
+#view .ux-bar__t span{position:absolute;top:-5px;bottom:-5px;width:2px;margin-left:-1px;border-radius:2px;background:var(--pv-acc);box-shadow:0 0 0 2px #fff}
+#view .ux-bar p{margin:10px 0 0;font-size:12px;color:var(--pv-mut)}
+#view .ux-sec{display:flex;align-items:baseline;gap:10px;margin-top:6px}
+#view .ux-sec h3{margin:0;font-size:15px;font-weight:700;letter-spacing:-.01em}
+#view .ux-sec small{font-size:12px;color:var(--pv-mut)}
+#view .ux-empty{display:flex;flex-direction:column;align-items:center;gap:6px;padding:40px 20px;text-align:center}
+#view .ux-empty b{font-size:14px;font-weight:650}
+#view .ux-empty span{font-size:12.5px;color:var(--pv-mut);line-height:1.6;max-width:520px}
+#view .ux .empty{padding:40px 20px !important}
+/* 업무 */
+#view .tboard.ux .tboard__bar{gap:10px;margin:0}
+#view .tboard.ux .mseg{width:auto;flex:0 0 auto;padding:3px;border-radius:10px;background:#F3F4F8;gap:2px}
+#view .tboard.ux .mseg button{flex:0 0 auto;height:30px;padding:0 12px;border-radius:8px;font:550 12.5px var(--sans);color:var(--pv-ink2)}
+#view .tboard.ux .mseg button i{font-weight:500;color:var(--pv-mut);margin-left:3px}
+#view .tboard.ux .mseg button[aria-pressed="true"]{background:#fff;color:var(--pv-ink);box-shadow:0 1px 2px rgba(16,20,32,.08),0 0 0 1px rgba(16,20,32,.04)}
+#view .tboard.ux .mgrp{margin:10px 2px 0;font-size:12px;color:var(--pv-mut)}
+#view .tboard.ux .mgrp b{font-size:14px;font-weight:700;color:var(--pv-ink);margin-right:2px}
+#view .tboard.ux .tcards{gap:8px}
+#view .tboard.ux .mt{background:#fff !important;border:1px solid var(--pv-line) !important;border-radius:12px !important;box-shadow:0 1px 2px rgba(16,20,32,.03) !important;backdrop-filter:none !important}
+#view .tboard.ux .mt:hover{border-color:#DFE2EA !important;box-shadow:0 4px 14px -8px rgba(16,20,32,.18) !important}
+#view .tboard.ux .mt__t{font-size:13.5px;font-weight:600;color:var(--pv-ink)}
+#view .tboard.ux .mt__m{font-size:11.5px;color:var(--pv-mut)}
+#view .tboard.ux .mt__chk{border-color:#D5D8E0 !important}
+#view .tboard.ux .mt.is-done .mt__chk{background:var(--pv-ink) !important;border-color:var(--pv-ink) !important;color:#fff !important}
+#view .tboard.ux .mempty{background:#fff;border:1px solid var(--pv-line);border-radius:14px}
+/* 콘텐츠 */
+#view .ux-tabs{display:flex}
+#view .ux-tabs--sub{margin-top:-4px}
+#view .ux .areahd h3{font-size:14px !important;font-weight:700 !important}
+#view .ux .areahd .line{background:var(--pv-line) !important}
+@media (max-width:900px){ #view .ux-kpis{grid-template-columns:repeat(2,1fr)} #view .ux-kpis .pv-kpi + .pv-kpi{border-left:0} }
+/* 콘텐츠 탭: 예전 밑줄 탭·검은 알약 규칙을 분절 버튼으로 */
+html body #view .ux .pv-seg:has(> button){display:inline-flex !important;gap:2px !important;padding:3px !important;border-radius:10px !important;background:#F3F4F8 !important;border-bottom:0 !important;margin:0 !important;overflow:visible !important;width:auto}
+html body #view .ux .pv-seg > button{height:30px !important;padding:0 12px !important;border-radius:8px !important;border:0 !important;background:transparent !important;color:var(--pv-ink2) !important;font:550 12.5px var(--sans) !important;box-shadow:none !important;margin:0 !important}
+html body #view .ux .pv-seg > button.is-on{background:#fff !important;color:var(--pv-ink) !important;box-shadow:0 1px 2px rgba(16,20,32,.08),0 0 0 1px rgba(16,20,32,.04) !important}
+html body #view .ux div:has(> .sub:not([data-ptab])){display:inline-flex !important;width:fit-content;max-width:100%;gap:2px !important;padding:3px !important;border-radius:10px;background:#F3F4F8;margin-left:0 !important;margin-right:0 !important}
+html body #view .ux .sub:not([data-ptab]){height:30px !important;border-radius:8px !important;color:var(--pv-ink2) !important;font-weight:550 !important}
+html body #view .ux .sub:not([data-ptab])[aria-pressed="true"]{background:#fff !important;color:var(--pv-ink) !important;box-shadow:0 1px 2px rgba(16,20,32,.08),0 0 0 1px rgba(16,20,32,.04) !important}
 </style>
 </head>
 <body>
@@ -2814,6 +2874,9 @@ const monthNav=()=>`<div class="monthnav">
     <button data-mo="1" aria-label="다음 달">›</button>
   </div>`;
 
+/* KPI·업무·콘텐츠 공통 머리글 — 제품 탭과 같은 모양 */
+const uxHd=(title,sub,actions='')=>`<header class="pv-hd ux-hd"><div><h2>${title}</h2><p>${sub}</p></div><div class="pv-actions">${actions}</div></header>`;
+const uxBtn=(act,label)=>`<button class="pv-btn pv-btn--pri" data-act="${act}">${LS_ICO.plus}${label}</button>`;
 function viewHtml(){
   if(UI.brand==='__home') return homeView();
   if(UI.brand==='__set') return settingsView();
@@ -3382,13 +3445,12 @@ function taskBoard(bid){
       .filter(([,r])=>r.length).map(([k,r])=>`<div class="mgrp"><b>${k}</b><span>${r.length}</span></div>${grid(r.sort(byDue))}`).join('');
   } else body = G[f].length ? grid(G[f].slice().sort(f==='done'?(x,y)=>(y.due||'').localeCompare(x.due||''):byDue)) : '';
   const brands = DB.brands.filter(b=>!b.hidden&&live.some(t=>t.brandId===b.id));
-  return `<div class="tboard">
+  return `<div class="tboard ux">
+    ${uxHd('업무',`${bid?esc(brandOf(bid)?.name||'')+' · ':''}할 일 ${G.all.length}건${G.late.length?` · 지연 ${G.late.length}건`:''}`,uxBtn('task-new','업무 추가'))}
     <div class="tboard__bar">
       ${mSeg([['all','전체',G.all.length],['late','지연',G.late.length],['week','이번 주',G.week.length],['done',Number(ym.slice(5))+'월 완료',G.done.length]],f,'data-mfilter')}
       ${bid?'':dd('taskBrand',bf,[['','모든 브랜드'],...brands.map(b=>[b.id,b.name])],'dd--m')}
       ${mMine()}
-      <div class="spacer" style="flex:1"></div>
-      <button class="btn btn--primary btn--sm" data-act="task-new">업무 추가</button>
     </div>
     ${body || `<div class="mempty"><b>${f==='done'?'이 달 완료한 업무가 없어요':'할 일이 없어요'}</b><span>${who?esc(who)+'님 담당 기준이에요':'업무 추가로 시작하세요'}</span></div>`}
   </div>`;
@@ -3498,32 +3560,25 @@ function kpiView(){
   const pacePct=Math.round(paceRatio(ym)*100);
   const pct = goal? actual/goal*100 : 0;
   const acts=actionsOf(b.id,ym);
-  return `
-  <section class="card">
-    <div class="card__hd"><h3>목표 매출</h3><span class="eyebrow" style="margin-left:auto">${ymLabel(ym)}</span></div>
-    <div class="card__bd">
-      <div style="display:flex;align-items:baseline;gap:10px;margin-bottom:12px">
-        <div class="mono" style="font-size:30px;font-weight:600;letter-spacing:-.02em">${man(actual)}<span style="font-size:13px;color:var(--mut)">만원</span></div>
-        <div class="mono" style="font-size:12.5px;color:var(--mut)">목표 ${man(goal)}만 · 달성 ${Math.round(pct)}%</div>
-        <div class="spacer" style="flex:1"></div>
-        <span class="tag ${pct>=pacePct?'tag--ok':'tag--high'}">진도 ${pacePct}%</span>
-      </div>
-      <div class="track" style="height:18px">
-        <i style="width:${Math.min(100,pct)}%;background:${pct<pacePct-5?'#C9A0A8':hueBg(b.hue,58)}"></i>
-        <span class="pace" style="left:${Math.min(100,pacePct)}%"></span>
-      </div>
-      <div class="eyebrow" style="margin-top:10px">목표·실적 숫자는 매출·손익 탭에서 채널별로 입력합니다</div>
+  const behind=pct<pacePct-5;
+  return `<section class="ux">
+  ${uxHd('KPI',`${esc(b.name)} · ${ymLabel(ym)} 목표 매출과 액션플랜`,uxBtn('action-new','액션플랜 추가'))}
+  <div class="pv-card ux-kpi">
+    <div class="pv-card__hd"><h3>목표 매출</h3><small>숫자는 매출·손익 탭에서 입력</small></div>
+    <div class="pv-kpis ux-kpis">
+      <div class="pv-kpi"><span>매출 (부가세 포함)</span><b>${won(actual)}원</b></div>
+      <div class="pv-kpi"><span>목표</span><b>${won(goal)}원</b></div>
+      <div class="pv-kpi"><span>달성률</span><b>${goal?Math.round(pct)+'%':'—'}</b></div>
+      <div class="pv-kpi"><span>기간 진도</span><b>${pacePct}%</b></div>
+      <div class="pv-kpi"><span>남은 금액</span><b>${goal?won(Math.max(0,goal-actual))+'원':'—'}</b></div>
     </div>
-  </section>
-
-  <div style="display:flex;align-items:center;gap:10px;margin:18px 0 8px">
-    <h3 style="margin:0;font-size:13px;font-weight:700">월별 액션플랜</h3>
-    <span class="eyebrow">목표 매출을 만들기 위한 행동 지표</span>
-    <div class="spacer" style="flex:1"></div>
-    <button class="btn btn--primary btn--sm" data-act="action-new">액션플랜 추가</button>
+    <div class="ux-bar"><div class="ux-bar__t"><i style="width:${Math.min(100,pct)}%"></i><span style="left:${Math.min(100,pacePct)}%" title="오늘까지 기간 진도"></span></div>
+      <p>${!goal?'목표를 넣으면 진행 상황이 보여요':behind?`기간 진도보다 ${Math.round(pacePct-pct)}%p 늦어요`:'기간 진도에 맞춰 가고 있어요'}</p></div>
   </div>
+  <div class="ux-sec"><h3>월별 액션플랜</h3><small>목표 매출을 만들기 위한 행동 지표 · ${acts.length}개</small></div>
   ${acts.length? acts.map(a=>actionCard(a,b)).join('')
-   : `<div class="card"><div class="empty"><b>이 달 액션플랜이 없습니다</b>"릴스 12편 발행", "29CM 상품 30개 등록"처럼 매출을 만드는 행동을 적고, 그 아래에 실제 업무를 붙이세요.</div></div>`}`;
+   : `<div class="pv-card ux-empty"><b>이 달 액션플랜이 없어요</b><span>"릴스 12편 발행", "29CM 상품 30개 등록"처럼 매출을 만드는 행동을 적고, 그 아래에 실제 업무를 붙이세요.</span></div>`}
+  </section>`;
 }
 function actionCard(a,b){
   const pr=actionProgress(a);
@@ -3652,15 +3707,16 @@ function uploadPlanView(){
         </section>`;
       }).join('')}`).join('')}`;
 }
-function plansView(){
+function plansView(){ return `<section class="ux">${EMBED?'':uxHd('콘텐츠',`${esc(brandOf(UI.brand)?.name||'')} · 레퍼런스부터 기획·업로드·분석까지`)}${plansInner()}</section>`; }
+function plansInner(){
   const ptab=UI.planTab||'plan';
   if(ptab==='ref') return contentTabs(ptab)+refsView();
   if(ptab==='stat') return contentTabs(ptab)+statsView();
   if(ptab==='upload'){
     const b=brandOf(UI.brand);
     const utab = EMBED? 'media' : (UI.upTab||'media');
-    const chip=(v,l,on)=>`<button class="btn btn--sm sub" data-uptab="${v}" aria-pressed="${!!(on)}">${l}</button>`;
-    const sub = EMBED? '' : `<div style="display:flex;gap:6px;margin-bottom:14px">${chip('media','영상 / 이미지',utab==='media')}${chip('thread','스레드',utab==='thread')}</div>`;
+    const chip=(v,l,on)=>`<button class="${on?'is-on':''}" data-uptab="${v}">${l}</button>`;
+    const sub = EMBED? '' : `<div class="ux-tabs ux-tabs--sub"><div class="pv-seg">${chip('media','영상 / 이미지',utab==='media')}${chip('thread','스레드',utab==='thread')}</div></div>`;
     const body = utab==='thread'? threadsView(b,UI.ym,plansOf(b.id,UI.ym)) : uploadPlanView();
     return contentTabs(ptab)+sub+body;
   }
@@ -4031,8 +4087,8 @@ function statModal(id){
 }
 function contentTabs(ptab){
   if(EMBED) return '';
-  const chip=(v,l,on)=>`<button class="btn btn--sm sub" data-ptab="${v}" aria-pressed="${!!(on)}">${l}</button>`;
-  return `<div style="display:flex;gap:6px;margin-bottom:12px">${chip('ref','레퍼런스',ptab==='ref')}${chip('plan','기획',ptab==='plan')}${chip('upload','업로드 계획',ptab==='upload')}${chip('stat','분석',ptab==='stat')}</div>`;
+  const chip=(v,l,on)=>`<button class="${on?'is-on':''}" data-ptab="${v}">${l}</button>`;
+  return `<div class="ux-tabs"><div class="pv-seg">${chip('ref','레퍼런스',ptab==='ref')}${chip('plan','기획',ptab==='plan')}${chip('upload','업로드 계획',ptab==='upload')}${chip('stat','분석',ptab==='stat')}</div></div>`;
 }
 function plansPlanView(){
   const b=brandOf(UI.brand), ym=UI.ym;
@@ -4043,8 +4099,8 @@ function plansPlanView(){
   const has=list.length;
   return `<div style="display:flex;align-items:center;gap:10px;margin-bottom:12px">
       <div class="eyebrow">${ymLabel(ym)} 기획안 ${has}건</div>
-      <div style="display:flex;gap:6px;flex-wrap:wrap">
-        ${PLAN_KINDS.filter(k=>k!=='텍스트').map(k=>[k,k]).map(([v,l])=>`<button class="btn btn--sm sub" data-plankind="${v}" aria-pressed="${!!(kind===v)}">${l} ${v? all.filter(x=>(x.kind||'영상')===v).length : all.length}</button>`).join('')}
+      <div class="pv-seg">
+        ${PLAN_KINDS.filter(k=>k!=='텍스트').map(k=>[k,k]).map(([v,l])=>`<button class="${kind===v?'is-on':''}" data-plankind="${v}">${l}<i>${v? all.filter(x=>(x.kind||'영상')===v).length : all.length}</i></button>`).join('')}
       </div>
       <div class="spacer" style="flex:1"></div>
       <button class="btn btn--primary btn--sm" data-act="plan-new">기획안 추가</button>
