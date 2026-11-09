@@ -2366,6 +2366,11 @@ html body .calx .cell .ev.ev--mid,html body .calx .cell .ev.ev--end,html body .c
 #view .synclog__r.is-bad b{color:var(--alert)}
 #keybar em{flex:1 0 100%;font-style:normal;color:#D4FF00;font-size:12.5px}
 #keybar em:empty{display:none}
+#layer .chrow{display:flex;gap:6px;margin-bottom:6px}
+#layer .chrow input{flex:1}
+#layer .chrow__x{width:34px;border:1px solid var(--line);border-radius:8px;background:transparent;color:var(--mut);font-size:16px;cursor:pointer}
+#layer .chrow__x:hover{color:var(--alert);border-color:var(--alert)}
+#view .sv-old{font-size:10.5px;font-weight:500;color:#9A9EA6;margin-left:4px}
 </style>
 </head>
 <body>
@@ -2536,9 +2541,18 @@ function chActual(bid,ym,ch){
   if(ds.length) return {v:ds.reduce((a,d)=>a+Number(d.amount||0),0), daily:true};
   return {v:Number(salesOf(bid,ym).find(s=>s.channel===ch)?.actual||0), daily:false};
 }
+/* 그 달에 보여줄 채널 = 설정의 채널 + 설정에서 지웠지만 그 달에 기록이 남아 있는 채널 (지워도 예전 숫자는 그대로) */
+function monthChannels(bid,ym){
+  const cur=(brandOf(bid)?.channels||[]).filter(Boolean), out=[...cur];
+  const add=ch=>{ if(ch && !out.includes(ch)) out.push(ch); };
+  dailyOf(bid,ym).forEach(d=>{ if(Number(d.amount||0)||Number(d.cost||0)) add(d.channel); });
+  salesOf(bid,ym).forEach(r=>{ if(Number(r.goal||0)||Number(r.actual||0)) add(r.channel); });
+  return out;
+}
+const isOldCh=(bid,ch)=>!(brandOf(bid)?.channels||[]).includes(ch);
 function totals(bid,ym){
-  const chs=brandOf(bid)?.channels||[];
-  const goal=salesOf(bid,ym).filter(r=>!chs.length||chs.includes(r.channel)).reduce((a,r)=>a+Number(r.goal||0),0);
+  const chs=monthChannels(bid,ym);
+  const goal=salesOf(bid,ym).filter(r=>chs.includes(r.channel)).reduce((a,r)=>a+Number(r.goal||0),0);
   return { goal, actual:chs.reduce((a,ch)=>a+chActual(bid,ym,ch).v,0) };
 }
 function paceRatio(ym){
@@ -4298,7 +4312,7 @@ function costRate(bid){
   return {rate:P?C/P:0, n};
 }
 function plOf(bid,ym){
-  const b=brandOf(bid), chs=b.channels||[], cs=costsOf(bid,ym);
+  const b=brandOf(bid), chs=monthChannels(bid,ym), cs=costsOf(bid,ym);
   const gross=chs.reduce((a,ch)=>a+chActual(bid,ym,ch).v,0), net=Math.round(gross/1.1);
   const sum=k=>cs.filter(c=>(c.kind||'기타')===k).reduce((a,c)=>a+Number(c.amount||0),0);
   const has=k=>cs.some(c=>(c.kind||'기타')===k);
@@ -4313,7 +4327,8 @@ function plOf(bid,ym){
   return {gross,net,cogs,cogsAuto,dCogs,rate:cr.rate,rateN:cr.n,fee,feeAuto,other,gp,opex,op};
 }
 function salesView(){
-  const b=brandOf(UI.brand), ym=UI.ym, chs=b.channels||[];
+  const b=brandOf(UI.brand), ym=UI.ym, chs=monthChannels(b.id,ym);
+  const old=ch=>isOldCh(b.id,ch)?' <small class="sv-old">지운 채널</small>':'';
   const [y,m]=ym.split('-').map(Number), dim=new Date(y,m,0).getDate();
   const rows=chs.map(ch=>{ const s=salesOf(b.id,ym).find(x=>x.channel===ch)||{}; const a=chActual(b.id,ym,ch); return {channel:ch,goal:Number(s.goal||0),actual:a.v,daily:a.daily}; });
   const goal=rows.reduce((a,r)=>a+r.goal,0), actual=rows.reduce((a,r)=>a+r.actual,0);
@@ -4353,7 +4368,7 @@ function salesView(){
         <colgroup><col><col style="width:26%"><col style="width:26%"><col style="width:150px"></colgroup>
         <thead><tr><th>채널</th><th class="num">목표</th><th class="num">실적</th><th class="num">달성률</th></tr></thead>
         <tbody>${rows.map((r,i)=>`<tr>
-          <td><b><i class="sv-dot" style="background:${cc(i)}"></i>${esc(r.channel)}</b></td>
+          <td><b><i class="sv-dot" style="background:${cc(i)}"></i>${esc(r.channel)}</b>${old(r.channel)}</td>
           <td class="num">${money(r.goal)} data-sale="${esc(r.channel)}" data-f="goal" /></td>
           <td class="num">${r.daily||!r.actual?`<b>${won(r.actual)}</b>`:`${money(r.actual)} data-sale="${esc(r.channel)}" data-f="actual" title="일별 입력 전 월 합계값" />`}</td>
           <td class="num"><span class="pct">${r.goal?Math.round(r.actual/r.goal*100)+'%':'—'}</span>${bar(r.actual,r.goal)}</td></tr>`).join('')}
@@ -4387,7 +4402,7 @@ function salesView(){
   <section class="card sv-card">
     <div class="card__hd"><h3>일별 · 유통사별 입력</h3><span class="eyebrow" style="margin-left:auto">매출은 결제 금액(부가세 포함, 반품 차감) · 원가는 팔린 제품 원가 · 입력하면 자동 저장</span></div>
     <div class="sv-gridwrap"><table class="dt sv-grid">
-      <thead><tr><th rowspan="2">날짜</th>${chs.map((ch,i)=>`<th class="num sv-ch sv-l" colspan="2" style="--c:${cc(i)}">${esc(ch)}</th>`).join('')}<th class="num sv-ch sv-l sv-tot" colspan="2" style="--c:#1A1D23">합계</th></tr>
+      <thead><tr><th rowspan="2">날짜</th>${chs.map((ch,i)=>`<th class="num sv-ch sv-l" colspan="2" style="--c:${cc(i)}">${esc(ch)}${old(ch)}</th>`).join('')}<th class="num sv-ch sv-l sv-tot" colspan="2" style="--c:#1A1D23">합계</th></tr>
         <tr class="sv-sub">${[...chs,''].map((_,i)=>{ const t=i===chs.length?' sv-tot':''; return `<th class="num sv-l${t}">매출</th><th class="num sv-cc${t}">원가</th>`; }).join('')}</tr></thead>
       <tbody>${days.map(ds=>{ const t=dTot(ds), tc=chs.reduce((a,ch)=>a+dayCost(b.id,ds,ch),0), w=wd(ds);
         const cell=(v,ch,f)=>`<td class="num${f==='amount'?' sv-l':' sv-cc'}"><input class="numin${f==='cost'?' sv-cost':''}" type="text" inputmode="numeric" value="${v?won(v):''}" placeholder="" data-day="${ds}" data-ch="${esc(ch)}" data-f="${f}" /></td>`;
@@ -5020,6 +5035,24 @@ function prodModal(id){
   });
 }
 
+const chRowHtml=ch=>`<div class="chrow"><input type="text" value="${esc(ch||'')}" data-orig="${esc(ch||'')}" placeholder="채널 이름"><button type="button" class="chrow__x" onclick="this.closest('.chrow').remove()" aria-label="채널 지우기">×</button></div>`;
+function chRowAdd(){ const w=document.getElementById('b_chs'); if(!w) return; w.insertAdjacentHTML('beforeend',chRowHtml('')); w.lastElementChild.querySelector('input').focus(); }
+/* 채널 이름 바꾸기 — 일별 매출·월 목표·판매 조건 수수료까지 새 이름으로, 노션에도 반영 */
+function renameChannels(bid, renames){
+  let n=0;
+  renames.forEach(({orig,name})=>{
+    DB.daily.forEach(d=>{ if(d.brandId===bid && d.channel===orig){ d.channel=name; d.dirty=true; n++; } });
+    DB.sales.forEach(r=>{ if(r.brandId===bid && r.channel===orig){
+      const dup=DB.sales.find(x=>x!==r && x.brandId===bid && x.ym===r.ym && x.channel===name);
+      if(dup){ dup.goal=Number(dup.goal||0)+Number(r.goal||0); dup.actual=Number(dup.actual||0)+Number(r.actual||0); dup.dirty=true; notionDrop(r); DB.sales=DB.sales.filter(x=>x!==r); }
+      else { r.channel=name; r.dirty=true; }
+      n++; } });
+    const c=UI.ls&&UI.ls.cond&&UI.ls.cond[bid];
+    if(c){ if(c.fees && c.fees[orig]!=null && c.fees[name]==null) c.fees[name]=c.fees[orig]; if(c.ch===orig) c.ch=name; }
+  });
+  save(); saveUI(); if(n) autoSync();
+  return n;
+}
 function brandModal(id){
   const isNew=!id;
   const b=isNew? {id:'b'+uid(),name:'',ko:'',hue:210,client:'',channels:['자사몰','플랫폼','기타']}
@@ -5032,12 +5065,18 @@ function brandModal(id){
         <label class="f"><span>클라이언트</span><input type="text" id="b_client" value="${esc(b.client||'')}" /></label>
         <label class="f"><span>색상 (0–360)</span><input type="number" id="b_hue" value="${b.hue}" min="0" max="360" /></label>
       </div>
-      <label class="f"><span>판매 채널 (쉼표로 구분)</span><input type="text" id="b_ch" value="${esc(b.channels.join(', '))}" /></label>`,
+      <div class="f"><span>판매 채널</span>
+        <div id="b_chs">${b.channels.map(ch=>chRowHtml(ch)).join('')}</div>
+        <button type="button" class="btn btn--sm" onclick="chRowAdd()" style="margin-top:6px">채널 추가</button>
+        <p class="eyebrow" style="margin:8px 0 0;line-height:1.6">이름을 고치면 지난 매출·목표 기록과 노션의 채널 이름도 함께 바뀌어요. 지워도 지난 달 기록은 그대로 남아요.</p></div>`,
     onSave:()=>{
       const v=$('#b_name').value.trim(); if(!v){ toast('브랜드명을 입력하세요'); return false; }
       b.name=v; b.ko=$('#b_ko').value.trim(); b.client=$('#b_client').value.trim();
       b.hue=Number($('#b_hue').value)||210;
-      b.channels=$('#b_ch').value.split(',').map(s=>s.trim()).filter(Boolean);
+      const rows=[...document.querySelectorAll('#b_chs .chrow input')].map(i=>({orig:i.dataset.orig||'', name:i.value.trim()})).filter(r=>r.name);
+      const renames=rows.filter(r=>r.orig && r.orig!==r.name);
+      b.channels=[...new Set(rows.map(r=>r.name))];
+      if(!isNew && renames.length) renameChannels(b.id, renames);
       if(isNew){ DB.brands.push(b); UI.brand=b.id; saveUI(); }
       setTimeout(pushBrands,300);
     },
@@ -5485,7 +5524,7 @@ function bind(){
       if(!r){ if(!v) return; r={id:uid(),brandId:UI.brand,date:ds,channel:ch,amount:0,cost:0}; DB.daily.push(r); }
       r[f]=v; r.dirty=true; save(); render();
     };
-    el.onkeydown=e=>{ if(e.key==='Enter'){ e.preventDefault(); const all=[...document.querySelectorAll('[data-day]')]; const i=all.indexOf(el), cols=((brandOf(UI.brand).channels||[]).length||1)*2; el.blur(); setTimeout(()=>{ const nx=document.querySelectorAll('[data-day]')[i+cols]; if(nx) nx.focus(); },30); } };
+    el.onkeydown=e=>{ if(e.key==='Enter'){ e.preventDefault(); const all=[...document.querySelectorAll('[data-day]')]; const i=all.indexOf(el), cols=(monthChannels(UI.brand,UI.ym).length||1)*2; el.blur(); setTimeout(()=>{ const nx=document.querySelectorAll('[data-day]')[i+cols]; if(nx) nx.focus(); },30); } };
   });
   document.querySelectorAll('[data-act]').forEach(el=>el.onclick=()=>act(el.dataset.act));
   if(UI.tab==='calendar') bindCalendar();
