@@ -4268,9 +4268,9 @@ function plOf(bid,ym){
   const has=k=>cs.some(c=>(c.kind||'기타')===k);
   const cr=costRate(bid);
   const dCogs=dailyOf(bid,ym).reduce((a,d)=>a+Number(d.cost||0),0);
-  const cogsAuto=!dCogs && !has('원가'), cogs=cogsAuto?Math.round(net*cr.rate):dCogs+sum('원가');
+  const cogsAuto=false, cogs=dCogs+sum('원가'); /* 원가·수수료는 결산 자료 보고 직접 넣음 — 추정하지 않음 */
   const fees=(UI.ls&&UI.ls.cond&&UI.ls.cond[bid]&&UI.ls.cond[bid].fees)||{};
-  const feeAuto=!has('수수료');
+  const feeAuto=false;
   const fee=feeAuto?Math.round(chs.reduce((a,ch)=>a+chActual(bid,ym,ch).v*Number(fees[ch]??LS_CH[ch]??0)/100,0)):sum('수수료');
   const other=cs.filter(c=>!['원가','수수료'].includes(c.kind||'기타')).reduce((a,c)=>a+Number(c.amount||0),0);
   const gp=net-cogs, opex=fee+other, op=gp-opex;
@@ -4301,11 +4301,11 @@ function salesView(){
   <section class="card pl">
     <div class="pl__c"><p>매출 <em>부가세 제외</em></p><b>${man(P.net)}</b><span>결제 ${man(actual)}만 · 목표 ${man(goal)}만 · 달성 ${pct}%</span></div>
     <i class="pl__op">−</i>
-    <div class="pl__c"><p>매출원가 ${P.cogsAuto?'<em class="pl__est">추정</em>':''}</p><b>${man(P.cogs)}</b><span>${P.cogsAuto?(P.rateN?`원가율 ${Math.round(P.rate*100)}% · 제품 ${P.rateN}개 기준`:'제품 입고가가 없어요'):`원가율 ${P.net?Math.round(P.cogs/P.net*100):0}% · ${P.dCogs?'일별 입력':'비용에 넣은 원가'}`}</span></div>
+    <div class="pl__c"><p>매출원가</p><b>${man(P.cogs)}</b><span>${P.cogs?`원가율 ${P.net?Math.round(P.cogs/P.net*100):0}%`:'비용에 원가를 넣어 주세요'}</span></div>
     <i class="pl__op">=</i>
     <div class="pl__c"><p>매출총이익</p><b class="${P.gp<0?'is-bad':''}">${P.gp<0?'-':''}${man(Math.abs(P.gp))}</b><span>이익률 ${P.net?Math.round(P.gp/P.net*100):0}%</span></div>
     <i class="pl__op">−</i>
-    <div class="pl__c"><p>비용 ${P.feeAuto&&P.fee?'<em class="pl__est">수수료 추정</em>':''}</p><b>${man(P.opex)}</b><span>수수료 ${man(P.fee)}만 · 광고비 등 ${man(P.other)}만</span></div>
+    <div class="pl__c"><p>비용</p><b>${man(P.opex)}</b><span>수수료 ${man(P.fee)}만 · 광고비 등 ${man(P.other)}만</span></div>
     <i class="pl__op">=</i>
     <div class="pl__c pl__c--end"><p>영업이익</p><b class="${P.op<0?'is-bad':''}">${P.op<0?'-':''}${man(Math.abs(P.op))}</b><span>이익률 ${P.net?Math.round(P.op/P.net*100):0}%</span></div>
   </section>
@@ -4375,7 +4375,7 @@ function salesView(){
         ${P.cogsAuto?`<tr class="sv-auto"><td><span class="st st--plan">원가</span></td><td>매출원가 추정 · 매출 × 원가율 ${Math.round(P.rate*100)}% <small>일별 입력표에 원가를 넣으면 그 값으로 바뀌어요</small></td><td class="num">${won(P.cogs)}</td></tr>`:''}
         ${P.feeAuto?`<tr class="sv-auto"><td><span class="st st--plan">수수료</span></td><td>채널 수수료 추정 · 채널별 매출 × 제품 탭 수수료율 <small>수수료를 직접 넣으면 그 값으로 바뀌어요</small></td><td class="num">${won(P.fee)}</td></tr>`:''}</tbody>
       <tfoot><tr><td>합계</td><td></td><td class="num">${won(P.cogs+P.opex)}</td></tr></tfoot>
-    </table>`:''}
+    </table>`:`<div class="empty"><b>이 달 비용이 없어요</b>원가·수수료·광고비를 넣으면 영업이익이 계산돼요.</div>`}
   </section>`;
 }
 
