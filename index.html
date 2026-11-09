@@ -2244,6 +2244,25 @@ html body .cell--today .cn{background:var(--neon) !important;color:#14161C !impo
 html body .calx .cell--today .cell__d,html body.ro .cell--today .cell__d{color:#14161C !important}
 html body .brandbar .btab[aria-current="true"]{background:var(--neon) !important;color:#14161C !important}
 html body .brandbar .btab[aria-current="true"] .btab__p{color:#4A5200 !important}
+/* ---------- 캘린더 색: 같은 채도·명도의 차분한 색 계열 / 업무는 무채색 + 영역별 왼쪽 선 ---------- */
+html body .calx .cell .ev{background:hsl(var(--h,220) 36% 95.5%) !important;box-shadow:0 0 0 1px hsl(var(--h,220) 26% 87%) inset !important;color:hsl(var(--h,220) 28% 28%) !important}
+html body .calx .cell .ev:hover{box-shadow:0 0 0 1px hsl(var(--h,220) 26% 80%) inset,0 8px 16px -12px rgba(20,24,34,.35) !important}
+html body .calx .cell .ev .evchk{border-color:hsl(var(--h,220) 22% 66%)}
+html body .calx .cell .ev .evchk[aria-pressed="true"]{background:hsl(var(--h,220) 24% 46%);border-color:hsl(var(--h,220) 24% 46%)}
+html body .calx .cell .ev.ev--task{background:#F4F5F7 !important;color:#363B46 !important;
+  box-shadow:inset 3px 0 0 hsl(var(--a,220) var(--as,0%) 72%),0 0 0 1px #E3E5EA inset !important}
+html body .calx .cell .ev.ev--task[style*="--a"]{--as:24%}
+html body .calx .cell .ev.ev--task:hover{background:#EEF0F3 !important}
+html body .calx .cell .ev.ev--task .evchk{border-color:#B9BDC6}
+html body .calx .cell .ev.ev--task .evchk[aria-pressed="true"]{background:#7B808B;border-color:#7B808B}
+.mc{background:hsl(var(--h) 36% 96% / .95);box-shadow:0 0 0 1px hsl(var(--h) 26% 88%) inset}
+.mc .mt__t{color:hsl(var(--h) 28% 26%)}
+.mc__tag{background:hsl(var(--h) 30% 90%);color:hsl(var(--h) 28% 32%)}
+.mday .dots i{background:hsl(var(--h) 30% 60%)}
+.mc.mc--task{background:#F4F5F7;box-shadow:inset 3px 0 0 hsl(var(--a,220) var(--as,0%) 72%),0 0 0 1px #E3E5EA inset}
+.mc.mc--task[style*="--a"]{--as:24%}
+.mc.mc--task .mt__t{color:#363B46}
+.mc.mc--task .mc__tag{background:#E8EAEE;color:#5A606C}
 </style>
 </head>
 <body>
@@ -2260,7 +2279,10 @@ const CONTENT_TYPES = ['EGC','UGC'];
 const OPS_TYPES = ['온라인','오프라인','이벤트','제품 업로드','제품 입고'];
 const TYPE_ALIAS = {'공구':'이벤트','기획전':'이벤트','피드':'EGC','릴스':'EGC','스레드':'EGC'};
 const TYPES = [...CONTENT_TYPES, ...OPS_TYPES];
-const TYPE_HUE = {'EGC':262,'UGC':330,'온라인':200,'오프라인':122,'이벤트':18,'제품 업로드':160,'제품 입고':38};
+const TYPE_HUE = {'EGC':252,'UGC':340,'온라인':205,'오프라인':150,'이벤트':22,'제품 업로드':180,'제품 입고':42};
+/* 업무 영역 표시색 — 무채색 카드 왼쪽 선만 같은 색 계열에서 고름 */
+const AREA_HUES=[205,150,22,252,340,42,180];
+const areaHue=a=>a?AREA_HUES[[...a].reduce((n,c)=>n+c.charCodeAt(0),0)%AREA_HUES.length]:'';
 const catOf = t => CONTENT_TYPES.includes(t) ? '콘텐츠' : '운영';
 /* 업무 영역은 고정값이 아니라 입력된 내용에서 자동 수집됩니다 */
 function areasIn(bid){
@@ -2811,7 +2833,7 @@ function calendarView(all){
     cells.push(`<div class="cell ${ds===TODAY?'cell--today':''} ${ds<TODAY?'cell--past':''}" data-date="${ds}">
       <div class="cell__d ${dow===0?'cell__sun':''}"><span class="cn">${d}</span></div>
       ${evs.map(e=>`<span class="ev ${e.done?'ev--done':''} ${pos(e.date,e.end)}" draggable="true" data-drag="c:${e.id}" style="--h:${TYPE_HUE[e.type]??262};border-left-color:${hueBg(TYPE_HUE[e.type]||0,55)}"><b class="evchk" data-toggle-content="${e.id}" title="완료 표시" aria-pressed="${!!e.done}"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 12.5l4 4 8-9"/></svg></b><span data-content="${e.id}" style="cursor:pointer">${bn(e)}${(e.att&&e.att.length)||(e.attView&&e.attView.length)?'📎':''}${esc(e.type)} · ${esc(e.title||'')}</span></span>`).join('')}
-      ${tks.map(t=>`<span class="ev ev--task ${t.done?'ev--done':''} ${pos(t.start,t.due)}" draggable="true" data-drag="t:${t.id}" style="--h:214"><b class="evchk" data-toggle-task-btn="${t.id}" title="완료 표시" aria-pressed="${!!t.done}"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 12.5l4 4 8-9"/></svg></b><span data-edit-task="${t.id}" style="cursor:pointer">${bn(t)}${esc(t.title)}</span></span>`).join('')}
+      ${tks.map(t=>`<span class="ev ev--task ${t.done?'ev--done':''} ${pos(t.start,t.due)}" draggable="true" data-drag="t:${t.id}" style="--h:220${t.area?`;--a:${areaHue(t.area)}`:''}" title="${esc(t.area||'')}"><b class="evchk" data-toggle-task-btn="${t.id}" title="완료 표시" aria-pressed="${!!t.done}"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 12.5l4 4 8-9"/></svg></b><span data-edit-task="${t.id}" style="cursor:pointer">${bn(t)}${esc(t.title)}</span></span>`).join('')}
       <button class="cell__add" data-newdate="${ds}" aria-label="${d}일 추가">+</button>
     </div>`);
   }
@@ -3042,10 +3064,10 @@ function mCalView(forceBid){
   const card=it=>{ const o=it.o, isC=it.k==='c', b=brandOf(o.brandId);
     const from=isC?o.date:(o.start||o.due), to=isC?(o.end||o.date):o.due;
     const meta=[!bf&&b?b.name:'', from&&to&&from!==to?`${md(from)} ~ ${md(to)}`:'', isC?'':ownersOf(o).join(', ')].filter(Boolean).map(esc).join(' · ');
-    return `<div class="mc ${o.done?'is-done':''}" style="--h:${hueOf(it)}">
+    return `<div class="mc ${o.done?'is-done':''} ${isC?'':'mc--task'}" style="--h:${hueOf(it)}${!isC&&o.area?`;--a:${areaHue(o.area)}`:''}">
       <button class="mt__chk" ${isC?`data-toggle-content="${o.id}"`:`data-toggle-task-btn="${o.id}"`} aria-label="완료 표시" aria-pressed="${!!o.done}">${MI.chk}</button>
       <div class="mt__b" ${isC?`data-content="${o.id}"`:`data-edit-task="${o.id}"`}><div class="mt__t">${esc(o.title||(isC?o.type:'(제목 없음)'))}</div>${meta?`<div class="mt__m">${meta}</div>`:''}</div>
-      <span class="mc__tag">${isC?esc(o.type):'업무'}</span></div>`; };
+      <span class="mc__tag">${isC?esc(o.type):esc(o.area||'업무')}</span></div>`; };
   return `<section class="mv">
     <div class="mbar">${forceBid?'<span class="mbar__t">브랜드 캘린더</span>':mBrandSel('mCalBrand',bf)}${mMine()}</div>
     <div class="mcard mmonth ${open?'is-open':''}" data-mswipe>
