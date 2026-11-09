@@ -2306,8 +2306,8 @@ html body .calx .cell .ev.ev--mid,html body .calx .cell .ev.ev--end,html body .c
 #view .pl__c p{margin:0 0 6px;font-size:12px;color:var(--ink2);display:flex;align-items:center;gap:6px;white-space:nowrap}
 #view .pl__c p em{font-style:normal;color:var(--mut)}
 #view .pl__c p em.pl__est{font-size:10.5px;padding:1px 6px;border-radius:99px;background:rgba(0,0,0,.05);color:var(--ink2)}
-#view .pl__c b{display:block;font-size:24px;font-weight:700;letter-spacing:-.02em;font-variant-numeric:tabular-nums}
-#view .pl__c b::after{content:'만원';font-size:12px;font-weight:500;color:var(--mut);margin-left:4px;letter-spacing:0}
+#view .pl__c b{display:block;font-size:21px;font-weight:700;letter-spacing:-.02em;font-variant-numeric:tabular-nums}
+#view .pl__c b::after{content:'원';font-size:12px;font-weight:500;color:var(--mut);margin-left:4px;letter-spacing:0}
 #view .pl__c b.is-bad{color:var(--alert)}
 #view .pl__c span{display:block;margin-top:4px;font-size:11.5px;color:var(--mut);line-height:1.45}
 #view .pl__c--end{background:rgba(212,255,0,.18);border-radius:12px;padding:10px 14px;margin:-10px 0}
@@ -2371,6 +2371,7 @@ html body .calx .cell .ev.ev--mid,html body .calx .cell .ev.ev--end,html body .c
 #layer .chrow__x{width:34px;border:1px solid var(--line);border-radius:8px;background:transparent;color:var(--mut);font-size:16px;cursor:pointer}
 #layer .chrow__x:hover{color:var(--alert);border-color:var(--alert)}
 #view .sv-old{font-size:10.5px;font-weight:500;color:#9A9EA6;margin-left:4px}
+#view .sv-costtbl tr.sv-grp td{font-weight:700 !important;color:var(--ink) !important;background:rgba(26,29,35,.035) !important}
 </style>
 </head>
 <body>
@@ -2407,7 +2408,7 @@ const pSt=p=>p.status==='품절'?'품절':'판매중'; /* 예전 단계 값(기�
 const WEEKS = ['1주차','2주차','3주차','4주차','5주차'];
 const PLAN_KINDS = ['영상','이미지','텍스트'];
 const REF_CATS = ['릴스','피드','스레드','계정','구분 필요'];
-const COST_KINDS = ['원가','광고비','수수료','인건비','기타'];
+const COST_KINDS = ['원가','부가세','광고비','수수료','인건비','포장·배송비','기타'];
 
 const SEED_BRANDS = [
   {id:'ootn',     name:'OOTN',       ko:'오오티엔',   hue:40,  client:'', channels:['자사몰','무신사','플랫폼','기타']},
@@ -4311,20 +4312,22 @@ function costRate(bid){
   productsOf(bid).forEach(p=>{ const i=Number(p.inPrice||0), pr=Number(p.price||0); if(i&&pr){ C+=i+pack; P+=pr/1.1; n++; } });
   return {rate:P?C/P:0, n};
 }
+/* 손익: 매출(부가세 포함) − 매출원가 = 매출총이익 − 비용(부가세·수수료·광고비·인건비 등) = 영업이익
+   매출원가 = 일별 입력 원가 + 비용에 '원가'로 넣은 금액 · 부가세는 직접 넣은 값이 없으면 매출의 1/11 */
 function plOf(bid,ym){
-  const b=brandOf(bid), chs=monthChannels(bid,ym), cs=costsOf(bid,ym);
-  const gross=chs.reduce((a,ch)=>a+chActual(bid,ym,ch).v,0), net=Math.round(gross/1.1);
-  const sum=k=>cs.filter(c=>(c.kind||'기타')===k).reduce((a,c)=>a+Number(c.amount||0),0);
-  const has=k=>cs.some(c=>(c.kind||'기타')===k);
-  const cr=costRate(bid);
+  const chs=monthChannels(bid,ym), cs=costsOf(bid,ym);
+  const gross=chs.reduce((a,ch)=>a+chActual(bid,ym,ch).v,0);
+  const k=c=>c.kind||'기타';
   const dCogs=dailyOf(bid,ym).reduce((a,d)=>a+Number(d.cost||0),0);
-  const cogsAuto=false, cogs=dCogs+sum('원가'); /* 원가·수수료는 결산 자료 보고 직접 넣음 — 추정하지 않음 */
-  const fees=(UI.ls&&UI.ls.cond&&UI.ls.cond[bid]&&UI.ls.cond[bid].fees)||{};
-  const feeAuto=false;
-  const fee=feeAuto?Math.round(chs.reduce((a,ch)=>a+chActual(bid,ym,ch).v*Number(fees[ch]??LS_CH[ch]??0)/100,0)):sum('수수료');
-  const other=cs.filter(c=>!['원가','수수료'].includes(c.kind||'기타')).reduce((a,c)=>a+Number(c.amount||0),0);
-  const gp=net-cogs, opex=fee+other, op=gp-opex;
-  return {gross,net,cogs,cogsAuto,dCogs,rate:cr.rate,rateN:cr.n,fee,feeAuto,other,gp,opex,op};
+  const cogsRows=cs.filter(c=>k(c)==='원가');
+  const cogs=dCogs+cogsRows.reduce((a,c)=>a+Number(c.amount||0),0);
+  const vatRows=cs.filter(c=>k(c)==='부가세');
+  const vatAuto=!vatRows.length, vat=vatAuto?Math.round(gross/11):vatRows.reduce((a,c)=>a+Number(c.amount||0),0);
+  const expRows=cs.filter(c=>!['원가','부가세'].includes(k(c)));
+  const fee=expRows.filter(c=>k(c)==='수수료').reduce((a,c)=>a+Number(c.amount||0),0);
+  const other=expRows.filter(c=>k(c)!=='수수료').reduce((a,c)=>a+Number(c.amount||0),0);
+  const gp=gross-cogs, opex=vat+fee+other, op=gp-opex;
+  return {gross,cogs,dCogs,cogsRows,vat,vatAuto,vatRows,expRows,fee,other,gp,opex,op};
 }
 function salesView(){
   const b=brandOf(UI.brand), ym=UI.ym, chs=monthChannels(b.id,ym);
@@ -4334,7 +4337,7 @@ function salesView(){
   const goal=rows.reduce((a,r)=>a+r.goal,0), actual=rows.reduce((a,r)=>a+r.actual,0);
   const cs=costsOf(b.id,ym), cost=costTotal(b.id,ym);
   /* 매출은 결제 금액(부가세 포함), 이익은 부가세를 뺀 매출에서 비용을 뺀 금액 */
-  const P=plOf(b.id,ym);
+  const P=plOf(b.id,ym), PR=n=>P.gross?(Math.round(n/P.gross*1000)/10)+'%':'—';
   const pct=goal? Math.round(actual/goal*100) : 0;
   const trend=[-5,-4,-3,-2,-1,0].map(n=>ymShift(ym,n)).map(mm=>({m:mm, ...totals(b.id,mm)}));
   const max=Math.max(1,...trend.map(t=>Math.max(t.goal,t.actual)));
@@ -4350,15 +4353,15 @@ function salesView(){
 
   return `
   <section class="card pl">
-    <div class="pl__c"><p>매출 <em>부가세 제외</em></p><b>${man(P.net)}</b><span>결제 ${man(actual)}만 · 목표 ${man(goal)}만 · 달성 ${pct}%</span></div>
+    <div class="pl__c"><p>매출 <em>부가세 포함</em></p><b>${won(P.gross)}</b><span>목표 ${won(goal)}원 · 달성 ${pct}%</span></div>
     <i class="pl__op">−</i>
-    <div class="pl__c"><p>매출원가</p><b>${man(P.cogs)}</b><span>${P.cogs?`원가율 ${P.net?Math.round(P.cogs/P.net*100):0}%`:'비용에 원가를 넣어 주세요'}</span></div>
+    <div class="pl__c"><p>매출원가</p><b>${won(P.cogs)}</b><span>원가율 ${PR(P.cogs)}</span></div>
     <i class="pl__op">=</i>
-    <div class="pl__c"><p>매출총이익</p><b class="${P.gp<0?'is-bad':''}">${P.gp<0?'-':''}${man(Math.abs(P.gp))}</b><span>이익률 ${P.net?Math.round(P.gp/P.net*100):0}%</span></div>
+    <div class="pl__c"><p>매출총이익</p><b class="${P.gp<0?'is-bad':''}">${P.gp<0?'-':''}${won(Math.abs(P.gp))}</b><span>이익률 ${PR(P.gp)}</span></div>
     <i class="pl__op">−</i>
-    <div class="pl__c"><p>비용</p><b>${man(P.opex)}</b><span>수수료 ${man(P.fee)}만 · 광고비 등 ${man(P.other)}만</span></div>
+    <div class="pl__c"><p>비용</p><b>${won(P.opex)}</b><span>부가세 ${won(P.vat)} · 수수료 ${won(P.fee)} · 그 외 ${won(P.other)}</span></div>
     <i class="pl__op">=</i>
-    <div class="pl__c pl__c--end"><p>영업이익</p><b class="${P.op<0?'is-bad':''}">${P.op<0?'-':''}${man(Math.abs(P.op))}</b><span>이익률 ${P.net?Math.round(P.op/P.net*100):0}%</span></div>
+    <div class="pl__c pl__c--end"><p>영업이익</p><b class="${P.op<0?'is-bad':''}">${P.op<0?'-':''}${won(Math.abs(P.op))}</b><span>이익률 ${PR(P.op)}</span></div>
   </section>
 
   <div class="grid g2">
@@ -4414,19 +4417,21 @@ function salesView(){
   </section>
 
   <section class="card">
-    <div class="card__hd"><h3>비용</h3><span class="eyebrow">${cs.length}건</span><button class="btn btn--sm" data-act="cost-new" style="margin-left:auto">비용 추가</button></div>
-    ${cs.length||P.cogsAuto||P.feeAuto||P.dCogs?`<table class="dt">
+    <div class="card__hd"><h3>매출원가 · 비용</h3><span class="eyebrow">${cs.length}건</span><button class="btn btn--sm" data-act="cost-new" style="margin-left:auto">비용 추가</button></div>
+    <table class="dt sv-costtbl">
       <colgroup><col style="width:140px"><col><col style="width:180px"></colgroup>
       <thead><tr><th>구분</th><th>항목</th><th class="num">금액</th></tr></thead>
-      <tbody>${cs.map(c=>`<tr class="dt__click" data-edit-cost="${c.id}">
-        <td><span class="st st--plan">${esc(c.kind||'기타')}</span></td>
-        <td>${esc(c.name)}</td>
-        <td class="num">${won(c.amount)}</td></tr>`).join('')}
+      <tbody>
+        <tr class="sv-grp"><td colspan="2">매출원가</td><td class="num">${won(P.cogs)}</td></tr>
         ${P.dCogs?`<tr class="sv-auto"><td><span class="st st--plan">원가</span></td><td>일별 · 유통사별 입력 원가 합계</td><td class="num">${won(P.dCogs)}</td></tr>`:''}
-        ${P.cogsAuto?`<tr class="sv-auto"><td><span class="st st--plan">원가</span></td><td>매출원가 추정 · 매출 × 원가율 ${Math.round(P.rate*100)}% <small>일별 입력표에 원가를 넣으면 그 값으로 바뀌어요</small></td><td class="num">${won(P.cogs)}</td></tr>`:''}
-        ${P.feeAuto?`<tr class="sv-auto"><td><span class="st st--plan">수수료</span></td><td>채널 수수료 추정 · 채널별 매출 × 제품 탭 수수료율 <small>수수료를 직접 넣으면 그 값으로 바뀌어요</small></td><td class="num">${won(P.fee)}</td></tr>`:''}</tbody>
-      <tfoot><tr><td>합계</td><td></td><td class="num">${won(P.cogs+P.opex)}</td></tr></tfoot>
-    </table>`:`<div class="empty"><b>이 달 비용이 없어요</b>원가·수수료·광고비를 넣으면 영업이익이 계산돼요.</div>`}
+        ${P.cogsRows.map(c=>`<tr class="dt__click" data-edit-cost="${c.id}"><td><span class="st st--plan">원가</span></td><td>${esc(c.name)}</td><td class="num">${won(c.amount)}</td></tr>`).join('')}
+        ${!P.cogs?`<tr class="sv-auto"><td></td><td>일별 입력표에 원가를 넣거나 '원가'로 비용을 추가하세요</td><td class="num">0</td></tr>`:''}
+        <tr class="sv-grp"><td colspan="2">비용</td><td class="num">${won(P.opex)}</td></tr>
+        ${P.vatAuto?`<tr class="sv-auto"><td><span class="st st--plan">부가세</span></td><td>매출의 1/11 <small>'부가세'로 비용을 넣으면 그 금액으로 바뀌어요</small></td><td class="num">${won(P.vat)}</td></tr>`:P.vatRows.map(c=>`<tr class="dt__click" data-edit-cost="${c.id}"><td><span class="st st--plan">부가세</span></td><td>${esc(c.name)}</td><td class="num">${won(c.amount)}</td></tr>`).join('')}
+        ${P.expRows.map(c=>`<tr class="dt__click" data-edit-cost="${c.id}"><td><span class="st st--plan">${esc(c.kind||'기타')}</span></td><td>${esc(c.name)}</td><td class="num">${won(c.amount)}</td></tr>`).join('')}
+      </tbody>
+      <tfoot><tr><td>매출원가 + 비용</td><td></td><td class="num">${won(P.cogs+P.opex)}</td></tr></tfoot>
+    </table>
   </section>`;
 }
 
