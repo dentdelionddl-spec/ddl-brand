@@ -2218,6 +2218,8 @@ html body .m .mv > .mday__hd{margin-top:14px !important}
 #view .pv-t tbody tr.is-sel td{background:var(--pv-acc-bg)}
 #view .pv-t tbody tr.is-sel td:first-child{box-shadow:inset 3px 0 0 var(--pv-acc)}
 #view .pv-t tbody tr:last-child td{border-bottom:0}
+#view .pv-t th:first-child,#view .pv-t td:first-child{padding-left:20px !important}
+#view .pv-date{font-size:12px;color:var(--pv-mut)}
 #view .pv-item{display:flex;align-items:center;gap:12px;min-width:250px}
 #view .pv-item img,#view .pv-item .pv-noimg{width:40px;height:40px;border-radius:10px;object-fit:cover;background:#F1F2F6;flex:none;border:1px solid var(--pv-line2)}
 #view .pv-item b{display:block;font-weight:600;max-width:260px;overflow:hidden;text-overflow:ellipsis}
@@ -4289,7 +4291,7 @@ function lsRow(x,s,selId){
     <td class="r">${c.maxd==null?'—':Math.round(c.maxd*100)+'%'}</td>
     <td class="r">${won(stock)}</td>
     <td>${stk?`<span class="pv-pill ${stk[1]}">${stk[0]}</span> `:''}<span class="pv-pill ${stCls}">${esc(st)}</span></td>
-    <td class="pv-sub" style="margin:0">${esc(p.updated||'')}</td>
+    <td class="pv-date">${esc(p.updated||'')}</td>
     <td class="r"><button class="pv-edit" data-edit-prod="${p.id}" aria-label="편집">${LS_ICO.edit}</button></td>
   </tr>`;
 }
