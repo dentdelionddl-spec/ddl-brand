@@ -2364,6 +2364,8 @@ html body .calx .cell .ev.ev--mid,html body .calx .cell .ev.ev--end,html body .c
 #view .synclog__r:first-of-type{border-top:0}
 #view .synclog__r b{font-weight:600;font-variant-numeric:tabular-nums}
 #view .synclog__r.is-bad b{color:var(--alert)}
+#keybar em{flex:1 0 100%;font-style:normal;color:#D4FF00;font-size:12.5px}
+#keybar em:empty{display:none}
 </style>
 </head>
 <body>
@@ -5232,12 +5234,13 @@ function keyBar(){
   const bar=document.createElement('div'); bar.id='keybar';
   bar.innerHTML=`<span>이 브라우저는 노션과 연결되지 않았어요. 관리자 비밀번호를 한 번만 넣어 주세요.</span>
     <input type="password" id="keybar_in" placeholder="관리자 비밀번호" autocomplete="current-password">
-    <button type="button" id="keybar_ok">연결</button>`;
+    <button type="button" id="keybar_ok">연결</button><em id="keybar_msg"></em>`;
   document.body.prepend(bar);
   const go=async()=>{
     const v=document.getElementById('keybar_in').value.trim(); if(!v) return;
     setAdminKey(v); __keyDeclined=false;
-    try{ await api({action:'ping'},true); }catch(e){ setAdminKey(''); toast('비밀번호가 맞지 않아요: '+e.message,3200); return; }
+    const msg=document.getElementById('keybar_msg'); msg.textContent='확인 중…';
+    try{ await api({action:'ping'},true); }catch(e){ setAdminKey(''); msg.textContent='연결 실패: '+e.message; return; }
     bar.remove(); toast('노션과 연결됐어요. 내려받는 중…',2000);
     try{ await pullAll(false); }catch(e){}
     autoSync();
