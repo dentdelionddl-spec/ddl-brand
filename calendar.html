@@ -8,7 +8,7 @@
 <style>
 /* 외부 공개용 캘린더 — /api/schedule 결과만 그림 (운영페이지 캘린더와 같은 모양). 업무(kind:'task')는 눌러서 담당자·상세를 보기만 */
 :root{
-  --ink:#121214; --mut:#7A8194; --line:#ECEDF1; --paper:#F4F5F9; --accent:#2563EB; --sun:#D2452F;
+  --ink:#121214; --mut:#7A8194; --line:#ECEDF1; --paper:#F4F5F9; --accent:#D4FF00; --sun:#D2452F;
   --sans:'Pretendard Variable',Pretendard,-apple-system,BlinkMacSystemFont,system-ui,'Apple SD Gothic Neo','Malgun Gothic',sans-serif;
 }
 *{box-sizing:border-box}
@@ -29,7 +29,7 @@ body{font-family:var(--sans);background:var(--paper);color:var(--ink);font-size:
 .d{display:inline-flex;align-items:center;justify-content:center;min-width:24px;height:24px;margin:0 0 4px 6px;font-size:13px;font-weight:600;border-radius:7px}
 .cell.sun .d{color:var(--sun)}
 .cell.past .d{color:#A3A8B5}
-.cell.today .d{background:var(--accent);color:#fff;padding:0 6px}
+.cell.today .d{background:var(--accent);color:var(--ink);padding:0 6px}
 .ev{display:flex;align-items:center;gap:5px;height:26px;margin:4px 3px 0;padding:0 7px;border-radius:6px;border:1px solid hsl(var(--h) 42% 82%);background:hsl(var(--h) 45% 95%);color:hsl(var(--h) 45% 28%);font-size:12px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .ev .t{overflow:hidden;text-overflow:ellipsis}
 .ev .o{flex:none;width:12px;height:12px;border-radius:50%;border:1.5px solid currentColor;opacity:.55}
@@ -49,13 +49,14 @@ body{font-family:var(--sans);background:var(--paper);color:var(--ink);font-size:
 .day{padding:12px 0;border-top:1px solid var(--line)}
 .day:first-child{border-top:0}
 .day h2{margin:0 0 6px;font-size:13px;font-weight:700}
-.day.today h2{color:var(--accent)}
+.day.today h2{color:var(--ink)}
+.day.today h2::before{content:'';display:inline-block;width:6px;height:6px;border-radius:50%;background:#A8CC00;margin-right:6px;vertical-align:middle}
 .day .ev{margin:6px 0 0;height:auto;min-height:30px;padding:6px 9px;white-space:normal}
 .day .sp{font-weight:500;opacity:.75;margin-left:4px}
 @media(max-width:700px){ body{padding:0} .card{border-radius:0} .cal{display:none} .list{display:block} }
 /* 편집: 체크·추가·수정·삭제 */
 .hr{display:flex;align-items:center;gap:8px}
-.add{border:0;background:var(--accent);color:#fff;font:inherit;font-size:12px;font-weight:600;height:32px;padding:0 12px;border-radius:8px;cursor:pointer}
+.add{border:0;background:var(--accent);color:var(--ink);font:inherit;font-size:12px;font-weight:650;height:32px;padding:0 12px;border-radius:8px;cursor:pointer}
 .ev{cursor:pointer}
 .ev .o{cursor:pointer;background:none;padding:0;color:inherit}
 .ev .o:hover{opacity:1}
@@ -73,7 +74,7 @@ body{font-family:var(--sans);background:var(--paper);color:var(--ink);font-size:
 .box .chk{display:flex;align-items:center;gap:8px;color:var(--ink);font-size:14px}
 .box .btns{display:flex;gap:8px;margin-top:6px}
 .box .btns button{height:38px;padding:0 14px;border-radius:8px;border:1px solid var(--line);background:#fff;font:inherit;font-size:13px;font-weight:600;cursor:pointer}
-.box .btns .save{background:var(--accent);border-color:var(--accent);color:#fff;margin-left:auto}
+.box .btns .save{background:var(--accent);border-color:var(--accent);color:var(--ink);margin-left:auto}
 .box .btns .del{color:var(--sun)}
 .box .err{color:var(--sun);font-size:12px;min-height:18px;margin-bottom:4px}
 .toast{position:fixed;left:50%;bottom:20px;transform:translateX(-50%);background:#1D1F26;color:#fff;font-size:13px;padding:9px 14px;border-radius:10px;opacity:0;transition:opacity .2s;pointer-events:none;z-index:11}
