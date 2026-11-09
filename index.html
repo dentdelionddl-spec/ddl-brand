@@ -2323,6 +2323,13 @@ html body .calx .cell .ev.ev--mid,html body .calx .cell .ev.ev--end,html body .c
   #view .pl__c--end{margin:4px 0 0}
   #view .pl__op{align-self:flex-start;padding:0 12px;font-size:14px;line-height:1}
 }
+#view .sv-grid .sv-ch{text-align:center}
+#view .sv-grid tr.sv-sub th{font-size:11px;font-weight:500;color:var(--mut);padding-top:0}
+#view .sv-grid .sv-l{border-left:1px solid var(--line)}
+#view .sv-grid input.sv-cost,#view .sv-grid .sv-c{color:var(--ink2)}
+#view table.dt.sv-grid{table-layout:auto;min-width:max-content}
+#view .sv-grid td.num,#view .sv-grid tr.sv-sub th{width:118px;min-width:118px;max-width:118px}
+#view .sv-grid .numin{width:100%;min-width:84px}
 </style>
 </head>
 <body>
@@ -2487,6 +2494,7 @@ function actionProgress(a){
 /* 일별 매출(유통사별) — 월 실적은 일별 합계, 그 달 그 채널에 일별 기록이 없으면 예전 월 입력값 */
 const dailyOf=(bid,ym)=>DB.daily.filter(d=>d.brandId===bid&&inMonth(d.date,ym));
 const dayAmt=(bid,ds,ch)=>Number(DB.daily.find(d=>d.brandId===bid&&d.date===ds&&d.channel===ch)?.amount||0);
+const dayCost=(bid,ds,ch)=>Number(DB.daily.find(d=>d.brandId===bid&&d.date===ds&&d.channel===ch)?.cost||0);
 function chActual(bid,ym,ch){
   const ds=dailyOf(bid,ym).filter(d=>d.channel===ch);
   if(ds.length) return {v:ds.reduce((a,d)=>a+Number(d.amount||0),0), daily:true};
@@ -4259,13 +4267,14 @@ function plOf(bid,ym){
   const sum=k=>cs.filter(c=>(c.kind||'기타')===k).reduce((a,c)=>a+Number(c.amount||0),0);
   const has=k=>cs.some(c=>(c.kind||'기타')===k);
   const cr=costRate(bid);
-  const cogsAuto=!has('원가'), cogs=cogsAuto?Math.round(net*cr.rate):sum('원가');
+  const dCogs=dailyOf(bid,ym).reduce((a,d)=>a+Number(d.cost||0),0);
+  const cogsAuto=!dCogs && !has('원가'), cogs=cogsAuto?Math.round(net*cr.rate):dCogs+sum('원가');
   const fees=(UI.ls&&UI.ls.cond&&UI.ls.cond[bid]&&UI.ls.cond[bid].fees)||{};
   const feeAuto=!has('수수료');
   const fee=feeAuto?Math.round(chs.reduce((a,ch)=>a+chActual(bid,ym,ch).v*Number(fees[ch]??LS_CH[ch]??0)/100,0)):sum('수수료');
   const other=cs.filter(c=>!['원가','수수료'].includes(c.kind||'기타')).reduce((a,c)=>a+Number(c.amount||0),0);
   const gp=net-cogs, opex=fee+other, op=gp-opex;
-  return {gross,net,cogs,cogsAuto,rate:cr.rate,rateN:cr.n,fee,feeAuto,other,gp,opex,op};
+  return {gross,net,cogs,cogsAuto,dCogs,rate:cr.rate,rateN:cr.n,fee,feeAuto,other,gp,opex,op};
 }
 function salesView(){
   const b=brandOf(UI.brand), ym=UI.ym, chs=b.channels||[];
@@ -4292,7 +4301,7 @@ function salesView(){
   <section class="card pl">
     <div class="pl__c"><p>매출 <em>부가세 제외</em></p><b>${man(P.net)}</b><span>결제 ${man(actual)}만 · 목표 ${man(goal)}만 · 달성 ${pct}%</span></div>
     <i class="pl__op">−</i>
-    <div class="pl__c"><p>매출원가 ${P.cogsAuto?'<em class="pl__est">추정</em>':''}</p><b>${man(P.cogs)}</b><span>${P.cogsAuto?(P.rateN?`원가율 ${Math.round(P.rate*100)}% · 제품 ${P.rateN}개 기준`:'제품 입고가가 없어요'):'비용에 넣은 원가'}</span></div>
+    <div class="pl__c"><p>매출원가 ${P.cogsAuto?'<em class="pl__est">추정</em>':''}</p><b>${man(P.cogs)}</b><span>${P.cogsAuto?(P.rateN?`원가율 ${Math.round(P.rate*100)}% · 제품 ${P.rateN}개 기준`:'제품 입고가가 없어요'):`원가율 ${P.net?Math.round(P.cogs/P.net*100):0}% · ${P.dCogs?'일별 입력':'비용에 넣은 원가'}`}</span></div>
     <i class="pl__op">=</i>
     <div class="pl__c"><p>매출총이익</p><b class="${P.gp<0?'is-bad':''}">${P.gp<0?'-':''}${man(Math.abs(P.gp))}</b><span>이익률 ${P.net?Math.round(P.gp/P.net*100):0}%</span></div>
     <i class="pl__op">−</i>
@@ -4340,27 +4349,30 @@ function salesView(){
   </section>
 
   <section class="card sv-card">
-    <div class="card__hd"><h3>일별 · 유통사별 입력</h3><span class="eyebrow" style="margin-left:auto">결제 금액(부가세 포함) · 입력하면 자동 저장</span></div>
+    <div class="card__hd"><h3>일별 · 유통사별 입력</h3><span class="eyebrow" style="margin-left:auto">매출은 결제 금액(부가세 포함, 반품 차감) · 원가는 팔린 제품 원가 · 입력하면 자동 저장</span></div>
     <div class="sv-gridwrap"><table class="dt sv-grid">
-      <thead><tr><th>날짜</th>${chs.map((ch,i)=>`<th class="num"><i class="sv-dot" style="background:${cc(i)}"></i>${esc(ch)}</th>`).join('')}<th class="num">합계</th></tr></thead>
-      <tbody>${days.map(ds=>{ const t=dTot(ds), w=wd(ds);
+      <thead><tr><th rowspan="2">날짜</th>${chs.map((ch,i)=>`<th class="num sv-ch" colspan="2"><i class="sv-dot" style="background:${cc(i)}"></i>${esc(ch)}</th>`).join('')}<th class="num sv-ch" colspan="2">합계</th></tr>
+        <tr class="sv-sub">${[...chs,''].map(()=>`<th class="num sv-l">매출</th><th class="num">원가</th>`).join('')}</tr></thead>
+      <tbody>${days.map(ds=>{ const t=dTot(ds), tc=chs.reduce((a,ch)=>a+dayCost(b.id,ds,ch),0), w=wd(ds);
+        const cell=(v,ch,f)=>`<td class="num${f==='amount'?' sv-l':''}"><input class="numin${f==='cost'?' sv-cost':''}" type="text" inputmode="numeric" value="${v?won(v):''}" placeholder="" data-day="${ds}" data-ch="${esc(ch)}" data-f="${f}" /></td>`;
         return `<tr class="${ds===TODAY?'is-today':''} ${w===0||w===6?'is-we':''}"><td class="sv-day ${w===0?'sun':''}">${Number(ds.slice(5,7))}/${Number(ds.slice(8))} <em>${'일월화수목금토'[w]}</em></td>
-          ${chs.map(ch=>{const v=dayAmt(b.id,ds,ch); return `<td class="num"><input class="numin" type="text" inputmode="numeric" value="${v?won(v):''}" placeholder="" data-day="${ds}" data-ch="${esc(ch)}" /></td>`;}).join('')}
-          <td class="num"><b>${t?won(t):''}</b></td></tr>`; }).join('')}</tbody>
-      <tfoot><tr><td>합계</td>${rows.map(r=>`<td class="num">${won(r.actual)}</td>`).join('')}<td class="num">${won(actual)}</td></tr></tfoot>
+          ${chs.map(ch=>cell(dayAmt(b.id,ds,ch),ch,'amount')+cell(dayCost(b.id,ds,ch),ch,'cost')).join('')}
+          <td class="num sv-l"><b>${t?won(t):''}</b></td><td class="num sv-c">${tc?won(tc):''}</td></tr>`; }).join('')}</tbody>
+      <tfoot><tr><td>합계</td>${rows.map(r=>{ const c=dailyOf(b.id,ym).filter(d=>d.channel===r.channel).reduce((a,d)=>a+Number(d.cost||0),0); return `<td class="num sv-l">${won(r.actual)}</td><td class="num sv-c">${won(c)}</td>`; }).join('')}<td class="num sv-l">${won(actual)}</td><td class="num sv-c">${won(P.dCogs)}</td></tr></tfoot>
     </table></div>
   </section>
 
   <section class="card">
     <div class="card__hd"><h3>비용</h3><span class="eyebrow">${cs.length}건</span><button class="btn btn--sm" data-act="cost-new" style="margin-left:auto">비용 추가</button></div>
-    ${cs.length||P.cogsAuto||P.feeAuto?`<table class="dt">
+    ${cs.length||P.cogsAuto||P.feeAuto||P.dCogs?`<table class="dt">
       <colgroup><col style="width:140px"><col><col style="width:180px"></colgroup>
       <thead><tr><th>구분</th><th>항목</th><th class="num">금액</th></tr></thead>
       <tbody>${cs.map(c=>`<tr class="dt__click" data-edit-cost="${c.id}">
         <td><span class="st st--plan">${esc(c.kind||'기타')}</span></td>
         <td>${esc(c.name)}</td>
         <td class="num">${won(c.amount)}</td></tr>`).join('')}
-        ${P.cogsAuto?`<tr class="sv-auto"><td><span class="st st--plan">원가</span></td><td>매출원가 추정 · 매출 × 원가율 ${Math.round(P.rate*100)}% <small>원가를 직접 넣으면 그 값으로 바뀌어요</small></td><td class="num">${won(P.cogs)}</td></tr>`:''}
+        ${P.dCogs?`<tr class="sv-auto"><td><span class="st st--plan">원가</span></td><td>일별 · 유통사별 입력 원가 합계</td><td class="num">${won(P.dCogs)}</td></tr>`:''}
+        ${P.cogsAuto?`<tr class="sv-auto"><td><span class="st st--plan">원가</span></td><td>매출원가 추정 · 매출 × 원가율 ${Math.round(P.rate*100)}% <small>일별 입력표에 원가를 넣으면 그 값으로 바뀌어요</small></td><td class="num">${won(P.cogs)}</td></tr>`:''}
         ${P.feeAuto?`<tr class="sv-auto"><td><span class="st st--plan">수수료</span></td><td>채널 수수료 추정 · 채널별 매출 × 제품 탭 수수료율 <small>수수료를 직접 넣으면 그 값으로 바뀌어요</small></td><td class="num">${won(P.fee)}</td></tr>`:''}</tbody>
       <tfoot><tr><td>합계</td><td></td><td class="num">${won(P.cogs+P.opex)}</td></tr></tfoot>
     </table>`:''}
@@ -5029,7 +5041,7 @@ const KIND={
   daily:{ db:'daily',
     props:d=>({ '항목':{title:[{text:{content:`${brandOf(d.brandId)?.name||''} ${d.date} ${d.channel}`}}]},
       '브랜드':{select:{name:brandOf(d.brandId)?.name||''}}, '날짜':{date:{start:d.date}},
-      '채널':{select:{name:d.channel}}, '매출':{number:Number(d.amount||0)},
+      '채널':{select:{name:d.channel}}, '매출':{number:Number(d.amount||0)}, '원가':{number:Number(d.cost||0)},
       '로컬ID':{rich_text:[{text:{content:d.id}}]} }) },
   plans:{ db:'plans',
     props:p=>({ '주제':{title:[{text:{content:p.title||''}}]}, '브랜드':{select:{name:brandOf(p.brandId)?.name||''}},
@@ -5274,7 +5286,7 @@ const brandByName=nm=>{
       if(kind==='refs'){ Object.assign(rec,{brandId:brandByName(sel(P['브랜드'])), cat:sel(P['분류'])||'릴스',
         title:ttl(P['제목']), url:P['링크']?.url||'', memo:txt(P['메모'])}); }
       if(kind==='daily'){ Object.assign(rec,{brandId:brandByName(sel(P['브랜드'])), date:P['날짜']?.date?.start||'',
-        channel:sel(P['채널']), amount:P['매출']?.number||0}); }
+        channel:sel(P['채널']), amount:P['매출']?.number||0, cost:P['원가']?.number||0}); }
       if(kind==='costs'){ Object.assign(rec,{brandId:brandByName(sel(P['브랜드'])), ym:txt(P['월']),
         kind:sel(P['구분'])||'기타', name:ttl(P['항목']), amount:P['금액']?.number||0}); }
       if(kind==='products'){ Object.assign(rec,{brandId:brandByName(sel(P['브랜드'])), name:ttl(P['제품명']),
@@ -5397,10 +5409,11 @@ function bind(){
     el.onchange=()=>{
       const ds=el.dataset.day, ch=el.dataset.ch, v=Number(String(el.value||'').replace(/[^\d.-]/g,''))||0;
       let r=DB.daily.find(d=>d.brandId===UI.brand&&d.date===ds&&d.channel===ch);
-      if(!r){ if(!v) return; r={id:uid(),brandId:UI.brand,date:ds,channel:ch,amount:0}; DB.daily.push(r); }
-      r.amount=v; r.dirty=true; save(); render();
+      const f=el.dataset.f==='cost'?'cost':'amount';
+      if(!r){ if(!v) return; r={id:uid(),brandId:UI.brand,date:ds,channel:ch,amount:0,cost:0}; DB.daily.push(r); }
+      r[f]=v; r.dirty=true; save(); render();
     };
-    el.onkeydown=e=>{ if(e.key==='Enter'){ e.preventDefault(); const all=[...document.querySelectorAll('[data-day]')]; const i=all.indexOf(el), cols=(brandOf(UI.brand).channels||[]).length||1; el.blur(); setTimeout(()=>{ const nx=document.querySelectorAll('[data-day]')[i+cols]; if(nx) nx.focus(); },30); } };
+    el.onkeydown=e=>{ if(e.key==='Enter'){ e.preventDefault(); const all=[...document.querySelectorAll('[data-day]')]; const i=all.indexOf(el), cols=((brandOf(UI.brand).channels||[]).length||1)*2; el.blur(); setTimeout(()=>{ const nx=document.querySelectorAll('[data-day]')[i+cols]; if(nx) nx.focus(); },30); } };
   });
   document.querySelectorAll('[data-act]').forEach(el=>el.onclick=()=>act(el.dataset.act));
   if(UI.tab==='calendar') bindCalendar();
