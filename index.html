@@ -2300,6 +2300,15 @@ html body .calx .ev.ev--mid:hover::before,html body .calx .ev.ev--end:hover::bef
 html body .calx .ev.ev--end.ev--done::before{opacity:.5}
 html body .calx .ev.ev--task.ev--mid::before,html body .calx .ev.ev--task.ev--end::before{background:#D9DCE2 !important}
 html body .calx .cell .ev.ev--mid,html body .calx .cell .ev.ev--end,html body .calx .cell .ev.ev--task.ev--mid,html body .calx .cell .ev.ev--task.ev--end{background:transparent !important;box-shadow:none !important}
+/* 일별 입력표: 고정 제목줄·합계줄이 날짜와 겹쳐 보이지 않게 흰 배경 */
+#view .sv-grid{border-collapse:separate !important;border-spacing:0}
+#view .sv-grid thead th{position:sticky !important;top:0;z-index:3;background:#fff !important;box-shadow:inset 0 -1px 0 var(--line)}
+#view .sv-grid tfoot td{position:sticky !important;bottom:0;z-index:3;background:#fff !important;box-shadow:inset 0 1px 0 var(--line);border-top:0 !important}
+#view .sv-grid td:first-child,#view .sv-grid th:first-child{position:sticky;left:0;z-index:2;background:#fff}
+#view .sv-grid thead th:first-child,#view .sv-grid tfoot td:first-child{z-index:4}
+#view .sv-grid tr.is-we td:first-child{background:#FAFAFB}
+#view .sv-grid tr.is-today td:first-child{background:#FBFFE6}
+#view .sv-grid td:first-child,#view .sv-grid th:first-child{min-width:92px;width:92px;white-space:nowrap;overflow:visible;text-overflow:clip}
 </style>
 </head>
 <body>
