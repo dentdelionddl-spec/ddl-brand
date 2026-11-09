@@ -4219,7 +4219,7 @@ function salesView(){
 const LS_KINDS=['반지','귀걸이','목걸이','팔찌','기타'];
 const LS_MATS=['14K-18K','925 실버','서지컬 스틸','신주·브라스','소재 미확인'];
 /* 채널별 판매 수수료(%) 기본값 — 화면에서 고치면 채널마다 따로 기억 */
-const LS_CH={'자사몰':3.3,'29CM':30,'W컨셉':32,'ZVZO':25,'쿠팡':15,'오프라인 팝업':4};
+const LS_CH={'자사몰':3.3,'29CM':30,'W컨셉':32,'ZVZO':25,'무신사':30,'쿠팡':15,'오프라인 팝업':4};
 const LS_DEF={q:'',kind:'',mat:'',st:'',yr:'',qt:'',se:'',ch:'자사몰',fees:{...LS_CH},disc:0,pack:3000,extra:21,target:25,
   mult:{'14K-18K':2,'925 실버':4,'서지컬 스틸':6,'신주·브라스':6,'소재 미확인':6},catMult:{},sort:'',dir:1,sel:''};
 const LS_CAT_MULT=3; /* 옷 브랜드 카테고리별 배수 기본값 */
@@ -4238,6 +4238,7 @@ function lsState(){
 const lsFee=s=>Number(s.fees[s.ch]??LS_CH[s.ch]??0);
 /* 판매 조건·배수는 브랜드마다 따로 저장 — 화면에 쓰는 값(s.ch 등)은 지금 브랜드 값으로 바꿔 끼움 */
 const LS_COND=['ch','disc','pack','extra','target'];
+const lsChannels=bid=>(brandOf(bid)?.channels||[]).filter(Boolean);
 function lsCond(s,bid){
   if(!s.cond){ /* 예전 값은 원래 설정하던 비비케이트 것으로 */
     s.cond={ vivicate:{ch:s.ch,fees:s.fees,disc:s.disc,pack:s.pack,extra:s.extra,target:s.target,mult:s.mult,catMult:s.catMult} };
@@ -4247,6 +4248,8 @@ function lsCond(s,bid){
   if(!c) c=s.cond[bid]={ch:'자사몰',fees:{...LS_CH},disc:0,pack:3000,extra:21,target:25,mult:{...LS_DEF.mult},catMult:{}};
   for(const k in LS_CH) if(c.fees[k]===undefined) c.fees[k]=LS_CH[k];
   if(s._bid===bid) LS_COND.forEach(k=>c[k]=s[k]); /* 같은 브랜드면 지금 입력값을 저장 */
+  /* 판매 채널은 설정 > 브랜드의 판매 채널만 — 지워진 채널을 고르고 있었으면 첫 채널로 */
+  const chs=lsChannels(bid); if(!chs.includes(c.ch)) c.ch=chs[0]||'';
   Object.assign(s,{ch:c.ch,fees:c.fees,disc:c.disc,pack:c.pack,extra:c.extra,target:c.target,mult:c.mult,catMult:c.catMult||(c.catMult={})});
   s._bid=bid; return s;
 }
@@ -4382,7 +4385,7 @@ function productsView(){
       <div class="pv-card">
         <div class="pv-card__hd"><h3>판매 조건</h3><small>${esc(b.name)} 전용 · 부가세 제외</small></div>
         <div class="pv-card__bd">
-          <div class="pv-kv"><span>판매 채널</span><select id="ls_ch" data-native>${Object.keys(LS_CH).map(k=>`<option ${k===s.ch?'selected':''}>${k}</option>`).join('')}</select></div>
+          <div class="pv-kv"><span>판매 채널</span><select id="ls_ch" data-native>${lsChannels(b.id).map(k=>`<option ${k===s.ch?'selected':''}>${esc(k)}</option>`).join('')||'<option value="">설정에서 채널 추가</option>'}</select></div>
           <div class="pv-kv"><span>채널 수수료</span>${num('ls_fee',lsFee(s),'%',0.1)}</div>
           <div class="pv-kv"><span>할인율</span><div class="pv-slider"><input type="range" id="ls_disc" min="0" max="70" step="1" value="${s.disc}"><b id="ls_disc_v">${s.disc}%</b></div></div>
           <div class="pv-kv"><span>포장비</span>${num('ls_pack',s.pack,'원',500,1)}</div>
