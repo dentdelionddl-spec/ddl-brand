@@ -2263,6 +2263,11 @@ html body .calx .cell .ev.ev--task .evchk[aria-pressed="true"]{background:#7B808
 .mc.mc--task[style*="--a"]{--as:24%}
 .mc.mc--task .mt__t{color:#363B46}
 .mc.mc--task .mc__tag{background:#E8EAEE;color:#5A606C}
+/* 오늘 날짜: 형광 배경 + 검정 글씨 */
+html body .calx .cell--today .cn,html body .cell--today .cell__d .cn{background:var(--neon) !important;color:#14161C !important;box-shadow:none !important}
+html body .cell--today .cell__d,html body.ro .cell--today .cell__d{color:#14161C !important}
+html body .cell--today .cell__d[style],html body .cell--today .cell__d:not(:has(.cn)){background:var(--neon) !important}
+html body .mday.is-today .n{background:var(--neon) !important;color:#14161C !important;box-shadow:none !important}
 </style>
 </head>
 <body>
