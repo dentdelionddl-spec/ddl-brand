@@ -2309,6 +2309,11 @@ html body .calx .cell .ev.ev--mid,html body .calx .cell .ev.ev--end,html body .c
 #view .sv-grid tr.is-we td:first-child{background:#FAFAFB}
 #view .sv-grid tr.is-today td:first-child{background:#FBFFE6}
 #view .sv-grid td:first-child,#view .sv-grid th:first-child{min-width:92px;width:92px;white-space:nowrap;overflow:visible;text-overflow:clip}
+/* 일별 입력표 카드: 한 가지 흰색으로 — 고정 칸과 나머지 칸 색이 갈라지지 않게 */
+#view .sv-card{background:#fff !important;backdrop-filter:none !important}
+#view .sv-card .card__hd,#view .sv-card .sv-gridwrap,#view .sv-grid th,#view .sv-grid td,#view .sv-grid thead th,#view .sv-grid tfoot td{background:#fff !important}
+#view .sv-grid tr.is-we td,#view .sv-grid tr.is-we td:first-child{background:#fff !important}
+#view .sv-grid tr.is-today td,#view .sv-grid tr.is-today td:first-child{background:#FBFFE6 !important}
 </style>
 </head>
 <body>
@@ -4297,7 +4302,7 @@ function salesView(){
         <span class="${wd(ds)===0?'sun':''}">${d}</span></div>`; }).join('')}</div>
   </section>
 
-  <section class="card">
+  <section class="card sv-card">
     <div class="card__hd"><h3>일별 · 유통사별 입력</h3><span class="eyebrow" style="margin-left:auto">결제 금액(부가세 포함) · 입력하면 자동 저장</span></div>
     <div class="sv-gridwrap"><table class="dt sv-grid">
       <thead><tr><th>날짜</th>${chs.map((ch,i)=>`<th class="num"><i class="sv-dot" style="background:${cc(i)}"></i>${esc(ch)}</th>`).join('')}<th class="num">합계</th></tr></thead>
