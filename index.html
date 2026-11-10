@@ -2540,12 +2540,7 @@ html:root body .calx .cell .ev.ev--mid{margin-left:-6px !important;margin-right:
 html:root body .calx .cell .ev.ev--end{margin-left:-6px !important;width:calc(100% + 6px) !important;max-width:none !important}
 html:root body .calx .cell .ev.ev--mid::before{left:-6px !important;right:0 !important;border-radius:0 !important}
 html:root body .calx .cell .ev.ev--end::before{left:-6px !important;right:6px !important;border-radius:0 2px 2px 0 !important}
-/* 캘린더 업무 순서 바꾸기: 놓일 자리 표시선 */
 html:root body .calx .cell .ev.ev--task[draggable="true"]{cursor:grab}
-html:root body .calx .cell .ev.is-dropb{position:relative}
-html:root body .calx .cell .ev.is-dropb::after{content:"";position:absolute;left:0;right:0;top:-4px;height:2px;border-radius:2px;background:#14161C}
-html:root body .calx .cell.is-dropend .ev.ev--task:not(.ev--start):not(.ev--mid):not(.ev--end):last-of-type{position:relative}
-html:root body .calx .cell.is-dropend .ev.ev--task:not(.ev--start):not(.ev--mid):not(.ev--end):last-of-type::after{content:"";position:absolute;left:0;right:0;bottom:-4px;height:2px;border-radius:2px;background:#14161C}
 /* 이벤트 일정만: 글씨 검정 + 얇은 검정 테두리 (왼쪽 형광 선 유지) */
 html:root body .calx .cell .ev.ev--evt:not(.ev--mid):not(.ev--end){color:#14161C !important;box-shadow:inset 3px 0 0 var(--c),inset 0 0 0 1px #14161C !important}
 html:root body .calx .cell .ev.ev--evt:not(.ev--mid):not(.ev--end):hover{box-shadow:inset 3px 0 0 var(--c),inset 0 0 0 1px #14161C,0 6px 14px -10px rgba(20,24,34,.3) !important}
@@ -2555,6 +2550,12 @@ html:root body .mc.mc--evt{box-shadow:inset 3px 0 0 var(--c),inset 0 0 0 1px #14
 html:root body .mc.mc--evt .mt__t{color:#14161C !important}
 html:root body .mc.mc--evt .mt__m{color:#4A4F5C !important}
 html:root body .mc.mc--evt .mc__tag{color:#14161C !important}
+/* 업무 순서 바꾸기 (아이폰 앱 옮기듯) */
+html:root body .calx .cell .ev.is-slot{opacity:.35 !important;outline:1.5px dashed #9EA3AC;outline-offset:-1.5px;box-shadow:none !important;background:transparent !important}
+html:root body .calx .cell .ev.is-slot > *{visibility:hidden}
+html:root body .mc--task{-webkit-touch-callout:none;-webkit-user-select:none;user-select:none}
+html:root body .mc.is-lift{position:relative;z-index:30;box-shadow:inset 3px 0 0 var(--c,#B9BDC4),0 18px 34px -14px rgba(20,22,28,.38),0 0 0 1px rgba(20,22,28,.08) !important;background:#fff !important;transition:box-shadow .15s}
+html:root body .mlist.is-sorting .mc:not(.is-lift){transition:transform .2s cubic-bezier(.2,.8,.2,1)}
 /* ================= 모바일 마감: 넘침·겹침 없이, 숫자 정렬·글자 크기 일관 ================= */
 @media (max-width:760px){
   /* 공통: 표 숫자 */
@@ -3505,7 +3506,7 @@ function mCalView(forceBid){
   const card=it=>{ const o=it.o, isC=it.k==='c', b=brandOf(o.brandId);
     const from=isC?o.date:(o.start||o.due), to=isC?(o.end||o.date):o.due;
     const meta=[!bf&&b?b.name:'', from&&to&&from!==to?`${md(from)} ~ ${md(to)}`:'', isC?'':ownersOf(o).join(', ')].filter(Boolean).map(esc).join(' · ');
-    return `<div class="mc ${o.done?'is-done':''} ${isC?'':'mc--task'} ${isC&&o.type==='이벤트'?'mc--evt':''}" style="--h:${hueOf(it)}${!isC&&o.area?`;--a:${areaHue(o.area)}`:''};--c:${toneIt(it)}">
+    return `<div class="mc ${o.done?'is-done':''} ${isC?'':'mc--task'} ${isC&&o.type==='이벤트'?'mc--evt':''}" ${isC?'':`data-tid="${o.id}"`} style="--h:${hueOf(it)}${!isC&&o.area?`;--a:${areaHue(o.area)}`:''};--c:${toneIt(it)}">
       <button class="mt__chk" ${isC?`data-toggle-content="${o.id}"`:`data-toggle-task-btn="${o.id}"`} aria-label="완료 표시" aria-pressed="${!!o.done}">${MI.chk}</button>
       <div class="mt__b" ${isC?`data-content="${o.id}"`:`data-edit-task="${o.id}"`}><div class="mt__t">${esc(o.title||(isC?o.type:'(제목 없음)'))}</div>${meta?`<div class="mt__m">${meta}</div>`:''}</div>
       <span class="mc__tag">${isC?esc(o.type):esc(o.area||'업무')}</span></div>`; };
@@ -5154,23 +5155,34 @@ const opt=(arr,v)=>arr.map(a=>`<option ${a===v?'selected':''}>${esc(a)}</option>
 function shiftDays(iso,n){ const d=new Date(iso+'T00:00:00'); d.setDate(d.getDate()+n); return dateStr(d); }
 /* 캘린더: 같은 날 업무 순서(우선순위) — 끌어 놓은 위치 바로 앞에 넣고 그 날 업무 순서를 10 단위로 다시 매김 */
 function calSingles(cell){ return [...cell.querySelectorAll('.ev.ev--task[data-drag]:not(.ev--start):not(.ev--mid):not(.ev--end)')]; }
-function calDropAt(cell,e){ const list=calSingles(cell); for(const el of list){ const r=el.getBoundingClientRect(); if(e.clientY<r.top+r.height/2) return el.dataset.drag.slice(2); } return null; }
-function calDropMark(cell,e){
-  document.querySelectorAll('.ev.is-dropb,.cell.is-dropend').forEach(x=>x.classList.remove('is-dropb','is-dropend'));
-  if(!cell||!e) return; const at=calDropAt(cell,e);
-  if(at){ const el=cell.querySelector(`[data-drag="t:${at}"]`); el&&el.classList.add('is-dropb'); } else if(calSingles(cell).length) cell.classList.add('is-dropend');
+/* 아이폰 앱 옮기듯: 들린 카드 자리는 비워두고, 나머지 카드가 부드럽게 비켜남 */
+function flipMove(els, mutate){
+  const before=new Map(els.map(e=>[e,e.getBoundingClientRect()])); mutate();
+  els.forEach(e=>{ const a=before.get(e), c=e.getBoundingClientRect(); const dx=a.left-c.left, dy=a.top-c.top; if(!dx&&!dy) return;
+    e.style.transition='none'; e.style.transform=`translate(${dx}px,${dy}px)`;
+    requestAnimationFrame(()=>requestAnimationFrame(()=>{ e.style.transition='transform .2s cubic-bezier(.2,.8,.2,1)'; e.style.transform=''; })); });
 }
-function reorderTask(id, date, beforeId){
-  const t=DB.tasks.find(x=>x.id===id); if(!t) return;
-  const single=!(t.start&&t.due&&t.start!==t.due);
-  if((t.due||t.start)!==date) moveItem('t:'+id, date);
-  if(!single){ save(); render(); return; }
-  const cell=document.querySelector(`.cell[data-date="${date}"]`);
-  let ids=cell? calSingles(cell).map(el=>el.dataset.drag.slice(2)).filter(x=>x!==id) : [];
-  const i=beforeId&&beforeId!==id? ids.indexOf(beforeId) : -1;
-  if(i<0) ids.push(id); else ids.splice(i,0,id);
+/* 그 날 업무 순서를 10 단위로 저장 (노션 '순서') */
+function setTaskOrder(ids){
   ids.forEach((x,n)=>{ const tk=DB.tasks.find(y=>y.id===x); if(tk && tk.rank!==(n+1)*10){ tk.rank=(n+1)*10; tk.dirty=true; } });
-  save(); render();
+}
+let __calDrag=null;
+function calDragOver(cell,e){
+  const d=__calDrag; if(!d) return;
+  const others=calSingles(cell).filter(x=>x!==d.el);
+  let before=null; for(const el of others){ const r=el.getBoundingClientRect(); if(e.clientY<r.top+r.height/2){ before=el; break; } }
+  const anchor=before || (others.length? others[others.length-1].nextElementSibling : cell.querySelector('.cell__add'));
+  if(d.el.parentElement===cell && (d.el.nextElementSibling===anchor || d.el===anchor)) return;
+  const moving=[...new Set([...calSingles(cell), ...calSingles(d.el.parentElement)])].filter(x=>x!==d.el);
+  flipMove(moving, ()=>cell.insertBefore(d.el, anchor));
+}
+function calDrop(cell){
+  const d=__calDrag; __calDrag=null; if(!d) return;
+  d.el.classList.remove('is-slot');
+  const date=cell.dataset.date, t=DB.tasks.find(x=>x.id===d.id); if(!t) return render();
+  const ids=calSingles(cell).map(el=>el.dataset.drag.slice(2));
+  if((t.due||t.start)!==date){ moveItem('t:'+d.id, date); }
+  setTaskOrder(ids); save(); render();
 }
 function moveItem(payload,target){
   const [kind,id]=payload.split(':');
@@ -5204,13 +5216,16 @@ function bindCalendar(){
     return;
   }
   document.querySelectorAll('[data-drag]').forEach(el=>{
-    el.addEventListener('dragstart',e=>{ e.dataTransfer.setData('text/plain', el.dataset.drag); e.dataTransfer.effectAllowed='move'; });
+    el.addEventListener('dragstart',e=>{ e.dataTransfer.setData('text/plain', el.dataset.drag); e.dataTransfer.effectAllowed='move';
+      const single=el.matches('.ev--task:not(.ev--start):not(.ev--mid):not(.ev--end)');
+      __calDrag= single? {id:el.dataset.drag.slice(2), el} : null;
+      if(single) requestAnimationFrame(()=>el.classList.add('is-slot')); });
+    el.addEventListener('dragend',()=>{ if(__calDrag && __calDrag.el===el){ __calDrag=null; el.classList.remove('is-slot'); render(); } });
   });
   document.querySelectorAll('.cell[data-date]').forEach(cell=>{
-    cell.addEventListener('dragover',e=>{ e.preventDefault(); e.dataTransfer.dropEffect='move'; calDropMark(cell,e); });
-    cell.addEventListener('dragleave',e=>{ if(!cell.contains(e.relatedTarget)) calDropMark(null); });
-    cell.addEventListener('drop',e=>{ e.preventDefault(); const p=e.dataTransfer.getData('text/plain'); const at=calDropAt(cell,e); calDropMark(null); if(!p) return;
-      if(p.startsWith('t:')) reorderTask(p.slice(2), cell.dataset.date, at); else moveItem(p, cell.dataset.date); });
+    cell.addEventListener('dragover',e=>{ e.preventDefault(); e.dataTransfer.dropEffect='move'; calDragOver(cell,e); });
+    cell.addEventListener('drop',e=>{ e.preventDefault(); const p=e.dataTransfer.getData('text/plain'); if(!p) return;
+      if(__calDrag && p==='t:'+__calDrag.id) calDrop(cell); else moveItem(p, cell.dataset.date); });
     cell.addEventListener('mousedown',e=>{ if(e.target.closest('.ev, .cell__add')) return; e.preventDefault(); selA=selB=cell.dataset.date; paintSel(); });
     cell.addEventListener('mouseenter',()=>{ if(selA){ selB=cell.dataset.date; paintSel(); } });
   });
@@ -5795,7 +5810,49 @@ const brandByName=nm=>{
 /* =========================================================
    EVENTS
    ========================================================= */
+/* 모바일 캘린더: 업무 카드를 꾹 누르면 들리고, 끌면 다른 카드가 비켜나며 순서가 바뀜 */
+function mSortInit(){
+  const list=document.querySelector('.mv .mlist'); if(!list || !list.querySelector('.mc--task[data-tid]')) return;
+  let timer=null;
+  list.addEventListener('pointerdown',e=>{
+    const card=e.target.closest('.mc--task[data-tid]'); if(!card || e.target.closest('.mt__chk')) return;
+    const sx=e.clientX, sy=e.clientY;
+    const off=()=>{ clearTimeout(timer); window.removeEventListener('pointermove',pre); window.removeEventListener('pointerup',off); window.removeEventListener('pointercancel',off); };
+    const pre=ev=>{ if(Math.abs(ev.clientX-sx)>8||Math.abs(ev.clientY-sy)>8) off(); };
+    window.addEventListener('pointermove',pre); window.addEventListener('pointerup',off); window.addEventListener('pointercancel',off);
+    timer=setTimeout(()=>{ off(); mSortStart(list,card,sy); },380);
+  });
+  list.querySelectorAll('.mc--task').forEach(c=>c.addEventListener('contextmenu',ev=>ev.preventDefault()));
+}
+function mSortStart(list,card,y0){
+  if(navigator.vibrate) navigator.vibrate(12);
+  card.classList.add('is-lift'); list.classList.add('is-sorting');
+  let dy=0;
+  const tasks=()=>[...list.querySelectorAll('.mc--task[data-tid]')];
+  const stopScroll=ev=>ev.preventDefault();
+  document.addEventListener('touchmove',stopScroll,{passive:false});
+  const move=ev=>{
+    dy=ev.clientY-y0; card.style.transform=`translateY(${dy}px) scale(1.03)`;
+    const mid=card.offsetTop+card.offsetHeight/2+dy;
+    const others=tasks().filter(x=>x!==card);
+    let before=null; for(const el of others){ if(mid<el.offsetTop+el.offsetHeight/2){ before=el; break; } }
+    const anchor=before || (others.length? others[others.length-1].nextElementSibling : null);
+    if(card.nextElementSibling===anchor || card===anchor) return;
+    const top0=card.offsetTop;
+    flipMove(others, ()=>list.insertBefore(card, anchor));
+    y0+=card.offsetTop-top0; dy=ev.clientY-y0; card.style.transform=`translateY(${dy}px) scale(1.03)`;
+  };
+  const up=()=>{
+    window.removeEventListener('pointermove',move); window.removeEventListener('pointerup',up); window.removeEventListener('pointercancel',up);
+    document.removeEventListener('touchmove',stopScroll);
+    card.style.transition='transform .18s cubic-bezier(.2,.8,.2,1)'; card.style.transform='';
+    const eat=ev=>{ ev.stopPropagation(); ev.preventDefault(); }; card.addEventListener('click',eat,{capture:true,once:true}); setTimeout(()=>card.removeEventListener('click',eat,{capture:true}),400);
+    setTimeout(()=>{ card.classList.remove('is-lift'); list.classList.remove('is-sorting'); setTaskOrder(tasks().map(x=>x.dataset.tid)); save(); render(); },190);
+  };
+  window.addEventListener('pointermove',move); window.addEventListener('pointerup',up); window.addEventListener('pointercancel',up);
+}
 function bind(){
+  setTimeout(mSortInit,0);
   document.querySelectorAll('[data-brand]').forEach(el=>el.onclick=()=>{
     UI.brand=el.dataset.brand; UI.tab='calendar';
     saveUI(); render();
