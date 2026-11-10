@@ -2533,6 +2533,8 @@ html:root body .mc.mc--task .mt__t{color:color-mix(in srgb,var(--c,#646A75) 70%,
 html:root body .mc.mc--task .mc__tag{background:#E8EAEE !important;color:#5A606C !important}
 html:root body .mday .dots i{background:var(--c,#A3A7AF) !important}
 html:root body .mday .dots i.is-done{opacity:.35}
+/* 기간 일정 이어지는 날: 원래대로 얇은 선만 (바탕·테두리 없음), 선 색만 유형 톤 */
+html:root body .calx .cell .ev.ev--end,html:root body .calx .cell .ev.ev--mid,html:root body .calx .cell .ev.ev--end:hover,html:root body .calx .cell .ev.ev--mid:hover{background:transparent !important;box-shadow:none !important;border-left-color:transparent !important}
 /* ================= 모바일 마감: 넘침·겹침 없이, 숫자 정렬·글자 크기 일관 ================= */
 @media (max-width:760px){
   /* 공통: 표 숫자 */
