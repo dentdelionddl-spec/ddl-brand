@@ -5181,10 +5181,12 @@ function calDrop(cell){
   d.el.classList.remove('is-slot');
   const date=cell.dataset.date, t=DB.tasks.find(x=>x.id===d.id); if(!t) return render();
   const ids=calSingles(cell).map(el=>el.dataset.drag.slice(2));
-  if((t.due||t.start)!==date){ moveItem('t:'+d.id, date); }
-  setTaskOrder(ids); save(); render();
+  if((t.due||t.start)!==date) moveItem('t:'+d.id, date, true);
+  setTaskOrder(ids); quietSave();
 }
-function moveItem(payload,target){
+/* 화면은 이미 바뀐 상태 — 다시 그리지 않고 저장·노션 반영만 (헤더 깜빡임 방지) */
+function quietSave(){ window.__quietPush=true; save(); }
+function moveItem(payload,target,noRender){
   const [kind,id]=payload.split(':');
   if(kind==='c'){
     const c=DB.contents.find(x=>x.id===id); if(!c) return;
@@ -5199,6 +5201,7 @@ function moveItem(payload,target){
     if(wasAuto) t.week=autoWeek(t.due);
     t.dirty=true;
   }
+  if(noRender) return;
   save(); render();
 }
 let selA=null, selB=null;
@@ -5636,7 +5639,8 @@ async function pushAll(onlyDirty){
   else if(!onlyDirty || n || fail) toast(`노션에 ${n}건 반영${fail?` · 실패 ${fail}건`:''}`,2200);
   syncing=false;
   const modalOpen=()=>!!document.querySelector('#layer')?.innerHTML.trim();
-  if((!onlyDirty || n || fail) && !modalOpen()) render();
+  const quiet=window.__quietPush && onlyDirty && !fail; window.__quietPush=false;
+  if((!onlyDirty || n || fail) && !modalOpen() && !quiet) render();
 }
 
 /* ---------- 자동 동기화 ---------- */
@@ -5847,7 +5851,7 @@ function mSortStart(list,card,y0){
     document.removeEventListener('touchmove',stopScroll);
     card.style.transition='transform .18s cubic-bezier(.2,.8,.2,1)'; card.style.transform='';
     const eat=ev=>{ ev.stopPropagation(); ev.preventDefault(); }; card.addEventListener('click',eat,{capture:true,once:true}); setTimeout(()=>card.removeEventListener('click',eat,{capture:true}),400);
-    setTimeout(()=>{ card.classList.remove('is-lift'); list.classList.remove('is-sorting'); setTaskOrder(tasks().map(x=>x.dataset.tid)); save(); render(); },190);
+    setTimeout(()=>{ card.classList.remove('is-lift'); list.classList.remove('is-sorting'); card.style.transition=''; setTaskOrder(tasks().map(x=>x.dataset.tid)); quietSave(); },190);
   };
   window.addEventListener('pointermove',move); window.addEventListener('pointerup',up); window.addEventListener('pointercancel',up);
 }
