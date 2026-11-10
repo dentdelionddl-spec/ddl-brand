@@ -2231,7 +2231,7 @@ html body .m .mv > .mday__hd{margin-top:14px !important}
 #view .pv-code{font-family:var(--mono);font-size:12px;color:var(--pv-ink2)}
 #view .pv-pill{display:inline-flex;align-items:center;gap:5px;height:22px;padding:0 8px;border-radius:6px;font-size:11.5px;font-weight:600;background:#F2F3F7;color:var(--pv-ink2)}
 #view .pv-pill::before{content:'';width:5px;height:5px;border-radius:50%;background:currentColor;opacity:.8}
-#view .pv-se--0{background:#EAF7EC;color:#2F8A47} #view .pv-se--1{background:#FFF6D6;color:#9A7400} #view .pv-se--2{background:#F3ECE4;color:#7A5232}
+#view .pv-se--0{background:#EAF7EC;color:#2F8A47} #view .pv-se--1{background:#FFF6D6;color:#9A7400} #view .pv-se--2{background:#F3ECE4;color:#7A5232} #view .pv-se--3{background:#E9EDF3;color:#3F5370}
 #view .pv-pill--ok{background:#EAF7F1;color:var(--pv-ok)} #view .pv-pill--warn{background:#FEF4E3;color:var(--pv-warn)} #view .pv-pill--bad{background:#FDECEA;color:var(--pv-bad)}
 #view .pv-bad{color:var(--pv-bad) !important}#view .pv-mid{color:var(--pv-warn) !important}#view .pv-good{color:var(--pv-ok) !important}
 #view .pv-edit{all:unset;cursor:pointer;width:30px;height:30px;border-radius:8px;display:inline-flex;align-items:center;justify-content:center;color:var(--pv-mut)}
@@ -4529,7 +4529,7 @@ const LS_CH={'자사몰':3.3,'29CM':30,'W컨셉':32,'ZVZO':25,'무신사':30,'�
 const LS_DEF={q:'',kind:'',mat:'',st:'',yr:'',qt:'',se:'',ch:'자사몰',fees:{...LS_CH},disc:0,pack:3000,extra:21,target:25,
   mult:{'14K-18K':2,'925 실버':4,'서지컬 스틸':6,'신주·브라스':6,'소재 미확인':6},catMult:{},sort:'',dir:1,sel:''};
 const LS_CAT_MULT=3; /* 옷 브랜드 카테고리별 배수 기본값 */
-const LS_SEASONS=['26 SPRING','26 SUMMER','26 FALL'];
+const LS_SEASONS=['26 SPRING','26 SUMMER','26 FALL','26 WINTER'];
 function lsState(){
   if(!UI.ls||typeof UI.ls!=='object') UI.ls={};
   const s=UI.ls;
