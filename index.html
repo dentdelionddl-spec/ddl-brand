@@ -2469,6 +2469,8 @@ html body #view .pv-t th.r,html body #view .pv-t td.r{text-align:right !importan
 /* 제품 표 공헌이익: 숫자는 옆 칸과 같은 높이, 퍼센트는 숫자 위 오른쪽에 작게 */
 html body #view .pv-t td.r[data-l="공헌이익"]{position:relative}
 html body #view .pv-t td .pv-pct{position:absolute;right:12px;top:calc(50% - 21px);font-size:10.5px;line-height:1;color:var(--mut);font-weight:500;font-variant-numeric:tabular-nums}
+/* KPI 기간 진도 표시: 형광 막대에 얇은 검정 테두리 */
+html body #view .ux-bar__t span{width:3px !important;margin-left:-1.5px !important;top:-4px !important;bottom:-4px !important;border-radius:2px !important;background:var(--pv-acc,#D4FF00) !important;box-shadow:0 0 0 1px #14161C !important}
 /* ================= 모바일 마감: 넘침·겹침 없이, 숫자 정렬·글자 크기 일관 ================= */
 @media (max-width:760px){
   /* 공통: 표 숫자 */
@@ -2542,10 +2544,13 @@ html body #view .pv-t td .pv-pct{position:absolute;right:12px;top:calc(50% - 21p
   html body .mc .mt__chk svg{border-color:#C3C6CC !important}
   html body .mc .mt__chk[aria-pressed="true"] svg{background:#14161C !important;border-color:#14161C !important;color:#fff}
   /* KPI 숫자: 위 2칸, 아래 3칸 */
-  html body #view .ux-kpis{display:grid !important;grid-template-columns:repeat(6,minmax(0,1fr)) !important}
-  html body #view .ux-kpis > *{grid-column:span 3;min-width:0}
-  html body #view .ux-kpis > *:nth-child(n+3){grid-column:span 2}
-  html body #view .ux-kpis b,html body #view .ux-kpis strong{white-space:nowrap;font-size:17px !important}
+  html body #view .ux-kpis{display:block !important;padding:4px 0 !important}
+  html body #view .ux-kpis .pv-kpi{display:flex !important;align-items:baseline;justify-content:space-between;gap:12px;padding:12px 18px !important;border:0 !important;border-top:1px solid var(--line2) !important;min-width:0}
+  html body #view .ux-kpis .pv-kpi:first-child{border-top:0 !important}
+  html body #view .ux-kpis .pv-kpi span{margin:0 !important;font-size:13px !important;color:var(--ink2);white-space:nowrap}
+  html body #view .ux-kpis .pv-kpi b{margin:0 !important;font-size:16px !important;font-weight:700;white-space:nowrap;text-align:right;font-variant-numeric:tabular-nums}
+  html body #view .ux-kpis .pv-kpi:nth-child(2) b{color:var(--ink2);font-weight:600}
+  html body #view .ux-bar{padding:6px 18px 18px !important}
   /* 제품 탭 */
   html body #view .pv-hd{flex-wrap:wrap;row-gap:10px}
   html body #view .pv-list__hd{display:grid !important;grid-template-columns:1fr 1fr;gap:8px;padding:12px 14px}
