@@ -2513,6 +2513,26 @@ html:root body #view .pv-btn--pri,html:root body #view .ux .btn--primary{border:
 html:root body .snav__m--n{display:inline-flex !important;align-items:center !important;justify-content:center !important;box-sizing:border-box;height:20px;min-width:22px;padding:1px 6px 0 !important;line-height:1 !important;text-align:center;font-variant-numeric:tabular-nums;letter-spacing:0}
 /* PC 매출 흐름: 영업이익 칸만 오른쪽 정렬 */
 @media (min-width:761px){ html body #view .pl .pl__c--end{text-align:right} html body #view .pl .pl__c--end > *{text-align:right;justify-content:flex-end} }
+
+/* ===== 캘린더 색: 같은 톤 안에서 구분 (바탕은 아주 옅게, 왼쪽 선·글씨로 구분) ===== */
+html:root body .calx .cell .ev{background:color-mix(in srgb,var(--c,#646A75) 9%,#fff) !important;box-shadow:inset 3px 0 0 var(--c,#646A75),0 0 0 1px color-mix(in srgb,var(--c,#646A75) 16%,#fff) inset !important;color:color-mix(in srgb,var(--c,#646A75) 82%,#000) !important;border-left-color:var(--c,#646A75) !important}
+html:root body .calx .cell .ev:hover{box-shadow:inset 3px 0 0 var(--c,#646A75),0 0 0 1px color-mix(in srgb,var(--c,#646A75) 34%,#fff) inset,0 8px 16px -12px rgba(20,24,34,.35) !important}
+html:root body .calx .cell .ev .ev__m{color:color-mix(in srgb,var(--c,#646A75) 55%,#fff) !important}
+html:root body .calx .cell .ev .evchk{border-color:color-mix(in srgb,var(--c,#646A75) 45%,#fff) !important}
+html:root body .calx .cell .ev .evchk[aria-pressed="true"]{background:var(--c,#646A75) !important;border-color:var(--c,#646A75) !important}
+html:root body .calx .cell .ev.ev--task{background:color-mix(in srgb,var(--c,#B9BDC4) 7%,#fff) !important;color:color-mix(in srgb,var(--c,#646A75) 70%,#000) !important;box-shadow:inset 3px 0 0 var(--c,#B9BDC4),0 0 0 1px color-mix(in srgb,var(--c,#B9BDC4) 15%,#fff) inset !important}
+html:root body .calx .ev.ev--end::before,html:root body .calx .ev.ev--mid::before{background:color-mix(in srgb,var(--c,#646A75) 38%,#fff) !important}
+html:root body .calx .ev.ev--mid:hover::before,html:root body .calx .ev.ev--end:hover::before{background:color-mix(in srgb,var(--c,#646A75) 60%,#fff) !important}
+/* 모바일 캘린더 카드·점 */
+html:root body .mc{background:color-mix(in srgb,var(--c,#646A75) 8%,#fff) !important;box-shadow:inset 3px 0 0 var(--c,#646A75),0 0 0 1px color-mix(in srgb,var(--c,#646A75) 14%,#fff) inset !important}
+html:root body .mc .mt__t{color:color-mix(in srgb,var(--c,#646A75) 80%,#000) !important}
+html:root body .mc .mt__m{color:color-mix(in srgb,var(--c,#646A75) 50%,#8A8F98) !important}
+html:root body .mc__tag{background:color-mix(in srgb,var(--c,#646A75) 14%,#fff) !important;color:color-mix(in srgb,var(--c,#646A75) 85%,#000) !important}
+html:root body .mc.mc--task{background:color-mix(in srgb,var(--c,#B9BDC4) 6%,#fff) !important;box-shadow:inset 3px 0 0 var(--c,#B9BDC4),0 0 0 1px color-mix(in srgb,var(--c,#B9BDC4) 14%,#fff) inset !important}
+html:root body .mc.mc--task .mt__t{color:color-mix(in srgb,var(--c,#646A75) 70%,#000) !important}
+html:root body .mc.mc--task .mc__tag{background:#E8EAEE !important;color:#5A606C !important}
+html:root body .mday .dots i{background:var(--c,#A3A7AF) !important}
+html:root body .mday .dots i.is-done{opacity:.35}
 /* ================= 모바일 마감: 넘침·겹침 없이, 숫자 정렬·글자 크기 일관 ================= */
 @media (max-width:760px){
   /* 공통: 표 숫자 */
@@ -2582,7 +2602,6 @@ html:root body .snav__m--n{display:inline-flex !important;align-items:center !im
   html body #view .plbar{flex-wrap:wrap;row-gap:10px}
   html body #view .plbar__t{flex:1 0 100%;white-space:nowrap}
   /* 캘린더: 남은 파란 점·체크 원 무채색 */
-  html body .mday .dots i{background:#A3A7AF !important}
   html body .mc .mt__chk svg{border-color:#C3C6CC !important}
   html body .mc .mt__chk[aria-pressed="true"] svg{background:#14161C !important;border-color:#14161C !important;color:#fff}
   /* KPI 숫자: 위 2칸, 아래 3칸 */
@@ -2651,6 +2670,12 @@ const TYPES = [...CONTENT_TYPES, ...OPS_TYPES];
 const TYPE_HUE = {'EGC':252,'UGC':340,'온라인':205,'오프라인':150,'이벤트':22,'제품 업로드':180,'제품 입고':42};
 /* 업무 영역 표시색 — 무채색 카드 왼쪽 선만 같은 색 계열에서 고름 */
 const AREA_HUES=[205,150,22,252,340,42,180];
+/* 캘린더 유형 색: 무채색에 가까운 같은 톤 — 콘텐츠는 차가운 회청, 제품은 녹회, 판매는 따뜻한 흙빛 */
+const TYPE_TONE={'피드':'#4E5C72','릴스':'#2C313B','스레드':'#7C879A','UGC':'#7A6A7E','EGC':'#4E5C72',
+  '제품 업로드':'#5C7264','제품 입고':'#878057','공구':'#A26E4C','기획전':'#9A8460','이벤트':'#A8665A','온라인':'#5B7884','오프라인':'#7B7265'};
+const AREA_TONES=['#4E5C72','#5C7264','#A26E4C','#878057','#6C6578','#5B7884','#9A8460'];
+const toneOf=t=>TYPE_TONE[t]||'#646A75';
+const areaTone=a=>a?AREA_TONES[[...a].reduce((n,c)=>n+c.charCodeAt(0),0)%AREA_TONES.length]:'#B9BDC4';
 const areaHue=a=>a?AREA_HUES[[...a].reduce((n,c)=>n+c.charCodeAt(0),0)%AREA_HUES.length]:'';
 const catOf = t => CONTENT_TYPES.includes(t) ? '콘텐츠' : '운영';
 /* 업무 영역은 고정값이 아니라 입력된 내용에서 자동 수집됩니다 */
@@ -3224,8 +3249,8 @@ function calendarView(all){
     const pos=(a,b)=>!multi(a,b)?'':(ds===a?'ev--start':ds===b?'ev--end':'ev--mid');
     cells.push(`<div class="cell ${ds===TODAY?'cell--today':''} ${ds<TODAY?'cell--past':''}" data-date="${ds}">
       <div class="cell__d ${dow===0?'cell__sun':''}"><span class="cn">${d}</span></div>
-      ${evs.map(e=>`<span class="ev ${e.done?'ev--done':''} ${pos(e.date,e.end)}" draggable="true" data-drag="c:${e.id}" style="--h:${TYPE_HUE[e.type]??262};border-left-color:${hueBg(TYPE_HUE[e.type]||0,55)}"><b class="evchk" data-toggle-content="${e.id}" title="완료 표시" aria-pressed="${!!e.done}"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 12.5l4 4 8-9"/></svg></b><span data-content="${e.id}" style="cursor:pointer">${bn(e)}${(e.att&&e.att.length)||(e.attView&&e.attView.length)?'📎':''}${esc(e.type)} · ${esc(e.title||'')}</span></span>`).join('')}
-      ${tks.map(t=>`<span class="ev ev--task ${t.done?'ev--done':''} ${pos(t.start,t.due)}" draggable="true" data-drag="t:${t.id}" style="--h:220${t.area?`;--a:${areaHue(t.area)}`:''}" title="${esc(t.area||'')}"><b class="evchk" data-toggle-task-btn="${t.id}" title="완료 표시" aria-pressed="${!!t.done}"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 12.5l4 4 8-9"/></svg></b><span data-edit-task="${t.id}" style="cursor:pointer">${bn(t)}${esc(t.title)}</span></span>`).join('')}
+      ${evs.map(e=>`<span class="ev ${e.done?'ev--done':''} ${pos(e.date,e.end)}" draggable="true" data-drag="c:${e.id}" style="--h:${TYPE_HUE[e.type]??262};--c:${toneOf(e.type)}"><b class="evchk" data-toggle-content="${e.id}" title="완료 표시" aria-pressed="${!!e.done}"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 12.5l4 4 8-9"/></svg></b><span data-content="${e.id}" style="cursor:pointer">${bn(e)}${(e.att&&e.att.length)||(e.attView&&e.attView.length)?'📎':''}${esc(e.type)} · ${esc(e.title||'')}</span></span>`).join('')}
+      ${tks.map(t=>`<span class="ev ev--task ${t.done?'ev--done':''} ${pos(t.start,t.due)}" draggable="true" data-drag="t:${t.id}" style="--h:220${t.area?`;--a:${areaHue(t.area)}`:''};--c:${areaTone(t.area)}" title="${esc(t.area||'')}"><b class="evchk" data-toggle-task-btn="${t.id}" title="완료 표시" aria-pressed="${!!t.done}"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 12.5l4 4 8-9"/></svg></b><span data-edit-task="${t.id}" style="cursor:pointer">${bn(t)}${esc(t.title)}</span></span>`).join('')}
       <button class="cell__add" data-newdate="${ds}" aria-label="${d}일 추가">+</button>
     </div>`);
   }
@@ -3434,29 +3459,30 @@ function mCalView(forceBid){
   const ts=DB.tasks.filter(t=>inB(t)&&(!who||hasOwner(t,who)));
   const itemsOn=ds=>[...cs.filter(c=>spans(c,ds)).map(c=>({k:'c',o:c})), ...ts.filter(t=>spans({date:t.start||t.due,end:t.due},ds)).map(t=>({k:'t',o:t}))];
   const hueOf=it=>it.k==='c'?(TYPE_HUE[it.o.type]??262):214;
+  const toneIt=it=>it.k==='c'?toneOf(it.o.type):areaTone(it.o.area);
   const sel=(UI.mCalSel&&UI.mCalSel.slice(0,7)===ym)?UI.mCalSel:(TODAY.slice(0,7)===ym?TODAY:`${ym}-01`);
   const open=UI.mCalOpen===true;
   const dayBtn=ds=>{ const its=itemsOn(ds), dt=new Date(ds+'T00:00:00');
-    return `<button class="mday ${ds===sel?'is-sel':''} ${ds===TODAY?'is-today':''} ${dt.getDay()===0?'is-sun':''}" data-msel="${ds}"><span class="n">${dt.getDate()}</span><span class="dots">${its.slice(0,3).map(it=>`<i style="--h:${hueOf(it)}" class="${it.o.done?'is-done':''}"></i>`).join('')}</span></button>`; };
+    return `<button class="mday ${ds===sel?'is-sel':''} ${ds===TODAY?'is-today':''} ${dt.getDay()===0?'is-sun':''}" data-msel="${ds}"><span class="n">${dt.getDate()}</span><span class="dots">${its.slice(0,3).map(it=>`<i style="--h:${hueOf(it)};--c:${toneIt(it)}" class="${it.o.done?'is-done':''}"></i>`).join('')}</span></button>`; };
   /* 접힌 상태: 날짜가 끊김 없이 이어지는 가로 줄 (앞뒤 90일) */
   if(!UI.mStripAnchor || Math.abs(daysBetween(UI.mStripAnchor, sel))>70){ UI.mStripAnchor=sel; window.__stripLeft=null; }
   const an=new Date(UI.mStripAnchor+'T00:00:00');
   const strip=[...Array(181)].map((_,k)=>{ const d=new Date(an); d.setDate(an.getDate()-90+k); return dateStr(d); });
   const stripBtn=ds=>{ const its=itemsOn(ds), dt=new Date(ds+'T00:00:00');
-    return `<button class="mday mstrip__d ${ds===sel?'is-sel':''} ${ds===TODAY?'is-today':''}" data-msel="${ds}" data-ym="${ds.slice(0,7)}"><span class="w">${WD_KO[dt.getDay()]}</span><span class="n">${dt.getDate()}</span><span class="dots">${its.slice(0,3).map(it=>`<i style="--h:${hueOf(it)}" class="${it.o.done?'is-done':''}"></i>`).join('')}</span></button>`; };
+    return `<button class="mday mstrip__d ${ds===sel?'is-sel':''} ${ds===TODAY?'is-today':''}" data-msel="${ds}" data-ym="${ds.slice(0,7)}"><span class="w">${WD_KO[dt.getDay()]}</span><span class="n">${dt.getDate()}</span><span class="dots">${its.slice(0,3).map(it=>`<i style="--h:${hueOf(it)};--c:${toneIt(it)}" class="${it.o.done?'is-done':''}"></i>`).join('')}</span></button>`; };
   const days=[];
   for(let i=0;i<lead;i++) days.push('<span class="mday is-out"></span>');
   for(let d=1;d<=dim;d++){
     const ds=`${y}-${pad(m)}-${pad(d)}`, its=itemsOn(ds), dow=new Date(y,m-1,d).getDay();
     days.push(`<button class="mday ${ds===sel?'is-sel':''} ${ds===TODAY?'is-today':''} ${dow===0?'is-sun':''} ${ds<TODAY?'is-past':''}" data-msel="${ds}">
-      <span class="n">${d}</span><span class="dots">${its.slice(0,3).map(it=>`<i style="--h:${hueOf(it)}" class="${it.o.done?'is-done':''}"></i>`).join('')}</span></button>`);
+      <span class="n">${d}</span><span class="dots">${its.slice(0,3).map(it=>`<i style="--h:${hueOf(it)};--c:${toneIt(it)}" class="${it.o.done?'is-done':''}"></i>`).join('')}</span></button>`);
   }
   const list=itemsOn(sel).sort((a,b)=>Number(a.o.done)-Number(b.o.done));
   const sd=new Date(sel+'T00:00:00'), md=x=>x?Number(x.slice(5,7))+'/'+Number(x.slice(8)):'';
   const card=it=>{ const o=it.o, isC=it.k==='c', b=brandOf(o.brandId);
     const from=isC?o.date:(o.start||o.due), to=isC?(o.end||o.date):o.due;
     const meta=[!bf&&b?b.name:'', from&&to&&from!==to?`${md(from)} ~ ${md(to)}`:'', isC?'':ownersOf(o).join(', ')].filter(Boolean).map(esc).join(' · ');
-    return `<div class="mc ${o.done?'is-done':''} ${isC?'':'mc--task'}" style="--h:${hueOf(it)}${!isC&&o.area?`;--a:${areaHue(o.area)}`:''}">
+    return `<div class="mc ${o.done?'is-done':''} ${isC?'':'mc--task'}" style="--h:${hueOf(it)}${!isC&&o.area?`;--a:${areaHue(o.area)}`:''};--c:${toneIt(it)}">
       <button class="mt__chk" ${isC?`data-toggle-content="${o.id}"`:`data-toggle-task-btn="${o.id}"`} aria-label="완료 표시" aria-pressed="${!!o.done}">${MI.chk}</button>
       <div class="mt__b" ${isC?`data-content="${o.id}"`:`data-edit-task="${o.id}"`}><div class="mt__t">${esc(o.title||(isC?o.type:'(제목 없음)'))}</div>${meta?`<div class="mt__m">${meta}</div>`:''}</div>
       <span class="mc__tag">${isC?esc(o.type):esc(o.area||'업무')}</span></div>`; };
