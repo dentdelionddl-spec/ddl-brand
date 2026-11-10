@@ -2515,20 +2515,20 @@ html:root body .snav__m--n{display:inline-flex !important;align-items:center !im
 @media (min-width:761px){ html body #view .pl .pl__c--end{text-align:right} html body #view .pl .pl__c--end > *{text-align:right;justify-content:flex-end} }
 
 /* ===== 캘린더 색: 같은 톤 안에서 구분 (바탕은 아주 옅게, 왼쪽 선·글씨로 구분) ===== */
-html:root body .calx .cell .ev{background:color-mix(in srgb,var(--c,#646A75) 9%,#fff) !important;box-shadow:inset 3px 0 0 var(--c,#646A75) !important;color:color-mix(in srgb,var(--c,#646A75) 82%,#000) !important;border-left-color:var(--c,#646A75) !important}
-html:root body .calx .cell .ev:hover{box-shadow:inset 3px 0 0 var(--c,#646A75),0 6px 14px -10px rgba(20,24,34,.3) !important}
+html:root body .calx .cell .ev{background:color-mix(in srgb,var(--c,#646A75) 9%,#fff) !important;box-shadow:inset 3px 0 0 var(--c,#646A75),0 0 0 1px color-mix(in srgb,var(--c,#646A75) 16%,#fff) inset !important;color:color-mix(in srgb,var(--c,#646A75) 82%,#000) !important;border-left-color:var(--c,#646A75) !important}
+html:root body .calx .cell .ev:hover{box-shadow:inset 3px 0 0 var(--c,#646A75),0 0 0 1px color-mix(in srgb,var(--c,#646A75) 34%,#fff) inset,0 8px 16px -12px rgba(20,24,34,.35) !important}
 html:root body .calx .cell .ev .ev__m{color:color-mix(in srgb,var(--c,#646A75) 55%,#fff) !important}
 html:root body .calx .cell .ev .evchk{border-color:color-mix(in srgb,var(--c,#646A75) 45%,#fff) !important}
 html:root body .calx .cell .ev .evchk[aria-pressed="true"]{background:var(--c,#646A75) !important;border-color:var(--c,#646A75) !important}
-html:root body .calx .cell .ev.ev--task{background:color-mix(in srgb,var(--c,#B9BDC4) 7%,#fff) !important;color:color-mix(in srgb,var(--c,#646A75) 70%,#000) !important;box-shadow:inset 3px 0 0 var(--c,#B9BDC4) !important}
+html:root body .calx .cell .ev.ev--task{background:color-mix(in srgb,var(--c,#B9BDC4) 7%,#fff) !important;color:color-mix(in srgb,var(--c,#646A75) 70%,#000) !important;box-shadow:inset 3px 0 0 var(--c,#B9BDC4),0 0 0 1px color-mix(in srgb,var(--c,#B9BDC4) 15%,#fff) inset !important}
 html:root body .calx .ev.ev--end::before,html:root body .calx .ev.ev--mid::before{background:color-mix(in srgb,var(--c,#646A75) 38%,#fff) !important}
 html:root body .calx .ev.ev--mid:hover::before,html:root body .calx .ev.ev--end:hover::before{background:color-mix(in srgb,var(--c,#646A75) 60%,#fff) !important}
 /* 모바일 캘린더 카드·점 */
-html:root body .mc{background:color-mix(in srgb,var(--c,#646A75) 8%,#fff) !important;box-shadow:inset 3px 0 0 var(--c,#646A75) !important}
+html:root body .mc{background:color-mix(in srgb,var(--c,#646A75) 8%,#fff) !important;box-shadow:inset 3px 0 0 var(--c,#646A75),0 0 0 1px color-mix(in srgb,var(--c,#646A75) 14%,#fff) inset !important}
 html:root body .mc .mt__t{color:color-mix(in srgb,var(--c,#646A75) 80%,#000) !important}
 html:root body .mc .mt__m{color:color-mix(in srgb,var(--c,#646A75) 50%,#8A8F98) !important}
 html:root body .mc__tag{background:color-mix(in srgb,var(--c,#646A75) 14%,#fff) !important;color:color-mix(in srgb,var(--c,#646A75) 85%,#000) !important}
-html:root body .mc.mc--task{background:color-mix(in srgb,var(--c,#B9BDC4) 6%,#fff) !important;box-shadow:inset 3px 0 0 var(--c,#B9BDC4) !important}
+html:root body .mc.mc--task{background:color-mix(in srgb,var(--c,#B9BDC4) 6%,#fff) !important;box-shadow:inset 3px 0 0 var(--c,#B9BDC4),0 0 0 1px color-mix(in srgb,var(--c,#B9BDC4) 14%,#fff) inset !important}
 html:root body .mc.mc--task .mt__t{color:color-mix(in srgb,var(--c,#646A75) 70%,#000) !important}
 html:root body .mc.mc--task .mc__tag{background:#E8EAEE !important;color:#5A606C !important}
 html:root body .mday .dots i{background:var(--c,#A3A7AF) !important}
