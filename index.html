@@ -2462,6 +2462,9 @@ html body #view .trend__b i.g{background:rgba(20,22,28,.08) !important}
 /* 제품 시즌 탭: 카테고리 탭 위 한 줄 */
 #view .pv-list__hd .pv-break-row{flex-basis:100%;height:0}
 #view .pv-seg--se{max-width:100%;overflow-x:auto}
+/* 제품 표: 글자 칸은 머리글과 같이 왼쪽, 숫자 칸만 오른쪽 */
+html body #view .pv-t th:not(.r),html body #view .pv-t td:not(.r){text-align:left !important}
+html body #view .pv-t th.r,html body #view .pv-t td.r{text-align:right !important}
 </style>
 </head>
 <body>
@@ -4637,7 +4640,7 @@ function lsRow(x,s,selId){
   return `<tr data-lssel="${p.id}" class="${selId===p.id?'is-sel':''}">
     <td><div class="pv-item">${p.img?`<img src="${esc(p.img)}" alt="" loading="lazy">`:'<span class="pv-noimg"></span>'}
       <div><b>${esc(p.name)}</b>${p.opts||p.plating?`<span class="pv-sub">${esc([p.opts,p.plating].filter(Boolean).join(' · '))}</span>`:''}</div></div></td>
-    <td><span class="pv-dot" style="--c:${lsKindC(p.kind||'기타')}">${esc(p.kind||'기타')}</span></td>
+    <td>${esc(p.kind||'기타')}</td>
     ${s.app?'':`<td>${esc(p.mat||'소재 미확인')}</td>`}
     <td class="pv-code">${esc(p.sku||'—')}</td>
     <td>${s.app?(p.season?`<span class="pv-pill pv-se pv-se--${LS_SEASONS.indexOf(p.season)}">${esc(p.season)}</span>`:'<span class="pv-sub" style="margin:0">시즌 미정</span>'):`${esc(L.y||'—')} ${esc(L.q||'')}`}<span class="pv-sub">${esc(p.launch||'')}</span></td>
