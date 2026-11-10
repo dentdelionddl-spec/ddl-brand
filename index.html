@@ -2366,7 +2366,14 @@ html body .calx .cell .ev.ev--mid,html body .calx .cell .ev.ev--end,html body .c
 #view .synclog__r.is-bad b{color:var(--alert)}
 #keybar em{flex:1 0 100%;font-style:normal;color:#D4FF00;font-size:12.5px}
 #keybar em:empty{display:none}
-#layer .chrow{display:flex;gap:6px;margin-bottom:6px}
+#layer .chrow{display:flex;gap:6px;margin-bottom:6px;align-items:stretch;transition:transform .12s}
+#layer .chrow__h{flex:0 0 26px;display:grid;place-items:center;border-radius:8px;color:#A3A7AF;cursor:grab;touch-action:none;user-select:none;-webkit-user-select:none}
+#layer .chrow__h svg{fill:currentColor}
+#layer .chrow__h:hover{color:#14161C;background:rgba(20,22,28,.05)}
+#layer #b_chs.is-sorting .chrow__h{cursor:grabbing}
+#layer .chrow.is-drag{position:relative;z-index:2;filter:drop-shadow(0 8px 16px rgba(20,22,28,.18))}
+#layer .chrow.is-drag input{border-color:#14161C !important;background:#fff}
+#layer .chrow.is-drag .chrow__h{color:#14161C}
 #layer .chrow input{flex:1}
 #layer .chrow__x{width:34px;border:1px solid var(--line);border-radius:8px;background:transparent;color:var(--mut);font-size:16px;cursor:pointer}
 #layer .chrow__x:hover{color:var(--alert);border-color:var(--alert)}
@@ -5283,7 +5290,21 @@ function prodModal(id){
   });
 }
 
-const chRowHtml=ch=>`<div class="chrow"><input type="text" value="${esc(ch||'')}" data-orig="${esc(ch||'')}" placeholder="채널 이름"><button type="button" class="chrow__x" onclick="this.closest('.chrow').remove()" aria-label="채널 지우기">×</button></div>`;
+const chRowHtml=ch=>`<div class="chrow"><span class="chrow__h" onpointerdown="chDragStart(event)" title="끌어서 순서 바꾸기" aria-label="끌어서 순서 바꾸기"><svg viewBox="0 0 10 16" width="10" height="16"><circle cx="2.5" cy="3" r="1.4"/><circle cx="7.5" cy="3" r="1.4"/><circle cx="2.5" cy="8" r="1.4"/><circle cx="7.5" cy="8" r="1.4"/><circle cx="2.5" cy="13" r="1.4"/><circle cx="7.5" cy="13" r="1.4"/></svg></span><input type="text" value="${esc(ch||'')}" data-orig="${esc(ch||'')}" placeholder="채널 이름"><button type="button" class="chrow__x" onclick="this.closest('.chrow').remove()" aria-label="채널 지우기">×</button></div>`;
+/* 판매 채널 순서: 손잡이를 끌어 위아래로 (마우스·터치 모두) — 저장할 때 화면 순서 그대로 */
+function chDragStart(e){
+  const h=e.currentTarget, row=h.closest('.chrow'), box=row&&row.parentElement; if(!row) return;
+  e.preventDefault(); h.setPointerCapture(e.pointerId); row.classList.add('is-drag'); box.classList.add('is-sorting');
+  const move=ev=>{
+    const y=ev.clientY;
+    const others=[...box.children].filter(r=>r!==row);
+    const next=others.find(r=>{ const b=r.getBoundingClientRect(); return y < b.top+b.height/2; });
+    if(next){ if(row.nextElementSibling!==next) box.insertBefore(row,next); }
+    else if(box.lastElementChild!==row) box.appendChild(row);
+  };
+  const end=()=>{ row.classList.remove('is-drag'); box.classList.remove('is-sorting'); h.removeEventListener('pointermove',move); h.removeEventListener('pointerup',end); h.removeEventListener('pointercancel',end); };
+  h.addEventListener('pointermove',move); h.addEventListener('pointerup',end); h.addEventListener('pointercancel',end);
+}
 function chRowAdd(){ const w=document.getElementById('b_chs'); if(!w) return; w.insertAdjacentHTML('beforeend',chRowHtml('')); w.lastElementChild.querySelector('input').focus(); }
 /* 채널 이름 바꾸기 — 일별 매출·월 목표·판매 조건 수수료까지 새 이름으로, 노션에도 반영 */
 function renameChannels(bid, renames){
@@ -5316,7 +5337,7 @@ function brandModal(id){
       <div class="f"><span>판매 채널</span>
         <div id="b_chs">${b.channels.map(ch=>chRowHtml(ch)).join('')}</div>
         <button type="button" class="btn btn--sm" onclick="chRowAdd()" style="margin-top:6px">채널 추가</button>
-        <p class="eyebrow" style="margin:8px 0 0;line-height:1.6">이름을 고치면 지난 매출·목표 기록과 노션의 채널 이름도 함께 바뀌어요. 지워도 지난 달 기록은 그대로 남아요.</p></div>`,
+        <p class="eyebrow" style="margin:8px 0 0;line-height:1.6">왼쪽 손잡이를 끌어 순서를 바꿔요. 이 순서대로 매출·손익과 제품 탭에 나와요. 이름을 고치면 지난 매출·목표 기록과 노션의 채널 이름도 함께 바뀌어요. 지워도 지난 달 기록은 그대로 남아요.</p></div>`,
     onSave:()=>{
       const v=$('#b_name').value.trim(); if(!v){ toast('브랜드명을 입력하세요'); return false; }
       b.name=v; b.ko=$('#b_ko').value.trim(); b.client=$('#b_client').value.trim();
