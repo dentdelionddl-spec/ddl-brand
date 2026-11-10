@@ -4540,6 +4540,8 @@ function lsState(){
   for(const m in LS_DEF.mult) if(s.mult[m]===undefined) s.mult[m]=LS_DEF.mult[m];
   for(const c in LS_CH) if(s.fees[c]===undefined) s.fees[c]=LS_CH[c];
   if(s.st && !PSTATUS.includes(s.st)) s.st='';
+  /* 기본 순서(시즌>카테고리>제품명>컬러)로 한 번 되돌림 */
+  if(!s.ord2){ s.sort=''; s.dir=1; s.ord2=1; }
   return s;
 }
 const lsFee=s=>Number(s.fees[s.ch]??LS_CH[s.ch]??0);
@@ -4596,6 +4598,12 @@ function lsRows(bid,s){
     else { const L=lsQ(p); if(s.yr && L.y!==s.yr) return false; if(s.qt && L.q!==s.qt) return false; }
     return true;
   }).map(p=>({p,c:lsCalc(p,s),L:lsQ(p)}));
+  /* 기본 순서: 시즌(최신부터) > 카테고리 > 같은 제품명 > 컬러 */
+  const seI=x=>{ const i=LS_SEASONS.indexOf(x.p.season); return i<0?-1:i; };
+  const kI=x=>{ const k=x.p.kind||'기타', i=LS_KIND_ORDER.indexOf(k); return i<0?LS_KIND_ORDER.length:i; };
+  const nm=x=>lsBase(x.p.name), col=x=>lsColor(x.p.name);
+  rows.sort((a,b)=>(seI(b)-seI(a)) || (kI(a)-kI(b)) || (a.p.kind||'').localeCompare(b.p.kind||'')
+    || nm(a).localeCompare(nm(b)) || col(a).localeCompare(col(b)));
   if(s.sort){
     const key={name:x=>x.p.name||'',kind:x=>x.p.kind||'',mat:x=>x.p.mat||'',launch:x=>s.app?(LS_SEASONS.indexOf(x.p.season)+1||null):(x.p.launch||''),
       inP:x=>x.c.inP||null,mul:x=>x.c.mul,contrib:x=>x.c.contrib,maxd:x=>x.c.maxd,stock:x=>Number(x.p.stock||0),upd:x=>x.p.updated||''}[s.sort];
@@ -4603,6 +4611,9 @@ function lsRows(bid,s){
   }
   return rows;
 }
+const LS_KIND_ORDER=['코트','재킷','가디건','베스트','니트','블라우스','셔츠','탑','원피스','스커트','팬츠','가방','스카프','반지','귀걸이','목걸이','팔찌','주얼리','기타'];
+const lsBase=n=>String(n||'').replace(/\s*\[[^\]]*\]\s*$/,'').trim().toUpperCase();
+const lsColor=n=>{ const m=String(n||'').match(/\[([^\]]*)\]\s*$/); return m?m[1].trim().toUpperCase():''; };
 const lsW=n=>n==null||n===''?'—':won(Math.round(n));
 const LS_KIND_C={'반지':'#4C7CF0','귀걸이':'#E08A2E','목걸이':'#8A63E0','팔찌':'#1E9E6E','기타':'#A3A8B5'};
 const lsKindC=k=>LS_KIND_C[k]||`hsl(${[...k].reduce((a,c)=>a+c.charCodeAt(0),0)*47%360} 45% 55%)`;
@@ -4757,7 +4768,7 @@ function lsBind(){
   document.querySelectorAll('[data-lsmult]').forEach(el=>el.addEventListener('input',()=>{ s.mult[el.dataset.lsmult]=Number(el.value||0); lsRefresh(); }));
   document.querySelectorAll('[data-lscat]').forEach(el=>el.addEventListener('input',()=>{ s.catMult[el.dataset.lscat]=Number(el.value||0); lsRefresh(); }));
   lsSegBind();
-  document.querySelectorAll('[data-lssort]').forEach(el=>el.onclick=()=>{ const k=el.dataset.lssort; if(s.sort===k) s.dir=-s.dir; else { s.sort=k; s.dir=1; } saveUI(); render(); });
+  document.querySelectorAll('[data-lssort]').forEach(el=>el.onclick=()=>{ const k=el.dataset.lssort; if(s.sort===k){ if(s.dir>0) s.dir=-1; else { s.sort=''; s.dir=1; } } else { s.sort=k; s.dir=1; } saveUI(); render(); });
   /* 행을 누르면 그 제품의 손익 구조를 보여줌 */
   on('ls_body','click',e=>{ const tr=e.target.closest('[data-lssel]'); if(!tr||e.target.closest('[data-edit-prod]')) return; s.sel=tr.dataset.lssel; lsRefresh(); });
   document.querySelectorAll('#ls_body [data-edit-prod]').forEach(el=>el.onclick=e=>{ e.stopPropagation(); prodModal(el.dataset.editProd); });
