@@ -2423,8 +2423,11 @@ html body .calx .cell .ev.ev--mid,html body .calx .cell .ev.ev--end,html body .c
 #view .tboard.ux .mt:hover{border-color:#DFE2EA !important;box-shadow:0 4px 14px -8px rgba(16,20,32,.18) !important}
 #view .tboard.ux .mt__t{font-size:13.5px;font-weight:600;color:var(--pv-ink)}
 #view .tboard.ux .mt__m{font-size:11.5px;color:var(--pv-mut)}
-#view .tboard.ux .mt__chk{border-color:#D5D8E0 !important}
-#view .tboard.ux .mt.is-done .mt__chk{background:var(--pv-ink) !important;border-color:var(--pv-ink) !important;color:#fff !important}
+/* 업무 체크: 버튼은 투명, 동그라미만 — 완료면 검정 원 + 흰 체크 */
+html body #view .mt__chk{background:transparent !important;border:0 !important}
+html body #view .mt__chk svg{width:22px !important;height:22px !important;padding:4px !important;border:1.5px solid #CDD0D6 !important;background:#fff !important;color:transparent !important;stroke-width:2.6 !important;transition:background .15s,border-color .15s}
+html body #view .mt__chk:hover svg{border-color:#14161C !important}
+html body #view .mt__chk[aria-pressed="true"] svg,html body #view .mt.is-done .mt__chk svg{background:#14161C !important;border-color:#14161C !important;color:#fff !important}
 #view .tboard.ux .mempty{background:#fff;border:1px solid var(--pv-line);border-radius:14px}
 /* 콘텐츠 */
 #view .ux-tabs{display:flex}
@@ -2490,7 +2493,7 @@ html:root body .dday--today,html:root body .st--today,html:root body #view .ux .
 html:root body .snav__m--n,
 html:root body #view .sv-col.is-today span,
 html:root body #keybar button{box-shadow:inset 0 0 0 1px #14161C !important}
-html:root body #view .pl .pl__c--end{box-shadow:inset 0 0 0 1px #14161C !important}
+html:root body #view .pl .pl__c--end{box-shadow:none !important}
 /* 선택된 제품 행·오늘 줄의 형광 선은 검정 선을 바로 옆에 */
 html:root body #view .pv-t tbody tr.is-sel td:first-child{box-shadow:inset 3px 0 0 #D4FF00,inset 4px 0 0 #14161C !important}
 html:root body #view .ux .thr--today{box-shadow:inset 3px 0 0 #D4FF00,inset 4px 0 0 #14161C !important}
@@ -2508,6 +2511,8 @@ html:root body .btn--primary,html:root body .btn--primary:focus,html:root body .
 html:root body #view .pv-btn--pri,html:root body #view .ux .btn--primary{border:1px solid #14161C !important;box-shadow:none !important}
 /* 업무 옆 개수 배지: 숫자 정가운데 */
 html:root body .snav__m--n{display:inline-flex !important;align-items:center !important;justify-content:center !important;box-sizing:border-box;height:20px;min-width:22px;padding:1px 6px 0 !important;line-height:1 !important;text-align:center;font-variant-numeric:tabular-nums;letter-spacing:0}
+/* PC 매출 흐름: 영업이익 칸만 오른쪽 정렬 */
+@media (min-width:761px){ html body #view .pl .pl__c--end{text-align:right} html body #view .pl .pl__c--end > *{text-align:right;justify-content:flex-end} }
 /* ================= 모바일 마감: 넘침·겹침 없이, 숫자 정렬·글자 크기 일관 ================= */
 @media (max-width:760px){
   /* 공통: 표 숫자 */
