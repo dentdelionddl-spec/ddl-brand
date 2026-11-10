@@ -2231,7 +2231,7 @@ html body .m .mv > .mday__hd{margin-top:14px !important}
 #view .pv-code{font-family:var(--mono);font-size:12px;color:var(--pv-ink2)}
 #view .pv-pill{display:inline-flex;align-items:center;gap:5px;height:22px;padding:0 8px;border-radius:6px;font-size:11.5px;font-weight:600;background:#F2F3F7;color:var(--pv-ink2)}
 #view .pv-pill::before{content:'';width:5px;height:5px;border-radius:50%;background:currentColor;opacity:.8}
-#view .pv-se--0{background:#EAF7EC;color:#2F8A47} #view .pv-se--1{background:#FFF6D6;color:#9A7400} #view .pv-se--2{background:#F3ECE4;color:#7A5232} #view .pv-se--3{background:#E9EDF3;color:#3F5370}
+#view .pv-se--0{background:#EAF7EC;color:#2F8A47} #view .pv-se--1{background:#FFF6D6;color:#9A7400} #view .pv-se--2{background:#F3ECE4;color:#7A5232} #view .pv-se--0,#view .pv-se--1,#view .pv-se--2,#view .pv-se--3,#view .pv-se--4,#view .pv-se--5{background:rgba(20,22,28,.06);color:#3A3D45}
 #view .pv-pill--ok{background:#EAF7F1;color:var(--pv-ok)} #view .pv-pill--warn{background:#FEF4E3;color:var(--pv-warn)} #view .pv-pill--bad{background:#FDECEA;color:var(--pv-bad)}
 #view .pv-bad{color:var(--pv-bad) !important}#view .pv-mid{color:var(--pv-warn) !important}#view .pv-good{color:var(--pv-ok) !important}
 #view .pv-edit{all:unset;cursor:pointer;width:30px;height:30px;border-radius:8px;display:inline-flex;align-items:center;justify-content:center;color:var(--pv-mut)}
@@ -2459,6 +2459,9 @@ html body #view .ux .track{background:rgba(20,22,28,.07) !important}
 /* 매출·손익 막대도 무채색 (달성률·6개월 추이) */
 html body #view .pbar i,html body #view .trend__b i.a{background:#14161C !important}
 html body #view .trend__b i.g{background:rgba(20,22,28,.08) !important}
+/* 제품 시즌 탭: 카테고리 탭 위 한 줄 */
+#view .pv-list__hd .pv-break-row{flex-basis:100%;height:0}
+#view .pv-seg--se{max-width:100%;overflow-x:auto}
 </style>
 </head>
 <body>
@@ -4530,7 +4533,7 @@ const LS_CH={'자사몰':3.3,'29CM':30,'W컨셉':32,'ZVZO':25,'무신사':30,'�
 const LS_DEF={q:'',kind:'',mat:'',st:'',yr:'',qt:'',se:'',ch:'자사몰',fees:{...LS_CH},disc:0,pack:3000,costx:15,extra:21,target:25,
   mult:{'14K-18K':2,'925 실버':4,'서지컬 스틸':6,'신주·브라스':6,'소재 미확인':6},catMult:{},sort:'',dir:1,sel:''};
 const LS_CAT_MULT=3; /* 옷 브랜드 카테고리별 배수 기본값 */
-const LS_SEASONS=['26 SPRING','26 SUMMER','26 FALL','26 WINTER'];
+const LS_SEASONS=['25 FALL','25 WINTER','26 SPRING','26 SUMMER','26 FALL','26 WINTER'];
 function lsState(){
   if(!UI.ls||typeof UI.ls!=='object') UI.ls={};
   const s=UI.ls;
@@ -4688,6 +4691,13 @@ function lsBody(bid,s){
     brk:lsBreak(rows,s)};
 }
 /* 전체·카테고리 칸 수량 — 상태·시즌·소재·검색 조건을 걸고 셈 (카테고리 조건만 뺌) */
+/* 시즌 탭: 최신 시즌부터, 다른 조건은 그대로 두고 개수만 셈 */
+function lsSeSeg(bid,s){
+  const base=lsRows(bid,{...s,se:'',sort:''}).map(r=>r.p);
+  const ses=LS_SEASONS.filter(x=>productsOf(bid).some(p=>p.season===x)).reverse();
+  return `<button class="${!s.se?'is-on':''}" data-lsse="">전체 시즌<i>${base.length}</i></button>`
+    +ses.map(x=>`<button class="${s.se===x?'is-on':''}" data-lsse="${esc(x)}">${esc(x)}<i>${base.filter(p=>p.season===x).length}</i></button>`).join('');
+}
 function lsSeg(bid,s){
   const base=lsRows(bid,{...s,kind:'',sort:''}).map(r=>r.p);
   const n=k=>base.filter(p=>(p.kind||'기타')===k).length;
@@ -4735,10 +4745,11 @@ function productsView(){
     </div>
     <div class="pv-card pv-list">
       <div class="pv-list__hd">
+        ${s.app?`<div class="pv-seg pv-seg--se" id="ls_seseg">${lsSeSeg(b.id,s)}</div><div class="pv-break-row"></div>`:''}
         <div class="pv-seg" id="ls_seg">${lsSeg(b.id,s)}</div>
         ${s.app?'':`<select id="ls_mat" data-native>${o(LS_MATS,s.mat,'소재 전체')}</select>`}
         <select id="ls_st" data-native>${o(PSTATUS,s.st,'상태 전체')}</select>
-        ${s.app?`<select id="ls_se" data-native>${o(LS_SEASONS,s.se,'시즌 전체')}</select>`:`<select id="ls_yr" data-native>${o(years,s.yr,'출시연도')}</select>
+        ${s.app?'':`<select id="ls_yr" data-native>${o(years,s.yr,'출시연도')}</select>
         <select id="ls_qt" data-native>${o(['Q1','Q2','Q3','Q4'],s.qt,'분기')}</select>`}
         <label class="pv-search">${LS_ICO.search}<input type="search" id="ls_q" placeholder="품목명·품목코드 검색" value="${esc(s.q)}"></label>
       </div>
@@ -4753,11 +4764,15 @@ function lsRefresh(){
   const b=brandOf(UI.brand); const s=lsCond(lsState(),b.id); s.app=lsApparel(b.id); const B=lsBody(b.id,s);
   const tb=document.getElementById('ls_body'), sm=document.getElementById('ls_sum'), bk=document.getElementById('ls_break');
   if(tb) tb.innerHTML=B.html; if(sm) sm.innerHTML=B.sum; if(bk) bk.innerHTML=B.brk;
-  const sg=document.getElementById('ls_seg'); if(sg){ sg.innerHTML=lsSeg(b.id,s); lsSegBind(); }
+  const sg=document.getElementById('ls_seg'); if(sg) sg.innerHTML=lsSeg(b.id,s);
+  const ss=document.getElementById('ls_seseg'); if(ss) ss.innerHTML=lsSeSeg(b.id,s);
+  lsSegBind();
   document.querySelectorAll('#ls_body [data-edit-prod]').forEach(el=>el.onclick=e=>{ e.stopPropagation(); prodModal(el.dataset.editProd); });
   saveUI();
 }
-function lsSegBind(){ const s=lsState(); document.querySelectorAll('[data-lskind]').forEach(el=>el.onclick=()=>{ s.kind=el.dataset.lskind; saveUI(); render(); }); }
+function lsSegBind(){ const s=lsState();
+  document.querySelectorAll('[data-lskind]').forEach(el=>el.onclick=()=>{ s.kind=el.dataset.lskind; saveUI(); render(); });
+  document.querySelectorAll('[data-lsse]').forEach(el=>el.onclick=()=>{ s.se=el.dataset.lsse; saveUI(); render(); }); }
 function lsBind(){
   if(!document.querySelector('.pv')) return;
   const s=lsState(); const $id=id=>document.getElementById(id);
