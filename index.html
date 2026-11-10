@@ -2477,7 +2477,7 @@ html body #view .pv-t th.r,html body #view .pv-t td.r{text-align:right !importan
 html body #view .pv-t td.r[data-l="공헌이익"]{position:relative}
 html body #view .pv-t td .pv-pct{position:absolute;right:12px;top:calc(50% - 21px);font-size:10.5px;line-height:1;color:var(--mut);font-weight:500;font-variant-numeric:tabular-nums}
 /* KPI 기간 진도 표시: 형광 막대에 얇은 검정 테두리 */
-html body #view .ux-bar__t span{width:3px !important;margin-left:-1.5px !important;top:-4px !important;bottom:-4px !important;border-radius:2px !important;background:var(--pv-acc,#D4FF00) !important;box-shadow:0 0 0 .5px #14161C !important}
+html body #view .ux-bar__t span{width:3px !important;margin-left:-1.5px !important;top:-4px !important;bottom:-4px !important;border-radius:2px !important;background:var(--pv-acc,#D4FF00) !important;box-shadow:0 0 0 1px #14161C !important}
 
 /* ===== 형광 포인트: 모든 형광 면에 얇은 검정 테두리 (PC·모바일 공통) ===== */
 html:root body .btn--primary,html:root body .btn--primary:focus,html:root body .btn--primary:hover,
@@ -2489,20 +2489,25 @@ html:root body .brandbar .btab[aria-current="true"],
 html:root body .dday--today,html:root body .st--today,html:root body #view .ux .st--today,
 html:root body .snav__m--n,
 html:root body #view .sv-col.is-today span,
-html:root body #keybar button{box-shadow:inset 0 0 0 .5px #14161C !important}
-html:root body #view .pl .pl__c--end{box-shadow:inset 0 0 0 .5px #14161C !important}
+html:root body #keybar button{box-shadow:inset 0 0 0 1px #14161C !important}
+html:root body #view .pl .pl__c--end{box-shadow:inset 0 0 0 1px #14161C !important}
 /* 선택된 제품 행·오늘 줄의 형광 선은 검정 선을 바로 옆에 */
-html:root body #view .pv-t tbody tr.is-sel td:first-child{box-shadow:inset 3px 0 0 #D4FF00,inset 3.5px 0 0 #14161C !important}
-html:root body #view .ux .thr--today{box-shadow:inset 3px 0 0 #D4FF00,inset 3.5px 0 0 #14161C !important}
+html:root body #view .pv-t tbody tr.is-sel td:first-child{box-shadow:inset 3px 0 0 #D4FF00,inset 4px 0 0 #14161C !important}
+html:root body #view .ux .thr--today{box-shadow:inset 3px 0 0 #D4FF00,inset 4px 0 0 #14161C !important}
 /* 입력칸 포커스: 검정 테두리 + 옅은 형광 빛 */
 html:root body #view .pv-field:focus-within,html:root body #view .pv select:focus,html:root body #view .pv-search input:focus{border-color:#14161C !important;box-shadow:0 0 0 3px rgba(212,255,0,.35) !important}
 /* 할인율 슬라이더: 형광 손잡이 + 얇은 검정 테두리 */
 html:root body #view .pv-slider input[type=range]{-webkit-appearance:none;appearance:none;height:4px;border-radius:99px;background:#14161C;accent-color:#D4FF00}
-html:root body #view .pv-slider input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;appearance:none;width:16px;height:16px;border-radius:50%;background:#D4FF00;border:.5px solid #14161C;cursor:pointer}
-html:root body #view .pv-slider input[type=range]::-moz-range-thumb{width:16px;height:16px;border-radius:50%;background:#D4FF00;border:.5px solid #14161C;cursor:pointer}
+html:root body #view .pv-slider input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;appearance:none;width:16px;height:16px;border-radius:50%;background:#D4FF00;border:1px solid #14161C;cursor:pointer}
+html:root body #view .pv-slider input[type=range]::-moz-range-thumb{width:16px;height:16px;border-radius:50%;background:#D4FF00;border:1px solid #14161C;cursor:pointer}
 /* 사이드바 '노션 자동 동기화' 점: 형광 + 얇은 검정 테두리 */
-html:root body .snav__sd.on,html:root body .syncdot--on{background:#D4FF00 !important;box-shadow:inset 0 0 0 .5px #14161C !important}
+html:root body .snav__sd.on,html:root body .syncdot--on{background:#D4FF00 !important;box-shadow:inset 0 0 0 1px #14161C !important}
 html:root body .snav__sd.on{width:8px !important;height:8px !important}
+/* 테두리가 있는 형광 버튼은 원래 테두리 자리를 검정으로 — 선이 버튼 바깥 끝에 오게 */
+html:root body .btn--primary,html:root body .btn--primary:focus,html:root body .btn--primary:hover,
+html:root body #view .pv-btn--pri,html:root body #view .ux .btn--primary{border:1px solid #14161C !important;box-shadow:none !important}
+/* 업무 옆 개수 배지: 숫자 정가운데 */
+html:root body .snav__m--n{display:inline-flex !important;align-items:center !important;justify-content:center !important;box-sizing:border-box;height:20px;min-width:22px;padding:1px 6px 0 !important;line-height:1 !important;text-align:center;font-variant-numeric:tabular-nums;letter-spacing:0}
 /* ================= 모바일 마감: 넘침·겹침 없이, 숫자 정렬·글자 크기 일관 ================= */
 @media (max-width:760px){
   /* 공통: 표 숫자 */
