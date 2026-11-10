@@ -2535,6 +2535,11 @@ html:root body .mday .dots i{background:var(--c,#A3A7AF) !important}
 html:root body .mday .dots i.is-done{opacity:.35}
 /* 기간 일정 이어지는 날: 원래대로 얇은 선만 (바탕·테두리 없음), 선 색만 유형 톤 */
 html:root body .calx .cell .ev.ev--end,html:root body .calx .cell .ev.ev--mid,html:root body .calx .cell .ev.ev--end:hover,html:root body .calx .cell .ev.ev--mid:hover{background:transparent !important;box-shadow:none !important;border-left-color:transparent !important}
+/* 기간 일정 선: 날짜 칸 사이 틈 없이 이어지게 (시작 카드 끝부터 마지막 날까지) */
+html:root body .calx .cell .ev.ev--mid{margin-left:-6px !important;margin-right:-6px !important;width:calc(100% + 12px) !important;max-width:none !important}
+html:root body .calx .cell .ev.ev--end{margin-left:-6px !important;width:calc(100% + 6px) !important;max-width:none !important}
+html:root body .calx .cell .ev.ev--mid::before{left:-6px !important;right:0 !important;border-radius:0 !important}
+html:root body .calx .cell .ev.ev--end::before{left:-6px !important;right:6px !important;border-radius:0 2px 2px 0 !important}
 /* ================= 모바일 마감: 넘침·겹침 없이, 숫자 정렬·글자 크기 일관 ================= */
 @media (max-width:760px){
   /* 공통: 표 숫자 */
