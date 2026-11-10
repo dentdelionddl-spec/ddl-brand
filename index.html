@@ -4389,9 +4389,9 @@ function costModal(id){
 /* 손익: 매출(부가세 제외) − 매출원가 = 매출총이익 − 비용 = 영업이익
    매출원가·수수료는 직접 넣은 값이 있으면 그 값, 없으면 제품 탭 기준으로 추정 */
 function costRate(bid){
-  const c=(UI.ls&&UI.ls.cond&&UI.ls.cond[bid])||{}, pack=Number(c.pack??3000);
+  const c=(UI.ls&&UI.ls.cond&&UI.ls.cond[bid])||{};
   let C=0,P=0,n=0;
-  productsOf(bid).forEach(p=>{ const i=Number(p.inPrice||0), pr=Number(p.price||0); if(i&&pr){ C+=i+pack; P+=pr/1.1; n++; } });
+  productsOf(bid).forEach(p=>{ const i=Number(p.inPrice||0), pr=Number(p.price||0); if(i&&pr){ C+=lsCost(i,c.costx); P+=pr/1.1; n++; } });
   return {rate:P?C/P:0, n};
 }
 /* 손익: 매출(부가세 포함) − 부가세 − 매출원가 = 매출총이익 − 비용(수수료·광고비·인건비 등) = 영업이익
@@ -4526,7 +4526,7 @@ const LS_KINDS=['반지','귀걸이','목걸이','팔찌','기타'];
 const LS_MATS=['14K-18K','925 실버','서지컬 스틸','신주·브라스','소재 미확인'];
 /* 채널별 판매 수수료(%) 기본값 — 화면에서 고치면 채널마다 따로 기억 */
 const LS_CH={'자사몰':3.3,'29CM':30,'W컨셉':32,'ZVZO':25,'무신사':30,'쿠팡':15,'오프라인 팝업':4};
-const LS_DEF={q:'',kind:'',mat:'',st:'',yr:'',qt:'',se:'',ch:'자사몰',fees:{...LS_CH},disc:0,pack:3000,extra:21,target:25,
+const LS_DEF={q:'',kind:'',mat:'',st:'',yr:'',qt:'',se:'',ch:'자사몰',fees:{...LS_CH},disc:0,pack:3000,costx:15,extra:21,target:25,
   mult:{'14K-18K':2,'925 실버':4,'서지컬 스틸':6,'신주·브라스':6,'소재 미확인':6},catMult:{},sort:'',dir:1,sel:''};
 const LS_CAT_MULT=3; /* 옷 브랜드 카테고리별 배수 기본값 */
 const LS_SEASONS=['26 SPRING','26 SUMMER','26 FALL','26 WINTER'];
@@ -4546,7 +4546,7 @@ function lsState(){
 }
 const lsFee=s=>Number(s.fees[s.ch]??LS_CH[s.ch]??0);
 /* 판매 조건·배수는 브랜드마다 따로 저장 — 화면에 쓰는 값(s.ch 등)은 지금 브랜드 값으로 바꿔 끼움 */
-const LS_COND=['ch','disc','pack','extra','target'];
+const LS_COND=['ch','disc','pack','costx','extra','target'];
 const lsChannels=bid=>(brandOf(bid)?.channels||[]).filter(Boolean);
 function lsCond(s,bid){
   if(!s.cond){ /* 예전 값은 원래 설정하던 비비케이트 것으로 */
@@ -4554,27 +4554,30 @@ function lsCond(s,bid){
   }
   const prev=s.cond[s._bid]; if(prev && s._bid!==bid) LS_COND.forEach(k=>prev[k]=s[k]);
   let c=s.cond[bid];
-  if(!c) c=s.cond[bid]={ch:'자사몰',fees:{...LS_CH},disc:0,pack:3000,extra:21,target:25,mult:{...LS_DEF.mult},catMult:{}};
+  if(!c) c=s.cond[bid]={ch:'자사몰',fees:{...LS_CH},disc:0,pack:3000,costx:15,extra:21,target:25,mult:{...LS_DEF.mult},catMult:{}};
   for(const k in LS_CH) if(c.fees[k]===undefined) c.fees[k]=LS_CH[k];
+  if(c.costx===undefined) c.costx=15;
   if(s._bid===bid) LS_COND.forEach(k=>c[k]=s[k]); /* 같은 브랜드면 지금 입력값을 저장 */
   /* 판매 채널은 설정 > 브랜드의 판매 채널만 — 지워진 채널을 고르고 있었으면 첫 채널로 */
   const chs=lsChannels(bid); if(!chs.includes(c.ch)) c.ch=chs[0]||'';
-  Object.assign(s,{ch:c.ch,fees:c.fees,disc:c.disc,pack:c.pack,extra:c.extra,target:c.target,mult:c.mult,catMult:c.catMult||(c.catMult={})});
+  Object.assign(s,{ch:c.ch,fees:c.fees,disc:c.disc,pack:c.pack,costx:c.costx,extra:c.extra,target:c.target,mult:c.mult,catMult:c.catMult||(c.catMult={})});
   s._bid=bid; return s;
 }
 /* 주얼리 종류 밖의 품목이 있으면 옷 브랜드 — 소재 대신 카테고리(종류)별 배수 */
 const lsApparel=bid=>productsOf(bid).some(p=>p.kind && !LS_KINDS.includes(p.kind));
 const lsKinds=(bid,app)=>{ if(!app) return LS_KINDS; const c={}; productsOf(bid).forEach(p=>{ const k=p.kind||'기타'; c[k]=(c[k]||0)+1; }); return Object.keys(c).sort((a,b)=>c[b]-c[a]); };
 const lsQ=p=>{ const d=p.launch||''; if(!d) return {y:p.year||'',q:p.quarter||''}; const m=+d.slice(5,7); return {y:p.year||d.slice(0,4), q:p.quarter||('Q'+(Math.floor((m-1)/3)+1))}; };
-/* 판매가 → 할인 → 채널 수수료 → 부가세 → 부대비 → 원가 = 공헌이익 */
+/* 원가 = 입고가 × (1 + 원가 부대비 15%) */
+const lsCost=(inP,x)=>Math.round(Number(inP||0)*(1+Number(x??15)/100));
+/* 판매가 → 할인 → 채널 수수료 → 부가세 → 판매 부대비 → 원가 = 공헌이익 */
 function lsCalc(p,s){
   const inP=Number(p.inPrice||0), price=Number(p.price||0), list=Number(p.listPrice||0)||price;
   const r={inP,price,list,cost:null,mul:null,rec:null,contrib:null,cpct:null,maxd:null};
   if(!inP) return r;
-  const pack=Number(s.pack||0), fee=lsFee(s)/100, extra=Number(s.extra||0)/100, target=Number(s.target||0)/100;
-  r.cost=inP+pack;
+  const fee=lsFee(s)/100, extra=Number(s.extra||0)/100, target=Number(s.target||0)/100;
+  r.cost=lsCost(inP,s.costx);
   const m=s.app ? Number(s.catMult[p.kind||'기타']??LS_CAT_MULT) : Number(s.mult[p.mat||'소재 미확인']||6);
-  r.rec=Math.floor((inP*m+pack)/1000)*1000;
+  r.rec=Math.floor(r.cost*m/1000)*1000;
   if(!price) return r;
   r.mul=price/r.cost;
   r.discAmt=price*Number(s.disc||0)/100; r.eff=price-r.discAmt;
@@ -4665,8 +4668,8 @@ function lsBreak(rows,s){
     ${L(`채널 수수료 ${fee}%`,neg(c.feeAmt),'pv-line--minus')}
     ${L('부가세',neg(c.vat),'pv-line--minus')}
     ${L('정산액 (부가세 제외)',won(Math.round(c.net)),'pv-line--sub')}
-    ${L(`부대비 ${s.extra}%`,neg(c.extraAmt),'pv-line--minus')}
-    ${L('원가 (입고가 + 포장)',neg(c.cost),'pv-line--minus')}
+    ${L(`판매 부대비 ${s.extra}%`,neg(c.extraAmt),'pv-line--minus')}
+    ${L(`원가 (입고가 + ${s.costx}%)`,neg(c.cost),'pv-line--minus')}
     <div class="pv-total ${c.contrib<0?'is-bad':''}"><span>공헌이익</span><div><b>${won(c.contrib)}</b><em>${Math.round(c.cpct*100)}%</em></div></div>
     <div class="pv-hint">${c.maxd==null?'이 조건에서는 목표 공헌이익을 맞출 수 없습니다':`목표 공헌이익 ${s.target}%를 지키는 최대 할인 <b>${Math.round(c.maxd*100)}%</b>`}</div>
   </div>`;
@@ -4714,8 +4717,8 @@ function productsView(){
           <div class="pv-kv"><span>판매 채널</span><select id="ls_ch" data-native>${lsChannels(b.id).map(k=>`<option ${k===s.ch?'selected':''}>${esc(k)}</option>`).join('')||'<option value="">설정에서 채널 추가</option>'}</select></div>
           <div class="pv-kv"><span>채널 수수료</span>${num('ls_fee',lsFee(s),'%',0.1)}</div>
           <div class="pv-kv"><span>할인율</span><div class="pv-slider"><input type="range" id="ls_disc" min="0" max="70" step="1" value="${s.disc}"><b id="ls_disc_v">${s.disc}%</b></div></div>
-          <div class="pv-kv"><span>포장비</span>${num('ls_pack',s.pack,'원',500,1)}</div>
-          <div class="pv-kv"><span>부대비</span>${num('ls_extra',s.extra,'%')}</div>
+          <div class="pv-kv"><span>원가 부대비</span>${num('ls_costx',s.costx,'%')}</div>
+          <div class="pv-kv"><span>판매 부대비</span>${num('ls_extra',s.extra,'%')}</div>
           <div class="pv-kv"><span>목표 공헌이익</span>${num('ls_target',s.target,'%')}</div>
         </div>
       </div>
@@ -4725,7 +4728,7 @@ function productsView(){
           ${s.app
             ? kinds.map(k=>`<div class="pv-kv"><span>${esc(k)} <i class="pv-cnt">${cnt(k)}</i></span><label class="pv-field"><input type="number" step="0.5" min="0" data-lscat="${esc(k)}" value="${s.catMult[k]??LS_CAT_MULT}"><i>배</i></label></div>`).join('')
             : LS_MATS.map(m=>`<div class="pv-kv"><span>${m}</span><label class="pv-field"><input type="number" step="0.5" min="0" data-lsmult="${m}" value="${s.mult[m]}"><i>배</i></label></div>`).join('')}
-          <p class="pv-note">권장정가 = 입고가 × 배수 + 포장비 (천 원 단위 내림)</p>
+          <p class="pv-note">원가 = 입고가 × (1 + 원가 부대비 ${s.costx}%) · 권장정가 = 원가 × 배수 (천 원 단위 내림)</p>
         </div>
       </div>
       <div class="pv-card pv-break" id="ls_break">${B.brk}</div>
@@ -4763,7 +4766,7 @@ function lsBind(){
   [['ls_mat','mat'],['ls_st','st'],['ls_yr','yr'],['ls_qt','qt'],['ls_se','se']].forEach(([id,k])=>on(id,'change',e=>{ s[k]=e.target.value; lsRefresh(); }));
   on('ls_ch','change',e=>{ s.ch=e.target.value; const f=$id('ls_fee'); if(f) f.value=lsFee(s); lsRefresh(); });
   on('ls_fee','input',e=>{ s.fees[s.ch]=Math.min(100,Math.max(0,Number(e.target.value||0))); lsRefresh(); });
-  [['ls_pack','pack'],['ls_extra','extra'],['ls_target','target']].forEach(([id,k])=>on(id,'input',e=>{ s[k]=Number(e.target.value||0); lsRefresh(); }));
+  [['ls_costx','costx'],['ls_extra','extra'],['ls_target','target']].forEach(([id,k])=>on(id,'input',e=>{ s[k]=Number(e.target.value||0); lsRefresh(); }));
   on('ls_disc','input',e=>{ s.disc=Number(e.target.value||0); const v=$id('ls_disc_v'); if(v) v.textContent=s.disc+'%'; lsRefresh(); });
   document.querySelectorAll('[data-lsmult]').forEach(el=>el.addEventListener('input',()=>{ s.mult[el.dataset.lsmult]=Number(el.value||0); lsRefresh(); }));
   document.querySelectorAll('[data-lscat]').forEach(el=>el.addEventListener('input',()=>{ s.catMult[el.dataset.lscat]=Number(el.value||0); lsRefresh(); }));
