@@ -2540,6 +2540,12 @@ html:root body .calx .cell .ev.ev--mid{margin-left:-6px !important;margin-right:
 html:root body .calx .cell .ev.ev--end{margin-left:-6px !important;width:calc(100% + 6px) !important;max-width:none !important}
 html:root body .calx .cell .ev.ev--mid::before{left:-6px !important;right:0 !important;border-radius:0 !important}
 html:root body .calx .cell .ev.ev--end::before{left:-6px !important;right:6px !important;border-radius:0 2px 2px 0 !important}
+/* 캘린더 업무 순서 바꾸기: 놓일 자리 표시선 */
+html:root body .calx .cell .ev.ev--task[draggable="true"]{cursor:grab}
+html:root body .calx .cell .ev.is-dropb{position:relative}
+html:root body .calx .cell .ev.is-dropb::after{content:"";position:absolute;left:0;right:0;top:-4px;height:2px;border-radius:2px;background:#14161C}
+html:root body .calx .cell.is-dropend .ev.ev--task:not(.ev--start):not(.ev--mid):not(.ev--end):last-of-type{position:relative}
+html:root body .calx .cell.is-dropend .ev.ev--task:not(.ev--start):not(.ev--mid):not(.ev--end):last-of-type::after{content:"";position:absolute;left:0;right:0;bottom:-4px;height:2px;border-radius:2px;background:#14161C}
 /* ================= 모바일 마감: 넘침·겹침 없이, 숫자 정렬·글자 크기 일관 ================= */
 @media (max-width:760px){
   /* 공통: 표 숫자 */
@@ -2679,7 +2685,7 @@ const TYPE_HUE = {'EGC':252,'UGC':340,'온라인':205,'오프라인':150,'이벤
 const AREA_HUES=[205,150,22,252,340,42,180];
 /* 캘린더 유형 색: 무채색에 가까운 같은 톤 — 콘텐츠는 차가운 회청, 제품은 녹회, 판매는 따뜻한 흙빛 */
 const TYPE_TONE={'피드':'#4E5C72','릴스':'#2C313B','스레드':'#7C879A','UGC':'#7A6A7E','EGC':'#4E5C72',
-  '제품 업로드':'#5C7264','제품 입고':'#878057','공구':'#A26E4C','기획전':'#9A8460','이벤트':'#A8665A','온라인':'#5B7884','오프라인':'#7B7265'};
+  '제품 업로드':'#5C7264','제품 입고':'#878057','공구':'#A26E4C','기획전':'#9A8460','이벤트':'#B4CC1E','온라인':'#5B7884','오프라인':'#7B7265'};
 const AREA_TONES=['#4E5C72','#5C7264','#A26E4C','#878057','#6C6578','#5B7884','#9A8460'];
 const toneOf=t=>TYPE_TONE[t]||'#646A75';
 const areaTone=a=>a?AREA_TONES[[...a].reduce((n,c)=>n+c.charCodeAt(0),0)%AREA_TONES.length]:'#B9BDC4';
@@ -3252,7 +3258,8 @@ function calendarView(all){
     const ord=(a0,a1,b0,b1,ia,ib)=>(Number(!multi(b0,b1))-Number(!multi(a0,a1)))*-1 || String(a0).localeCompare(String(b0)) || String(ia).localeCompare(String(ib));
     const evs=cs.filter(c=>spans(c,ds)).sort((a,b)=>ord(a.date,a.end,b.date,b.end,a.id,b.id));
     const dow=new Date(y,m-1,d).getDay();
-    const tks=dayTasks.filter(t=>spans({date:t.start||t.due,end:t.due},ds)).sort((a,b)=>ord(a.start,a.due,b.start,b.due,a.id,b.id));
+    const rk=t=>t.rank==null||t.rank===''?1e9:Number(t.rank);
+    const tks=dayTasks.filter(t=>spans({date:t.start||t.due,end:t.due},ds)).sort((a,b)=>(Number(multi(b.start,b.due))-Number(multi(a.start,a.due))) || (multi(a.start,a.due)? ord(a.start,a.due,b.start,b.due,a.id,b.id) : (rk(a)-rk(b) || ord(a.start,a.due,b.start,b.due,a.id,b.id))));
     const pos=(a,b)=>!multi(a,b)?'':(ds===a?'ev--start':ds===b?'ev--end':'ev--mid');
     cells.push(`<div class="cell ${ds===TODAY?'cell--today':''} ${ds<TODAY?'cell--past':''}" data-date="${ds}">
       <div class="cell__d ${dow===0?'cell__sun':''}"><span class="cn">${d}</span></div>
@@ -3464,7 +3471,7 @@ function mCalView(forceBid){
   const cs=(DB.contents||[]).filter(c=>inB(c));
   const who=myFilter();
   const ts=DB.tasks.filter(t=>inB(t)&&(!who||hasOwner(t,who)));
-  const itemsOn=ds=>[...cs.filter(c=>spans(c,ds)).map(c=>({k:'c',o:c})), ...ts.filter(t=>spans({date:t.start||t.due,end:t.due},ds)).map(t=>({k:'t',o:t}))];
+  const itemsOn=ds=>[...cs.filter(c=>spans(c,ds)).map(c=>({k:'c',o:c})), ...ts.filter(t=>spans({date:t.start||t.due,end:t.due},ds)).sort((a,b)=>(a.rank==null?1e9:+a.rank)-(b.rank==null?1e9:+b.rank)).map(t=>({k:'t',o:t}))];
   const hueOf=it=>it.k==='c'?(TYPE_HUE[it.o.type]??262):214;
   const toneIt=it=>it.k==='c'?toneOf(it.o.type):areaTone(it.o.area);
   const sel=(UI.mCalSel&&UI.mCalSel.slice(0,7)===ym)?UI.mCalSel:(TODAY.slice(0,7)===ym?TODAY:`${ym}-01`);
@@ -5136,6 +5143,26 @@ function modal({title, body, onSave, onDelete, saveLabel='저장', footer=true})
 const opt=(arr,v)=>arr.map(a=>`<option ${a===v?'selected':''}>${esc(a)}</option>`).join('');
 
 function shiftDays(iso,n){ const d=new Date(iso+'T00:00:00'); d.setDate(d.getDate()+n); return dateStr(d); }
+/* 캘린더: 같은 날 업무 순서(우선순위) — 끌어 놓은 위치 바로 앞에 넣고 그 날 업무 순서를 10 단위로 다시 매김 */
+function calSingles(cell){ return [...cell.querySelectorAll('.ev.ev--task[data-drag]:not(.ev--start):not(.ev--mid):not(.ev--end)')]; }
+function calDropAt(cell,e){ const list=calSingles(cell); for(const el of list){ const r=el.getBoundingClientRect(); if(e.clientY<r.top+r.height/2) return el.dataset.drag.slice(2); } return null; }
+function calDropMark(cell,e){
+  document.querySelectorAll('.ev.is-dropb,.cell.is-dropend').forEach(x=>x.classList.remove('is-dropb','is-dropend'));
+  if(!cell||!e) return; const at=calDropAt(cell,e);
+  if(at){ const el=cell.querySelector(`[data-drag="t:${at}"]`); el&&el.classList.add('is-dropb'); } else if(calSingles(cell).length) cell.classList.add('is-dropend');
+}
+function reorderTask(id, date, beforeId){
+  const t=DB.tasks.find(x=>x.id===id); if(!t) return;
+  const single=!(t.start&&t.due&&t.start!==t.due);
+  if((t.due||t.start)!==date) moveItem('t:'+id, date);
+  if(!single){ save(); render(); return; }
+  const cell=document.querySelector(`.cell[data-date="${date}"]`);
+  let ids=cell? calSingles(cell).map(el=>el.dataset.drag.slice(2)).filter(x=>x!==id) : [];
+  const i=beforeId&&beforeId!==id? ids.indexOf(beforeId) : -1;
+  if(i<0) ids.push(id); else ids.splice(i,0,id);
+  ids.forEach((x,n)=>{ const tk=DB.tasks.find(y=>y.id===x); if(tk && tk.rank!==(n+1)*10){ tk.rank=(n+1)*10; tk.dirty=true; } });
+  save(); render();
+}
 function moveItem(payload,target){
   const [kind,id]=payload.split(':');
   if(kind==='c'){
@@ -5171,8 +5198,10 @@ function bindCalendar(){
     el.addEventListener('dragstart',e=>{ e.dataTransfer.setData('text/plain', el.dataset.drag); e.dataTransfer.effectAllowed='move'; });
   });
   document.querySelectorAll('.cell[data-date]').forEach(cell=>{
-    cell.addEventListener('dragover',e=>{ e.preventDefault(); e.dataTransfer.dropEffect='move'; });
-    cell.addEventListener('drop',e=>{ e.preventDefault(); const p=e.dataTransfer.getData('text/plain'); if(p) moveItem(p, cell.dataset.date); });
+    cell.addEventListener('dragover',e=>{ e.preventDefault(); e.dataTransfer.dropEffect='move'; calDropMark(cell,e); });
+    cell.addEventListener('dragleave',e=>{ if(!cell.contains(e.relatedTarget)) calDropMark(null); });
+    cell.addEventListener('drop',e=>{ e.preventDefault(); const p=e.dataTransfer.getData('text/plain'); const at=calDropAt(cell,e); calDropMark(null); if(!p) return;
+      if(p.startsWith('t:')) reorderTask(p.slice(2), cell.dataset.date, at); else moveItem(p, cell.dataset.date); });
     cell.addEventListener('mousedown',e=>{ if(e.target.closest('.ev, .cell__add')) return; e.preventDefault(); selA=selB=cell.dataset.date; paintSel(); });
     cell.addEventListener('mouseenter',()=>{ if(selA){ selB=cell.dataset.date; paintSel(); } });
   });
@@ -5446,7 +5475,8 @@ const KIND={
       ...(t.due?{'Due':{date:{start:t.start||t.due, ...(t.start&&t.start!==t.due?{end:t.due}:{})}}}:{}),
       'Status':{status:{name:t.done?'Done':'To do'}},
       ...(ownersOf(t).length?{'담당자':{multi_select:ownersOf(t).map(n=>({name:n}))}}:{}),
-      ...(t.memo?{'상세':{rich_text:[{text:{content:t.memo.slice(0,1900)}}]}}:{}) }) },
+      ...(t.memo?{'상세':{rich_text:[{text:{content:t.memo.slice(0,1900)}}]}}:{}),
+      ...(t.rank!=null&&t.rank!==''?{'순서':{number:Number(t.rank)}}:{}) }) },
   sales:{ db:'sales',
     props:s=>({ '항목':{title:[{text:{content:`${brandOf(s.brandId)?.name||''} ${s.ym} ${s.channel}`}}]},
       '브랜드':{select:{name:brandOf(s.brandId)?.name||''}}, '월':{rich_text:[{text:{content:s.ym}}]},
@@ -5711,7 +5741,7 @@ const brandByName=nm=>{
           priority:rec.priority||'보통',
           due: dd?.end||dd?.start||'', start: dd?.end?(dd?.start||''):'',
           title:ttl(P['Task']), owners:(P['담당자']?.multi_select||[]).map(x=>x.name), owner:P['담당자']?.multi_select?.[0]?.name||'',
-          memo:txt(P['상세']), done:(P['Status']?.status?.name||sel(P['Status']))==='Done'});
+          memo:txt(P['상세']), rank:P['순서']?.number??null, done:(P['Status']?.status?.name||sel(P['Status']))==='Done'});
       }
       if(kind==='sales'){ Object.assign(rec,{brandId:brandByName(sel(P['브랜드'])), ym:txt(P['월']),
         channel:sel(P['채널']), goal:P['목표']?.number||0, actual:P['실적']?.number||0}); }
