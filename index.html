@@ -3656,6 +3656,14 @@ function ddMenu(btn,opts,cur,onPick){
   setTimeout(()=>{ const off=e=>{ if(!pop.contains(e.target)&&e.target!==btn&&!btn.contains(e.target)){ ddClose(); document.removeEventListener('pointerdown',off,true); } }; document.addEventListener('pointerdown',off,true); },0);
 }
 document.addEventListener('keydown',e=>{ if(e.key==='Escape') ddClose(); });
+/* 추천 목록(datalist) 입력칸: 값이 있으면 그 값과 맞는 것만 보여서 다른 걸 고르려면 지워야 했음
+   → 칸을 누르면 값을 잠시 비워 전체 목록을 보여주고, 아무것도 안 고르고 나가면 원래 값 복원 */
+document.addEventListener('focusin',e=>{ const i=e.target; if(!(i instanceof HTMLInputElement)||!i.getAttribute('list')||!i.value) return;
+  i.dataset.dlPrev=i.value; i.dataset.dlPh=i.placeholder; i.placeholder=i.value; i.value=''; i.dataset.dlCleared=''; });
+document.addEventListener('keydown',e=>{ const i=e.target; if(i instanceof HTMLInputElement && i.dataset.dlPrev!=null && !i.value && (e.key==='Backspace'||e.key==='Delete')) i.dataset.dlCleared='1'; },true);
+document.addEventListener('focusout',e=>{ const i=e.target; if(!(i instanceof HTMLInputElement)||i.dataset.dlPrev==null) return;
+  if(!i.value && i.dataset.dlCleared!=='1') i.value=i.dataset.dlPrev;
+  i.placeholder=i.dataset.dlPh||''; delete i.dataset.dlPrev; delete i.dataset.dlPh; delete i.dataset.dlCleared; });
 /* 모든 기본 선택칸(<select>)을 같은 드롭다운으로 — 실제 select는 숨겨 두고 값만 주고받음 */
 function enhanceSelects(root){
   (root||document).querySelectorAll('select:not([data-native]):not([data-dd-done])').forEach(sel=>{
