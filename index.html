@@ -5774,7 +5774,14 @@ async function pullBrands(){
   }catch(e){}
 }
 const KIND_LABEL={contents:'콘텐츠',tasks:'업무',sales:'매출',daily:'일별 매출',plans:'기획',actions:'액션플랜',stats:'성과',refs:'레퍼런스',costs:'비용',products:'제품'};
-async function pullAll(quiet){
+/* 노션 읽기는 한 번에 하나만 — 이미 읽는 중이면 그 결과를 같이 기다림 */
+let __pulling=null, __lastPull=0;
+function pullAll(quiet){
+  if(__pulling) return __pulling;
+  __pulling=__pullAll(quiet).finally(()=>{ __pulling=null; __lastPull=Date.now(); });
+  return __pulling;
+}
+async function __pullAll(quiet){
   await pullBrands(); await pullConfig(); await pullTraffic(); await pullInquiries();
   const s=DB.settings; let n=0;
   const snap=()=>JSON.stringify(['contents','tasks','sales','products','plans','costs','actions','refs','daily'].map(k=>DB[k]));
@@ -6099,9 +6106,11 @@ bootSync();
 function liveRefresh(){
   if(!DB.settings.workerUrl || DB.settings.auto===false) return;
   if(document.querySelector('#layer')?.innerHTML) return;
+  /* 창을 오갈 때마다 전체를 다시 읽으면 노션 요청 제한에 걸림 — 마지막으로 읽고 2분 지났을 때만 */
+  if(__pulling || Date.now()-__lastPull<120000) return;
   pullAll(true).catch(()=>{});
 }
-if(EMBED) setInterval(liveRefresh, 30000);
+if(EMBED) setInterval(liveRefresh, 120000);
 /* 임베드 높이를 부모 페이지에 알림 */
 if(EMBED){
   const postH=()=>{ try{ const el=document.getElementById('view'); const h=el? el.getBoundingClientRect().height+28 : document.documentElement.scrollHeight; parent.postMessage({ddlHeight: Math.ceil(h)}, '*'); }catch(e){} };
