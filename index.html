@@ -1694,6 +1694,8 @@ html body .modal .f input,html body .modal .f select,html body .modal .f textare
 /* ===== 5단계: 팝업 세부 ===== */
 /* 날짜 추가 선택 카드 */
 .picks{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin-bottom:8px}
+.picks--4{grid-template-columns:repeat(4,minmax(0,1fr))}
+.picks--2{grid-template-columns:repeat(2,minmax(0,1fr))}
 .pick{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;padding:18px 10px 16px;border:0;border-radius:var(--r-lg);background:rgba(255,255,255,.9);box-shadow:0 0 0 1px var(--line) inset;cursor:pointer;text-align:center;font-family:var(--sans);transition:box-shadow .12s,transform .12s}
 .pick:hover{transform:translateY(-1px);box-shadow:0 0 0 1.5px var(--accent) inset,0 10px 20px -14px rgba(20,22,28,.6)}
 .pick__i{width:36px;height:36px;border-radius:10px;display:grid;place-items:center;background:var(--accent-bg);color:var(--accent);margin-bottom:6px}
@@ -2698,10 +2700,28 @@ const TYPE_TONE={'피드':'#4E5C72','릴스':'#2C313B','스레드':'#7C879A','UG
   '제품 업로드':'#5C7264','제품 입고':'#878057','공구':'#A26E4C','기획전':'#9A8460','이벤트':'#B4CC1E','온라인':'#5B7884','오프라인':'#7B7265'};
 const AREA_TONES=['#4E5C72','#5C7264','#A26E4C','#878057','#6C6578','#5B7884','#9A8460'];
 const toneOf=t=>TYPE_TONE[t]||'#646A75';
-const areaTone=a=>a?AREA_TONES[[...a].reduce((n,c)=>n+c.charCodeAt(0),0)%AREA_TONES.length]:'#B9BDC4';
+const AREA_TONE={'모객':'#4E5C72','제품':'#5C7264','이벤트':'#A26E4C','접객':'#6C6578','기타':'#878057'};
+const areaTone=a=>a?(AREA_TONE[a]||AREA_TONES[[...a].reduce((n,c)=>n+c.charCodeAt(0),0)%AREA_TONES.length]):'#B9BDC4';
 const areaHue=a=>a?AREA_HUES[[...a].reduce((n,c)=>n+c.charCodeAt(0),0)%AREA_HUES.length]:'';
 const catOf = t => CONTENT_TYPES.includes(t) ? '콘텐츠' : '운영';
-/* 업무 영역은 고정값이 아니라 입력된 내용에서 자동 수집됩니다 */
+/* 영역 — 월간 브랜드 운영 4축(모객·제품·이벤트·접객) + 기타. 세부는 영역별 선택지 */
+const AREAS=['모객','제품','이벤트','접객','기타'];
+const AREA_SUBS={'모객':['스레드','인스타','광고소재','마켓협업'],'제품':['진열·사진','소싱·입고','업로드'],
+  '이벤트':['세일즈 전략','기획전','공구'],'접객':['온사이트 배너','채널톡','CS'],'기타':['정산·행정']};
+const AREA_DESC={'모객':'콘텐츠·광고·협업','제품':'사진·입고·업로드','이벤트':'기획전·공구·행사','접객':'CRM·배너·채널톡','기타':'정산·행정 등'};
+/* 캘린더 일정 유형이 속한 영역 */
+const TYPE_AREA={'EGC':'모객','UGC':'모객','제품 업로드':'제품','제품 입고':'제품','이벤트':'이벤트','온라인':'이벤트','오프라인':'이벤트'};
+const areaTypes=a=>TYPES.filter(t=>TYPE_AREA[t]===a);
+const areaLabel=t=>[t.area,t.sub].filter(Boolean).join(' · ');
+/* 예전 자유입력 영역 → 4축으로 (제목·상세 키워드로 분류, 못 고르면 기타) */
+const AREA_RULES=[
+ ['접객',/CS|채널톡|배너|CRM|문의|리뷰|알림톡|카카오|카톡|응대|고객/i],
+ ['이벤트',/이벤트|기획전|공구|할인|프로모션|세일|블프|블랙프라이데이|쿠폰|팝업|증정|2\+1/i],
+ ['모객',/콘텐츠|컨텐츠|릴스|피드|스레드|인스타|광고|메타|Meta|UGC|EGC|인플루언서|시딩|협찬|촬영|영상|틱톡|유튜브|마켓|협업|홍보|바이럴/i],
+ ['제품',/제품|상품|입고|발주|샘플|사진|누끼|상세|업로드|등록|재고|생산|패키지|포장|소싱|원가|라인시트|사이즈|작업지시|공장|출고/i]];
+function guessArea(t){ const old=(t.area||'').trim();
+  if(old==='콘텐츠') return '모객'; if(old==='제품') return '제품';
+  const txt=(t.title||'')+' '+(t.memo||''); for(const [a,re] of AREA_RULES) if(re.test(txt)) return a; return '기타'; }
 function areasIn(bid){
   const count={};
   for(const t of DB.tasks){ const a=(t.area||'').trim(); if(!a) continue;
@@ -2792,6 +2812,7 @@ for(const k of ['contents','tasks','sales','products','plans','costs','actions',
   DB[k]=(DB[k]||[]).filter(r=>{ if(!r.notionId) return true; if(seen.has(r.notionId)) return false; seen.add(r.notionId); return true; });
 }
 for(const t of DB.tasks){ if(/\d+\s*월\s*\d+\s*주/.test(t.area||'')){ t.week=t.area; t.area=''; } }
+for(const t of DB.tasks){ if(!AREAS.includes(t.area)){ t.area=guessArea(t); t.dirty=true; } if(t.sub && !(AREA_SUBS[t.area]||[]).includes(t.sub)) t.sub=''; }
 
 const save=()=>{ store.set(KEY,JSON.stringify(DB)); if(typeof autoSync==='function') autoSync(); };
 
@@ -3274,7 +3295,7 @@ function calendarView(all){
     cells.push(`<div class="cell ${ds===TODAY?'cell--today':''} ${ds<TODAY?'cell--past':''}" data-date="${ds}">
       <div class="cell__d ${dow===0?'cell__sun':''}"><span class="cn">${d}</span></div>
       ${evs.map(e=>`<span class="ev ${e.done?'ev--done':''} ${e.type==='이벤트'?'ev--evt':''} ${pos(e.date,e.end)}" draggable="true" data-drag="c:${e.id}" style="--h:${TYPE_HUE[e.type]??262};--c:${toneOf(e.type)}"><b class="evchk" data-toggle-content="${e.id}" title="완료 표시" aria-pressed="${!!e.done}"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 12.5l4 4 8-9"/></svg></b><span data-content="${e.id}" style="cursor:pointer">${bn(e)}${(e.att&&e.att.length)||(e.attView&&e.attView.length)?'📎':''}${esc(e.type)} · ${esc(e.title||'')}</span></span>`).join('')}
-      ${tks.map(t=>`<span class="ev ev--task ${t.done?'ev--done':''} ${pos(t.start,t.due)}" draggable="true" data-drag="t:${t.id}" style="--h:220${t.area?`;--a:${areaHue(t.area)}`:''};--c:${areaTone(t.area)}" title="${esc(t.area||'')}"><b class="evchk" data-toggle-task-btn="${t.id}" title="완료 표시" aria-pressed="${!!t.done}"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 12.5l4 4 8-9"/></svg></b><span data-edit-task="${t.id}" style="cursor:pointer">${bn(t)}${esc(t.title)}</span></span>`).join('')}
+      ${tks.map(t=>`<span class="ev ev--task ${t.done?'ev--done':''} ${pos(t.start,t.due)}" draggable="true" data-drag="t:${t.id}" style="--h:220${t.area?`;--a:${areaHue(t.area)}`:''};--c:${areaTone(t.area)}" title="${esc(areaLabel(t))}"><b class="evchk" data-toggle-task-btn="${t.id}" title="완료 표시" aria-pressed="${!!t.done}"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 12.5l4 4 8-9"/></svg></b><span data-edit-task="${t.id}" style="cursor:pointer">${bn(t)}${esc(t.title)}</span></span>`).join('')}
       <button class="cell__add" data-newdate="${ds}" aria-label="${d}일 추가">+</button>
     </div>`);
   }
@@ -3320,7 +3341,7 @@ function ownerPicker(sel){
 function readOwners(){ return [...document.querySelectorAll('.ownchk:checked')].map(el=>el.value); }
 function taskRow(t,compact,showBrand){
   const st=taskState(t), b=brandOf(t.brandId), ow=ownersOf(t);
-  const meta=[showBrand&&b?b.name:'', ow.length>2?ow.slice(0,2).join(', ')+' 외 '+(ow.length-2):ow.join(', '), t.area||''].filter(Boolean).map(esc).join(' · ');
+  const meta=[showBrand&&b?b.name:'', ow.length>2?ow.slice(0,2).join(', ')+' 외 '+(ow.length-2):ow.join(', '), areaLabel(t)].filter(Boolean).map(esc).join(' · ');
   return `<div class="trw ${t.done?'is-done':''}" data-edit-task="${t.id}">
     <input type="checkbox" data-toggle-task="${t.id}" ${t.done?'checked':''} onclick="event.stopPropagation()" aria-label="완료 표시" />
     <div class="trw__m"><div class="tt">${t.priority==='긴급'?'<span class="pr">긴급</span>':''}${esc(t.title)}</div>${meta?`<div class="ta">${meta}</div>`:''}</div>
@@ -3351,10 +3372,8 @@ function tasksView(){
   const list = showDone? done : open;
   const sorter=(x,y)=>(x.due||'9999').localeCompare(y.due||'9999')||PRIOS.indexOf(x.priority)-PRIOS.indexOf(y.priority);
   const areaOf=t=>(t.area||'').trim()||'미분류';
-  const areas=[...new Set(list.map(areaOf))].sort((x,y)=>{
-    const first=a=>list.filter(t=>areaOf(t)===a).map(t=>t.due||'9999-99-99').sort()[0]||'9999-99-99';
-    return first(x).localeCompare(first(y)) || x.localeCompare(y,'ko');
-  });
+  const ai=a=>{ const i=AREAS.indexOf(a); return i<0?99:i; };
+  const areas=[...new Set(list.map(areaOf))].sort((x,y)=>ai(x)-ai(y) || x.localeCompare(y,'ko'));
   const pct = (open.length+done.length)? Math.round(done.length/(open.length+done.length)*100):0;
   const chip=(label,val,on)=>`<button class="btn btn--sm" data-taskowner="${esc(val)}" style="border-radius:999px;${on?'background:var(--ink);border-color:var(--ink);color:#fff':''}">${esc(label)}</button>`;
   return `<div class="ttool">
@@ -3431,7 +3450,7 @@ const mMine=()=>`<button class="mswitch" data-act="mine" aria-pressed="${!!myFil
 const mChip=(attr,label,on,n)=>`<button class="mchipb" ${attr} aria-pressed="${!!on}">${esc(label)}${n!==undefined?`<span>${n}</span>`:''}</button>`;
 function mTaskCard(t,showBrand=true){
   const st=taskState(t), b=brandOf(t.brandId), ow=ownersOf(t);
-  const meta=[showBrand&&b?b.name:'', ow.length>2?ow.slice(0,2).join(', ')+' 외 '+(ow.length-2):ow.join(', '), t.area||''].filter(Boolean).map(esc).join(' · ');
+  const meta=[showBrand&&b?b.name:'', ow.length>2?ow.slice(0,2).join(', ')+' 외 '+(ow.length-2):ow.join(', '), areaLabel(t)].filter(Boolean).map(esc).join(' · ');
   return `<div class="mt ${t.done?'is-done':''}">
     <button class="mt__chk" data-toggle-task-btn="${t.id}" aria-label="완료 표시" aria-pressed="${!!t.done}">${MI.chk}</button>
     <div class="mt__b" data-edit-task="${t.id}">
@@ -3772,7 +3791,7 @@ function allTasksView(){
     const ow=ownersOf(t);
     return `<tr class="trow ${t.done?'is-done':''}" data-edit-task="${t.id}">
       <td class="c-chk"><input type="checkbox" data-toggle-task="${t.id}" ${t.done?'checked':''} onclick="event.stopPropagation()" aria-label="완료 표시" /></td>
-      <td class="c-title"><div class="tt">${t.priority==='긴급'?'<span class="pr">긴급</span>':''}${esc(t.title)}</div>${t.area?`<div class="ta">${esc(t.area)}</div>`:''}</td>
+      <td class="c-title"><div class="tt">${t.priority==='긴급'?'<span class="pr">긴급</span>':''}${esc(t.title)}</div>${t.area?`<div class="ta">${esc(areaLabel(t))}</div>`:''}</td>
       <td class="c-brand">${esc(b.name)}</td>
       <td class="c-who">${ow.length?esc(ow.length>2?ow.slice(0,2).join(', ')+' 외 '+(ow.length-2):ow.join(', ')):'<span class="mutd">—</span>'}</td>
       <td class="c-due">${t.due?t.due.slice(5).replace('-','/'):'<span class="mutd">—</span>'}</td>
@@ -5255,17 +5274,34 @@ function bindCalendar(){
 function addOnDate(date,end){
   const lab=ds=>{ const d=new Date(ds+'T00:00:00'); return `${d.getMonth()+1}월 ${d.getDate()}일 (${WD_KO[d.getDay()]})`; };
   const span=end&&end!==date;
+  const ttl= span? `${lab(date)} ~ ${lab(end)}` : lab(date);
   const opt=(id,icon,t,d)=>`<button class="pick" id="${id}"><span class="pick__i">${icon}</span><b>${t}</b><span>${d}</span></button>`;
-  modal({ title: span? `${lab(date)} ~ ${lab(end)}` : lab(date), footer:false,
-    body:`<p>무엇을 추가할까요?</p>
-      <div class="picks">
-        ${opt('addOps','<svg viewBox="0 0 24 24"><path d="M4 20V8l8-4 8 4v12"/><path d="M9 20v-6h6v6"/></svg>','운영','행사·입고·업로드 일정')}
-        ${opt('addContent','<svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M10 9.5v5l4-2.5z"/></svg>','콘텐츠','EGC·UGC 발행')}
-        ${opt('addTask','<svg viewBox="0 0 24 24"><rect x="4" y="4" width="16" height="16" rx="3"/><path d="M8.5 12.5l2.5 2.5 4.5-5"/></svg>','업무','담당자·마감 있는 할 일')}
-      </div>` });
-  $('#addOps').onclick=()=>{ $('#layer').innerHTML=''; contentModal(null,date,'운영',end); };
-  $('#addContent').onclick=()=>{ $('#layer').innerHTML=''; contentModal(null,date,'콘텐츠',end); };
-  $('#addTask').onclick=()=>{ $('#layer').innerHTML=''; taskModal(null,(end||date),null,date); };
+  const IC={'모객':'<svg viewBox="0 0 24 24"><path d="M4 10v4h3l5 4V6L7 10z"/><path d="M16 9a4 4 0 0 1 0 6"/></svg>',
+    '제품':'<svg viewBox="0 0 24 24"><path d="M4 8l8-4 8 4v8l-8 4-8-4z"/><path d="M4 8l8 4 8-4M12 12v8"/></svg>',
+    '이벤트':'<svg viewBox="0 0 24 24"><path d="M20 12l-8 8-8-8V4h8z"/><circle cx="8.5" cy="8.5" r="1.3"/></svg>',
+    '접객':'<svg viewBox="0 0 24 24"><path d="M4 5h16v11H9l-5 4z"/></svg>'};
+  const close=()=>{ $('#layer').innerHTML=''; };
+  const step2=a=>{
+    const types=areaTypes(a);
+    if(!types.length){ close(); return taskModal(null,(end||date),null,date,a); }
+    close();
+    modal({ title:`${ttl} · ${a}`, footer:false,
+      body:`<p>어떤 걸 추가할까요?</p>
+        <div class="picks picks--2">
+          ${opt('addSched','<svg viewBox="0 0 24 24"><rect x="4" y="5" width="16" height="15" rx="2"/><path d="M4 10h16M9 3v4M15 3v4"/></svg>','일정',types.join('·'))}
+          ${opt('addTask','<svg viewBox="0 0 24 24"><rect x="4" y="4" width="16" height="16" rx="3"/><path d="M8.5 12.5l2.5 2.5 4.5-5"/></svg>','할 일','담당자·마감 있는 업무')}
+        </div>` });
+    $('#addSched').onclick=()=>{ close(); contentModal(null,date,a,end); };
+    $('#addTask').onclick=()=>{ close(); taskModal(null,(end||date),null,date,a); };
+  };
+  modal({ title:ttl, footer:false,
+    body:`<p>어느 영역인가요?</p>
+      <div class="picks picks--4">
+        ${['모객','제품','이벤트','접객'].map(a=>opt('addA_'+a,IC[a],a,AREA_DESC[a])).join('')}
+      </div>
+      <button class="btn btn--sm" id="addEtc" style="margin-top:4px">기타 할 일 추가</button>` });
+  ['모객','제품','이벤트','접객'].forEach(a=>{ $('#addA_'+a).onclick=()=>step2(a); });
+  $('#addEtc').onclick=()=>{ close(); taskModal(null,(end||date),null,date,'기타'); };
 }
 
 async function shrinkImage(file, maxSide, quality){
@@ -5300,12 +5336,12 @@ function attChips(list, editable){
 function contentModal(id,date,cat,end){
   if(EMBED&&EMBED.ro) return;
   const isNew=!id;
-  const c = isNew? {id:uid(),brandId:(brandOf(UI.brand)?UI.brand:(UI.schedBrand&&brandOf(UI.schedBrand)?UI.schedBrand:HOME_BRAND())),date:date||TODAY,end:(end&&end!==date?end:''),type:(cat==='콘텐츠'?'EGC':'온라인'),title:'',memo:'',done:false}
+  const c = isNew? {id:uid(),brandId:(brandOf(UI.brand)?UI.brand:(UI.schedBrand&&brandOf(UI.schedBrand)?UI.schedBrand:HOME_BRAND())),date:date||TODAY,end:(end&&end!==date?end:''),type:(AREAS.includes(cat)?(areaTypes(cat)[0]||'온라인'):cat==='콘텐츠'?'EGC':'온라인'),title:'',memo:'',done:false}
                  : DB.contents.find(x=>x.id===id);
-  const kind = cat || catOf(c.type);
-  const typeOptions = kind==='콘텐츠' ? CONTENT_TYPES : OPS_TYPES;
+  const kind = AREAS.includes(cat)? cat : (TYPE_AREA[c.type]||cat||catOf(c.type));
+  const typeOptions = AREAS.includes(kind) ? (areaTypes(kind).length?areaTypes(kind):TYPES) : (kind==='콘텐츠' ? CONTENT_TYPES : OPS_TYPES);
   modal({
-    title: kind+(isNew?' 추가':' 편집'),
+    title: kind+' 일정'+(isNew?' 추가':' 편집'),
     body:`${brandOf(UI.brand)&&isNew?'':`<label class="f"><span>브랜드</span><select id="c_brand">${DB.brands.filter(b=>!b.hidden||b.id===c.brandId).map(b=>`<option value="${b.id}" ${b.id===c.brandId?'selected':''}>${esc(b.name)}</option>`).join('')}</select></label>`}
       <div class="row2">
         <label class="f"><span>시작일</span><input type="date" id="c_date" value="${c.date}" /></label>
@@ -5347,19 +5383,18 @@ function contentModal(id,date,cat,end){
   };
 }
 
-function taskModal(id,due,actionId,startAt){
+function taskModal(id,due,actionId,startAt,areaPreset){
   const isNew=!id;
   const defBrand = brandOf(UI.brand)? UI.brand : (UI.taskBrand && brandOf(UI.taskBrand)? UI.taskBrand : (DB.brands.find(b=>!b.hidden)||DB.brands[0]).id);
-  const t=isNew? {id:uid(),brandId:defBrand,area:'',week:'',title:'',priority:'보통',start:(startAt||''),due:due||'',owner:(DB.settings.me||''),owners:(DB.settings.me?[DB.settings.me]:[]),done:false}
+  const t=isNew? {id:uid(),brandId:defBrand,area:(areaPreset||''),sub:'',week:'',title:'',priority:'보통',start:(startAt||''),due:due||'',owner:(DB.settings.me||''),owners:(DB.settings.me?[DB.settings.me]:[]),done:false}
                : DB.tasks.find(x=>x.id===id);
   modal({
     title:isNew?'업무 추가':'업무 편집',
     body:`<label class="f"><span>업무</span><input type="text" id="t_title" value="${esc(t.title)}" placeholder="예: 29CM 상품등록 · 시그니처 1차 작업지시" /></label>
       <div class="row2">
         <label class="f"><span>브랜드</span><select id="t_brand">${DB.brands.filter(b=>!b.hidden||b.id===t.brandId).map(b=>`<option value="${b.id}" ${b.id===t.brandId?'selected':''}>${esc(b.name)}</option>`).join('')}</select></label>
-        <label class="f"><span>영역</span>
-          <input type="text" id="t_area" value="${esc(t.area||'')}" list="areaSuggest" placeholder="콘텐츠" autocomplete="off" />
-          <datalist id="areaSuggest">${allAreas().map(a=>`<option value="${esc(a)}"></option>`).join('')}</datalist></label>
+        <label class="f"><span>영역</span><select id="t_area"><option value="">선택</option>${AREAS.map(a=>`<option value="${a}" ${a===t.area?'selected':''}>${a}</option>`).join('')}</select></label>
+        <label class="f"><span>세부 (선택)</span><select id="t_sub">${subOpts(t.area,t.sub)}</select></label>
         <label class="f"><span>우선순위</span><select id="t_prio">${opt(PRIOS,t.priority)}</select></label>
         <label class="f"><span>시작일 (선택)</span><input type="date" id="t_start" value="${t.start||''}" /></label>
         <label class="f"><span>마감일</span><input type="date" id="t_due" value="${t.due||''}" /></label>
@@ -5372,7 +5407,7 @@ function taskModal(id,due,actionId,startAt){
       <label style="display:flex;gap:8px;align-items:center"><input type="checkbox" id="t_done" ${t.done?'checked':''} style="width:16px;height:16px;accent-color:var(--ink)" /> 완료</label>`,
     onSave:()=>{
       const v=$('#t_title').value.trim(); if(!v){ toast('업무 내용을 입력하세요'); return false; }
-      t.title=v; t.brandId=$('#t_brand').value||t.brandId; t.area=$('#t_area').value.trim(); t.priority=$('#t_prio').value;
+      t.title=v; t.brandId=$('#t_brand').value||t.brandId; t.area=$('#t_area').value; t.sub=$('#t_sub').value; t.priority=$('#t_prio').value;
       t.due=$('#t_due').value; const ts=$('#t_start').value;
       if(ts&&t.due&&ts>t.due){ toast('시작일이 마감일보다 늦습니다'); return false; }
       t.start=ts; t.week=$('#t_week').value.trim()||autoWeek(t.due);
@@ -5383,7 +5418,9 @@ function taskModal(id,due,actionId,startAt){
     },
     onDelete:isNew?null:()=>{ notionDrop(DB.tasks.find(x=>x.id===id)); DB.tasks=DB.tasks.filter(x=>x.id!==id); }
   });
+  const ar=$('#t_area'); if(ar) ar.onchange=()=>{ $('#t_sub').innerHTML=subOpts(ar.value,''); };
 }
+function subOpts(area,cur){ return `<option value="">없음</option>`+(AREA_SUBS[area]||[]).map(x=>`<option value="${esc(x)}" ${x===cur?'selected':''}>${esc(x)}</option>`).join(''); }
 
 function prodModal(id){
   const isNew=!id;
@@ -5507,6 +5544,7 @@ const KIND={
     props:t=>({ 'Task':{title:[{text:{content:t.title}}]}, 'Brand':{select:{name:brandOf(t.brandId)?.name||''}},
       ...((t.week||autoWeek(t.due))?{'Week':{select:{name:t.week||autoWeek(t.due)}}}:{}),
       ...(t.area?{'영역':{select:{name:t.area}}}:{}),
+      '세부':t.sub?{select:{name:t.sub}}:{select:null},
       ...(t.due?{'Due':{date:{start:t.start||t.due, ...(t.start&&t.start!==t.due?{end:t.due}:{})}}}:{}),
       'Status':{status:{name:t.done?'Done':'To do'}},
       ...(ownersOf(t).length?{'담당자':{multi_select:ownersOf(t).map(n=>({name:n}))}}:{}),
@@ -5773,11 +5811,12 @@ const brandByName=nm=>{
         const bn=sel(P['Brand']); const bid=DB.brands.find(b=>b.name===bn)?.id;
         if(!bid){ DB[kind]=DB[kind].filter(r=>r!==rec); continue; }
         const dd=P['Due']?.date;
-        Object.assign(rec,{brandId:bid, area:sel(P['영역'])||'', week:sel(P['Week'])||'',
+        Object.assign(rec,{brandId:bid, area:sel(P['영역'])||'', sub:sel(P['세부'])||'', week:sel(P['Week'])||'',
           priority:rec.priority||'보통',
           due: dd?.end||dd?.start||'', start: dd?.end?(dd?.start||''):'',
           title:ttl(P['Task']), owners:(P['담당자']?.multi_select||[]).map(x=>x.name), owner:P['담당자']?.multi_select?.[0]?.name||'',
           memo:txt(P['상세']), rank:P['순서']?.number??null, done:(P['Status']?.status?.name||sel(P['Status']))==='Done'});
+        if(!AREAS.includes(rec.area)){ rec.area=guessArea(rec); rec.dirty=true; }
       }
       if(kind==='sales'){ Object.assign(rec,{brandId:brandByName(sel(P['브랜드'])), ym:txt(P['월']),
         channel:sel(P['채널']), goal:P['목표']?.number||0, actual:P['실적']?.number||0}); }
