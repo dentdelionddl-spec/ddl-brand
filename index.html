@@ -2866,6 +2866,7 @@ function actionProgress(a){
 const dailyOf=(bid,ym)=>DB.daily.filter(d=>d.brandId===bid&&inMonth(d.date,ym));
 const dayAmt=(bid,ds,ch)=>Number(DB.daily.find(d=>d.brandId===bid&&d.date===ds&&d.channel===ch)?.amount||0);
 const dayCost=(bid,ds,ch)=>Number(DB.daily.find(d=>d.brandId===bid&&d.date===ds&&d.channel===ch)?.cost||0);
+const dayF=(bid,ds,ch,f)=>Number(DB.daily.find(d=>d.brandId===bid&&d.date===ds&&d.channel===ch)?.[f]||0);
 function chActual(bid,ym,ch){
   const ds=dailyOf(bid,ym).filter(d=>d.channel===ch);
   if(ds.length) return {v:ds.reduce((a,d)=>a+Number(d.amount||0),0), daily:true};
@@ -2875,7 +2876,7 @@ function chActual(bid,ym,ch){
 function monthChannels(bid,ym){
   const cur=(brandOf(bid)?.channels||[]).filter(Boolean), out=[...cur];
   const add=ch=>{ if(ch && !out.includes(ch)) out.push(ch); };
-  dailyOf(bid,ym).forEach(d=>{ if(Number(d.amount||0)||Number(d.cost||0)) add(d.channel); });
+  dailyOf(bid,ym).forEach(d=>{ if(Number(d.amount||0)||Number(d.cost||0)||Number(d.fee||0)||Number(d.ship||0)) add(d.channel); });
   salesOf(bid,ym).forEach(r=>{ if(Number(r.goal||0)||Number(r.actual||0)) add(r.channel); });
   return out;
 }
@@ -4657,10 +4658,12 @@ function plOf(bid,ym){
   const vatRows=cs.filter(c=>k(c)==='부가세');
   const vatAuto=!vatRows.length, vat=vatAuto?Math.round(gross/11):vatRows.reduce((a,c)=>a+Number(c.amount||0),0);
   const expRows=cs.filter(c=>!['원가','부가세'].includes(k(c)));
-  const fee=expRows.filter(c=>k(c)==='수수료').reduce((a,c)=>a+Number(c.amount||0),0);
-  const other=expRows.filter(c=>k(c)!=='수수료').reduce((a,c)=>a+Number(c.amount||0),0);
-  const gp=gross-vat-cogs, opex=fee+other, op=gp-opex;
-  return {gross,cogs,dCogs,cogsRows,vat,vatAuto,vatRows,expRows,fee,other,gp,opex,op};
+  const dFee=dailyOf(bid,ym).reduce((a,d)=>a+Number(d.fee||0),0), dShip=dailyOf(bid,ym).reduce((a,d)=>a+Number(d.ship||0),0);
+  const fee=dFee+expRows.filter(c=>k(c)==='수수료').reduce((a,c)=>a+Number(c.amount||0),0);
+  const ship=dShip+expRows.filter(c=>k(c)==='포장·배송비').reduce((a,c)=>a+Number(c.amount||0),0);
+  const other=expRows.filter(c=>!['수수료','포장·배송비'].includes(k(c))).reduce((a,c)=>a+Number(c.amount||0),0);
+  const gp=gross-vat-cogs, opex=fee+ship+other, op=gp-opex;
+  return {gross,cogs,dCogs,cogsRows,vat,vatAuto,vatRows,expRows,fee,dFee,ship,dShip,other,gp,opex,op};
 }
 function salesView(){
   const b=brandOf(UI.brand), ym=UI.ym, chs=monthChannels(b.id,ym);
@@ -4694,7 +4697,7 @@ function salesView(){
     <i class="pl__op">=</i>
     <div class="pl__c"><p>매출총이익</p><b class="${P.gp<0?'is-bad':''}">${P.gp<0?'-':''}${won(Math.abs(P.gp))}</b><span>이익률 ${PR(P.gp)}</span></div>
     <i class="pl__op">−</i>
-    <div class="pl__c"><p>비용</p><b>${won(P.opex)}</b><span>수수료 ${won(P.fee)} · 그 외 ${won(P.other)}</span></div>
+    <div class="pl__c"><p>비용</p><b>${won(P.opex)}</b><span>수수료 ${won(P.fee)} · 배송비 ${won(P.ship)} · 그 외 ${won(P.other)}</span></div>
     <i class="pl__op">=</i>
     <div class="pl__c pl__c--end"><p>영업이익</p><b class="${P.op<0?'is-bad':''}">${P.op<0?'-':''}${won(Math.abs(P.op))}</b><span>이익률 ${PR(P.op)}</span></div>
   </section>
@@ -4738,16 +4741,16 @@ function salesView(){
   </section>
 
   <section class="card sv-card">
-    <div class="card__hd"><h3>일별 · 유통사별 입력</h3><span class="eyebrow" style="margin-left:auto">매출은 결제 금액(부가세 포함, 반품 차감) · 원가는 팔린 제품 원가 · 입력하면 자동 저장</span></div>
+    <div class="card__hd"><h3>일별 · 유통사별 입력</h3><span class="eyebrow" style="margin-left:auto">매출은 결제 금액(부가세 포함, 반품 차감) · 원가는 팔린 제품 원가 · 수수료·배송비는 채널 정산 자료 금액 그대로 · 입력하면 자동 저장</span></div>
     <div class="sv-gridwrap"><table class="dt sv-grid">
-      <thead><tr><th rowspan="2">날짜</th>${chs.map((ch,i)=>`<th class="num sv-ch sv-l" colspan="2" style="--c:${cc(i)}">${esc(ch)}${old(ch)}</th>`).join('')}<th class="num sv-ch sv-l sv-tot" colspan="2" style="--c:#1A1D23">합계</th></tr>
-        <tr class="sv-sub">${[...chs,''].map((_,i)=>{ const t=i===chs.length?' sv-tot':''; return `<th class="num sv-l${t}">매출</th><th class="num sv-cc${t}">원가</th>`; }).join('')}</tr></thead>
-      <tbody>${days.map(ds=>{ const t=dTot(ds), tc=chs.reduce((a,ch)=>a+dayCost(b.id,ds,ch),0), w=wd(ds);
-        const cell=(v,ch,f)=>`<td class="num${f==='amount'?' sv-l':' sv-cc'}"><input class="numin${f==='cost'?' sv-cost':''}" type="text" inputmode="numeric" value="${v?won(v):''}" placeholder="" data-day="${ds}" data-ch="${esc(ch)}" data-f="${f}" /></td>`;
+      <thead><tr><th rowspan="2">날짜</th>${chs.map((ch,i)=>`<th class="num sv-ch sv-l" colspan="4" style="--c:${cc(i)}">${esc(ch)}${old(ch)}</th>`).join('')}<th class="num sv-ch sv-l sv-tot" colspan="4" style="--c:#1A1D23">합계</th></tr>
+        <tr class="sv-sub">${[...chs,''].map((_,i)=>{ const t=i===chs.length?' sv-tot':''; return `<th class="num sv-l${t}">매출</th><th class="num sv-cc${t}">원가</th><th class="num sv-cc${t}">수수료</th><th class="num sv-cc${t}">배송비</th>`; }).join('')}</tr></thead>
+      <tbody>${days.map(ds=>{ const t=dTot(ds), tc=chs.reduce((a,ch)=>a+dayCost(b.id,ds,ch),0), tf=chs.reduce((a,ch)=>a+dayF(b.id,ds,ch,'fee'),0), tsh=chs.reduce((a,ch)=>a+dayF(b.id,ds,ch,'ship'),0), w=wd(ds);
+        const cell=(v,ch,f)=>`<td class="num${f==='amount'?' sv-l':' sv-cc'}"><input class="numin${f!=='amount'?' sv-cost':''}" type="text" inputmode="numeric" value="${v?won(v):''}" placeholder="" data-day="${ds}" data-ch="${esc(ch)}" data-f="${f}" /></td>`;
         return `<tr class="${ds===TODAY?'is-today':''} ${w===0||w===6?'is-we':''}"><td class="sv-day ${w===0?'sun':''}">${Number(ds.slice(5,7))}/${Number(ds.slice(8))} <em>${'일월화수목금토'[w]}</em></td>
-          ${chs.map(ch=>cell(dayAmt(b.id,ds,ch),ch,'amount')+cell(dayCost(b.id,ds,ch),ch,'cost')).join('')}
-          <td class="num sv-l sv-tot"><b>${t?won(t):''}</b></td><td class="num sv-cc sv-tot">${tc?won(tc):''}</td></tr>`; }).join('')}</tbody>
-      <tfoot><tr><td>합계</td>${rows.map(r=>{ const c=dailyOf(b.id,ym).filter(d=>d.channel===r.channel).reduce((a,d)=>a+Number(d.cost||0),0); return `<td class="num sv-l">${won(r.actual)}</td><td class="num sv-cc">${won(c)}</td>`; }).join('')}<td class="num sv-l sv-tot">${won(actual)}</td><td class="num sv-cc sv-tot">${won(P.dCogs)}</td></tr></tfoot>
+          ${chs.map(ch=>cell(dayAmt(b.id,ds,ch),ch,'amount')+cell(dayCost(b.id,ds,ch),ch,'cost')+cell(dayF(b.id,ds,ch,'fee'),ch,'fee')+cell(dayF(b.id,ds,ch,'ship'),ch,'ship')).join('')}
+          <td class="num sv-l sv-tot"><b>${t?won(t):''}</b></td><td class="num sv-cc sv-tot">${tc?won(tc):''}</td><td class="num sv-cc sv-tot">${tf?won(tf):''}</td><td class="num sv-cc sv-tot">${tsh?won(tsh):''}</td></tr>`; }).join('')}</tbody>
+      <tfoot><tr><td>합계</td>${rows.map(r=>{ const ds=dailyOf(b.id,ym).filter(d=>d.channel===r.channel), sm=f=>ds.reduce((a,d)=>a+Number(d[f]||0),0); return `<td class="num sv-l">${won(r.actual)}</td><td class="num sv-cc">${won(sm('cost'))}</td><td class="num sv-cc">${won(sm('fee'))}</td><td class="num sv-cc">${won(sm('ship'))}</td>`; }).join('')}<td class="num sv-l sv-tot">${won(actual)}</td><td class="num sv-cc sv-tot">${won(P.dCogs)}</td><td class="num sv-cc sv-tot">${won(P.dFee)}</td><td class="num sv-cc sv-tot">${won(P.dShip)}</td></tr></tfoot>
     </table></div>
   </section>
 
@@ -4764,7 +4767,9 @@ function salesView(){
         ${P.cogsRows.map(c=>`<tr class="dt__click" data-edit-cost="${c.id}"><td><span class="st st--plan">원가</span></td><td>${esc(c.name)}</td><td class="num">${won(c.amount)}</td></tr>`).join('')}
         ${!P.cogs?`<tr class="sv-auto"><td></td><td>일별 입력표에 원가를 넣거나 '원가'로 비용을 추가하세요</td><td class="num">0</td></tr>`:''}
         <tr class="sv-grp"><td colspan="2">비용</td><td class="num">${won(P.opex)}</td></tr>
-        ${!P.expRows.length?`<tr class="sv-auto"><td></td><td>수수료·광고비·인건비 등을 '비용 추가'로 넣으세요</td><td class="num">0</td></tr>`:''}
+        ${P.dFee?`<tr class="sv-auto"><td><span class="st st--plan">수수료</span></td><td>일별 · 유통사별 입력 수수료 합계</td><td class="num">${won(P.dFee)}</td></tr>`:''}
+        ${P.dShip?`<tr class="sv-auto"><td><span class="st st--plan">포장·배송비</span></td><td>일별 · 유통사별 입력 배송비 합계</td><td class="num">${won(P.dShip)}</td></tr>`:''}
+        ${!P.expRows.length&&!P.dFee&&!P.dShip?`<tr class="sv-auto"><td></td><td>광고비·인건비 등을 '비용 추가'로 넣으세요</td><td class="num">0</td></tr>`:''}
         ${P.expRows.map(c=>`<tr class="dt__click" data-edit-cost="${c.id}"><td><span class="st st--plan">${esc(c.kind||'기타')}</span></td><td>${esc(c.name)}</td><td class="num">${won(c.amount)}</td></tr>`).join('')}
       </tbody>
       <tfoot><tr><td>합계</td><td></td><td class="num">${won(P.cogs+P.vat+P.opex)}</td></tr></tfoot>
@@ -4777,7 +4782,7 @@ const LS_KINDS=['반지','귀걸이','목걸이','팔찌','기타'];
 const LS_MATS=['14K-18K','925 실버','서지컬 스틸','신주·브라스','소재 미확인'];
 /* 채널별 판매 수수료(%) 기본값 — 화면에서 고치면 채널마다 따로 기억 */
 const LS_CH={'자사몰':3.3,'29CM':30,'W컨셉':32,'ZVZO':25,'무신사':30,'쿠팡':15,'오프라인 팝업':4};
-const LS_DEF={q:'',kind:'',mat:'',st:'',yr:'',qt:'',se:'',ch:'자사몰',fees:{...LS_CH},disc:0,pack:3000,costx:15,extra:21,target:25,
+const LS_DEF={q:'',kind:'',mat:'',st:'',yr:'',qt:'',se:'',ch:'자사몰',fees:{...LS_CH},disc:0,pack:3000,ship:0,costx:15,extra:21,target:25,
   mult:{'14K-18K':2,'925 실버':4,'서지컬 스틸':6,'신주·브라스':6,'소재 미확인':6},catMult:{},sort:'',dir:1,sel:''};
 const LS_CAT_MULT=3; /* 옷 브랜드 카테고리별 배수 기본값 */
 const LS_SEASONS=['25 FALL','25 WINTER','26 SPRING','26 SUMMER','26 FALL','26 WINTER'];
@@ -4797,7 +4802,7 @@ function lsState(){
 }
 const lsFee=s=>Number(s.fees[s.ch]??LS_CH[s.ch]??0);
 /* 판매 조건·배수는 브랜드마다 따로 저장 — 화면에 쓰는 값(s.ch 등)은 지금 브랜드 값으로 바꿔 끼움 */
-const LS_COND=['ch','disc','pack','costx','extra','target'];
+const LS_COND=['ch','pack','ship','costx','extra','target'];
 const lsChannels=bid=>(brandOf(bid)?.channels||[]).filter(Boolean);
 function lsCond(s,bid){
   if(!s.cond){ /* 예전 값은 원래 설정하던 비비케이트 것으로 */
@@ -4805,13 +4810,14 @@ function lsCond(s,bid){
   }
   const prev=s.cond[s._bid]; if(prev && s._bid!==bid) LS_COND.forEach(k=>prev[k]=s[k]);
   let c=s.cond[bid];
-  if(!c) c=s.cond[bid]={ch:'자사몰',fees:{...LS_CH},disc:0,pack:3000,costx:15,extra:21,target:25,mult:{...LS_DEF.mult},catMult:{}};
+  if(!c) c=s.cond[bid]={ch:'자사몰',fees:{...LS_CH},disc:0,pack:3000,ship:0,costx:15,extra:21,target:25,mult:{...LS_DEF.mult},catMult:{}};
   for(const k in LS_CH) if(c.fees[k]===undefined) c.fees[k]=LS_CH[k];
   if(c.costx===undefined) c.costx=15;
+  if(c.ship===undefined) c.ship=0;
   if(s._bid===bid) LS_COND.forEach(k=>c[k]=s[k]); /* 같은 브랜드면 지금 입력값을 저장 */
   /* 판매 채널은 설정 > 브랜드의 판매 채널만 — 지워진 채널을 고르고 있었으면 첫 채널로 */
   const chs=lsChannels(bid); if(!chs.includes(c.ch)) c.ch=chs[0]||'';
-  Object.assign(s,{ch:c.ch,fees:c.fees,disc:c.disc,pack:c.pack,costx:c.costx,extra:c.extra,target:c.target,mult:c.mult,catMult:c.catMult||(c.catMult={})});
+  Object.assign(s,{ch:c.ch,fees:c.fees,disc:0,pack:c.pack,ship:c.ship,costx:c.costx,extra:c.extra,target:c.target,mult:c.mult,catMult:c.catMult||(c.catMult={})});
   s._bid=bid; return s;
 }
 /* 주얼리 종류 밖의 품목이 있으면 옷 브랜드 — 소재 대신 카테고리(종류)별 배수 */
@@ -4820,7 +4826,7 @@ const lsKinds=(bid,app)=>{ if(!app) return LS_KINDS; const c={}; productsOf(bid)
 const lsQ=p=>{ const d=p.launch||''; if(!d) return {y:p.year||'',q:p.quarter||''}; const m=+d.slice(5,7); return {y:p.year||d.slice(0,4), q:p.quarter||('Q'+(Math.floor((m-1)/3)+1))}; };
 /* 원가 = 입고가 + 부대비(원) */
 const lsCost=(inP,pack)=>Math.round(Number(inP||0)+Number(pack??3000));
-/* 판매가 → 할인 → 채널 수수료 → 부가세 → 원가(입고가+부대비) = 공헌이익 */
+/* 판매가(결제 금액) → 채널 수수료 → 부가세 → 배송비 → 원가(입고가+부대비) = 공헌이익 */
 function lsCalc(p,s){
   const inP=Number(p.inPrice||0), price=Number(p.price||0), list=Number(p.listPrice||0)||price;
   const r={inP,price,list,cost:null,mul:null,rec:null,contrib:null,cpct:null,maxd:null};
@@ -4831,13 +4837,13 @@ function lsCalc(p,s){
   r.rec=Math.floor(r.cost*m/1000)*1000;
   if(!price) return r;
   r.mul=price/r.cost;
-  r.discAmt=price*Number(s.disc||0)/100; r.eff=price-r.discAmt;
+  r.eff=price; r.ship=Number(s.ship||0);
   r.feeAmt=r.eff*fee;
   r.vat=(r.eff-r.feeAmt)/11;
   r.net=r.eff-r.feeAmt-r.vat;
-  r.contrib=Math.round(r.net-r.cost); r.cpct=r.net?r.contrib/r.net:0;
+  r.contrib=Math.round(r.net-r.ship-r.cost); r.cpct=r.net?r.contrib/r.net:0;
   const k=1-target;
-  if(k>0 && fee<1){ const needNet=r.cost/k, needP=needNet*1.1/(1-fee); r.maxd=Math.max(0,1-needP/price); }
+  if(k>0 && fee<1){ const needNet=(r.cost+r.ship)/k, needP=needNet*1.1/(1-fee); r.maxd=Math.max(0,1-needP/price); }
   return r;
 }
 function lsRows(bid,s){
@@ -4907,17 +4913,16 @@ function lsBreak(rows,s){
   const hd=t=>`<div class="pv-card__hd"><div class="pv-break__name"><h3>손익 구조</h3><small>${t}</small></div></div>`;
   if(!pick) return hd('제품을 고르면 여기에 계산됩니다')+`<div class="pv-card__bd"><div class="pv-empty">입고가와 판매가가 있는 제품이 없습니다</div></div>`;
   const {p,c}=pick, fee=lsFee(s);
-  const head=`<div class="pv-card__hd">${p.img?`<img class="pv-thumb" src="${esc(p.img)}" alt="">`:'<span class="pv-thumb"></span>'}<div class="pv-break__name"><h3>${esc(p.name)}</h3><small>${esc(s.ch)} · 수수료 ${fee}% · 할인 ${s.disc}%</small></div></div>`;
+  const head=`<div class="pv-card__hd">${p.img?`<img class="pv-thumb" src="${esc(p.img)}" alt="">`:'<span class="pv-thumb"></span>'}<div class="pv-break__name"><h3>${esc(p.name)}</h3><small>${esc(s.ch)} · 수수료 ${fee}% · 배송비 ${won(Number(s.ship||0))}원</small></div></div>`;
   if(c.contrib==null) return head+`<div class="pv-card__bd"><div class="pv-empty">${c.inP?'판매가':'입고가'}를 입력하면 계산됩니다</div></div>`;
   const L=(k,v,cls='')=>`<div class="pv-line ${cls}"><span>${k}</span><b>${v}</b></div>`;
   const neg=n=>n?'−'+won(Math.round(n)):'0';
   return head+`<div class="pv-card__bd">
     ${L('판매가',won(c.price))}
-    ${L(`할인 ${s.disc}%`,neg(c.discAmt),'pv-line--minus')}
-    ${L('실판매가',won(Math.round(c.eff)),'pv-line--sub')}
     ${L(`채널 수수료 ${fee}%`,neg(c.feeAmt),'pv-line--minus')}
     ${L('부가세',neg(c.vat),'pv-line--minus')}
     ${L('정산액 (부가세 제외)',won(Math.round(c.net)),'pv-line--sub')}
+    ${L('배송비',neg(c.ship),'pv-line--minus')}
     ${L(`원가 (입고가 + 부대비 ${won(Number(s.pack??3000))})`,neg(c.cost),'pv-line--minus')}
     <div class="pv-total ${c.contrib<0?'is-bad':''}"><span>공헌이익</span><div><b>${won(c.contrib)}</b><em>${Math.round(c.cpct*100)}%</em></div></div>
     <div class="pv-hint">${c.maxd==null?'이 조건에서는 목표 공헌이익을 맞출 수 없습니다':`목표 공헌이익 ${s.target}%를 지키는 최대 할인 <b>${Math.round(c.maxd*100)}%</b>`}</div>
@@ -4972,8 +4977,8 @@ function productsView(){
         <div class="pv-card__bd">
           <div class="pv-kv"><span>판매 채널</span><select id="ls_ch" data-native>${lsChannels(b.id).map(k=>`<option ${k===s.ch?'selected':''}>${esc(k)}</option>`).join('')||'<option value="">설정에서 채널 추가</option>'}</select></div>
           <div class="pv-kv"><span>채널 수수료</span>${num('ls_fee',lsFee(s),'%',0.1)}</div>
-          <div class="pv-kv"><span>할인율</span><div class="pv-slider"><input type="range" id="ls_disc" min="0" max="70" step="1" value="${s.disc}"><b id="ls_disc_v">${s.disc}%</b></div></div>
           <div class="pv-kv"><span>부대비</span>${num('ls_pack',s.pack??3000,'원',100,1)}</div>
+          <div class="pv-kv"><span>배송비</span>${num('ls_ship',s.ship||0,'원',100,1)}</div>
           <div class="pv-kv"><span>목표 공헌이익</span>${num('ls_target',s.target,'%')}</div>
         </div>
       </div>
@@ -5026,8 +5031,7 @@ function lsBind(){
   [['ls_mat','mat'],['ls_st','st'],['ls_yr','yr'],['ls_qt','qt'],['ls_se','se']].forEach(([id,k])=>on(id,'change',e=>{ s[k]=e.target.value; lsRefresh(); }));
   on('ls_ch','change',e=>{ s.ch=e.target.value; const f=$id('ls_fee'); if(f) f.value=lsFee(s); lsRefresh(); });
   on('ls_fee','input',e=>{ s.fees[s.ch]=Math.min(100,Math.max(0,Number(e.target.value||0))); lsRefresh(); });
-  [['ls_pack','pack'],['ls_target','target']].forEach(([id,k])=>on(id,'input',e=>{ s[k]=Number(e.target.value||0); lsRefresh(); }));
-  on('ls_disc','input',e=>{ s.disc=Number(e.target.value||0); const v=$id('ls_disc_v'); if(v) v.textContent=s.disc+'%'; lsRefresh(); });
+  [['ls_pack','pack'],['ls_ship','ship'],['ls_target','target']].forEach(([id,k])=>on(id,'input',e=>{ s[k]=Number(e.target.value||0); lsRefresh(); }));
   document.querySelectorAll('[data-lsmult]').forEach(el=>el.addEventListener('input',()=>{ s.mult[el.dataset.lsmult]=Number(el.value||0); lsRefresh(); }));
   document.querySelectorAll('[data-lscat]').forEach(el=>el.addEventListener('input',()=>{ s.catMult[el.dataset.lscat]=Number(el.value||0); lsRefresh(); }));
   lsSegBind();
@@ -5557,6 +5561,7 @@ const KIND={
     props:d=>({ '항목':{title:[{text:{content:`${brandOf(d.brandId)?.name||''} ${d.date} ${d.channel}`}}]},
       '브랜드':{select:{name:brandOf(d.brandId)?.name||''}}, '날짜':{date:{start:d.date}},
       '채널':{select:{name:d.channel}}, '매출':{number:Number(d.amount||0)}, '원가':{number:Number(d.cost||0)},
+      '수수료':{number:Number(d.fee||0)}, '배송비':{number:Number(d.ship||0)},
       '로컬ID':{rich_text:[{text:{content:d.id}}]} }) },
   plans:{ db:'plans',
     props:p=>({ '주제':{title:[{text:{content:p.title||''}}]}, '브랜드':{select:{name:brandOf(p.brandId)?.name||''}},
@@ -5837,7 +5842,7 @@ const brandByName=nm=>{
       if(kind==='refs'){ Object.assign(rec,{brandId:brandByName(sel(P['브랜드'])), cat:sel(P['분류'])||'릴스',
         title:ttl(P['제목']), url:P['링크']?.url||'', memo:txt(P['메모'])}); }
       if(kind==='daily'){ Object.assign(rec,{brandId:brandByName(sel(P['브랜드'])), date:P['날짜']?.date?.start||'',
-        channel:sel(P['채널']), amount:P['매출']?.number||0, cost:P['원가']?.number||0}); }
+        channel:sel(P['채널']), amount:P['매출']?.number||0, cost:P['원가']?.number||0, fee:P['수수료']?.number||0, ship:P['배송비']?.number||0}); }
       if(kind==='costs'){ Object.assign(rec,{brandId:brandByName(sel(P['브랜드'])), ym:txt(P['월']),
         kind:sel(P['구분'])||'기타', name:ttl(P['항목']), amount:P['금액']?.number||0}); }
       if(kind==='products'){ Object.assign(rec,{brandId:brandByName(sel(P['브랜드'])), name:ttl(P['제품명']),
@@ -6002,11 +6007,11 @@ function bind(){
     el.onchange=()=>{
       const ds=el.dataset.day, ch=el.dataset.ch, v=Number(String(el.value||'').replace(/[^\d.-]/g,''))||0;
       let r=DB.daily.find(d=>d.brandId===UI.brand&&d.date===ds&&d.channel===ch);
-      const f=el.dataset.f==='cost'?'cost':'amount';
-      if(!r){ if(!v) return; r={id:uid(),brandId:UI.brand,date:ds,channel:ch,amount:0,cost:0}; DB.daily.push(r); }
+      const f=['cost','fee','ship'].includes(el.dataset.f)?el.dataset.f:'amount';
+      if(!r){ if(!v) return; r={id:uid(),brandId:UI.brand,date:ds,channel:ch,amount:0,cost:0,fee:0,ship:0}; DB.daily.push(r); }
       r[f]=v; r.dirty=true; save(); render();
     };
-    el.onkeydown=e=>{ if(e.key==='Enter'){ e.preventDefault(); const all=[...document.querySelectorAll('[data-day]')]; const i=all.indexOf(el), cols=(monthChannels(UI.brand,UI.ym).length||1)*2; el.blur(); setTimeout(()=>{ const nx=document.querySelectorAll('[data-day]')[i+cols]; if(nx) nx.focus(); },30); } };
+    el.onkeydown=e=>{ if(e.key==='Enter'){ e.preventDefault(); const all=[...document.querySelectorAll('[data-day]')]; const i=all.indexOf(el), cols=(monthChannels(UI.brand,UI.ym).length||1)*4; el.blur(); setTimeout(()=>{ const nx=document.querySelectorAll('[data-day]')[i+cols]; if(nx) nx.focus(); },30); } };
   });
   document.querySelectorAll('[data-act]').forEach(el=>el.onclick=()=>act(el.dataset.act));
   if(UI.tab==='calendar') bindCalendar();
