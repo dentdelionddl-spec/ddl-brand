@@ -4741,16 +4741,16 @@ function salesView(){
   </section>
 
   <section class="card sv-card">
-    <div class="card__hd"><h3>일별 · 유통사별 입력</h3><span class="eyebrow" style="margin-left:auto">매출은 결제 금액(부가세 포함, 반품 차감) · 원가는 팔린 제품 원가 · 수수료·배송비는 채널 정산 자료 금액 그대로 · 입력하면 자동 저장</span></div>
+    <div class="card__hd"><h3>일별 · 유통사별 입력</h3><span class="eyebrow" style="margin-left:auto">매출은 결제 금액(부가세 포함, 반품 차감) · 원가는 팔린 제품 원가 · 수수료·배송비는 아래 비용에 추가 · 입력하면 자동 저장</span></div>
     <div class="sv-gridwrap"><table class="dt sv-grid">
-      <thead><tr><th rowspan="2">날짜</th>${chs.map((ch,i)=>`<th class="num sv-ch sv-l" colspan="4" style="--c:${cc(i)}">${esc(ch)}${old(ch)}</th>`).join('')}<th class="num sv-ch sv-l sv-tot" colspan="4" style="--c:#1A1D23">합계</th></tr>
-        <tr class="sv-sub">${[...chs,''].map((_,i)=>{ const t=i===chs.length?' sv-tot':''; return `<th class="num sv-l${t}">매출</th><th class="num sv-cc${t}">원가</th><th class="num sv-cc${t}">수수료</th><th class="num sv-cc${t}">배송비</th>`; }).join('')}</tr></thead>
-      <tbody>${days.map(ds=>{ const t=dTot(ds), tc=chs.reduce((a,ch)=>a+dayCost(b.id,ds,ch),0), tf=chs.reduce((a,ch)=>a+dayF(b.id,ds,ch,'fee'),0), tsh=chs.reduce((a,ch)=>a+dayF(b.id,ds,ch,'ship'),0), w=wd(ds);
+      <thead><tr><th rowspan="2">날짜</th>${chs.map((ch,i)=>`<th class="num sv-ch sv-l" colspan="2" style="--c:${cc(i)}">${esc(ch)}${old(ch)}</th>`).join('')}<th class="num sv-ch sv-l sv-tot" colspan="2" style="--c:#1A1D23">합계</th></tr>
+        <tr class="sv-sub">${[...chs,''].map((_,i)=>{ const t=i===chs.length?' sv-tot':''; return `<th class="num sv-l${t}">매출</th><th class="num sv-cc${t}">원가</th>`; }).join('')}</tr></thead>
+      <tbody>${days.map(ds=>{ const t=dTot(ds), tc=chs.reduce((a,ch)=>a+dayCost(b.id,ds,ch),0), w=wd(ds);
         const cell=(v,ch,f)=>`<td class="num${f==='amount'?' sv-l':' sv-cc'}"><input class="numin${f!=='amount'?' sv-cost':''}" type="text" inputmode="numeric" value="${v?won(v):''}" placeholder="" data-day="${ds}" data-ch="${esc(ch)}" data-f="${f}" /></td>`;
         return `<tr class="${ds===TODAY?'is-today':''} ${w===0||w===6?'is-we':''}"><td class="sv-day ${w===0?'sun':''}">${Number(ds.slice(5,7))}/${Number(ds.slice(8))} <em>${'일월화수목금토'[w]}</em></td>
-          ${chs.map(ch=>cell(dayAmt(b.id,ds,ch),ch,'amount')+cell(dayCost(b.id,ds,ch),ch,'cost')+cell(dayF(b.id,ds,ch,'fee'),ch,'fee')+cell(dayF(b.id,ds,ch,'ship'),ch,'ship')).join('')}
-          <td class="num sv-l sv-tot"><b>${t?won(t):''}</b></td><td class="num sv-cc sv-tot">${tc?won(tc):''}</td><td class="num sv-cc sv-tot">${tf?won(tf):''}</td><td class="num sv-cc sv-tot">${tsh?won(tsh):''}</td></tr>`; }).join('')}</tbody>
-      <tfoot><tr><td>합계</td>${rows.map(r=>{ const ds=dailyOf(b.id,ym).filter(d=>d.channel===r.channel), sm=f=>ds.reduce((a,d)=>a+Number(d[f]||0),0); return `<td class="num sv-l">${won(r.actual)}</td><td class="num sv-cc">${won(sm('cost'))}</td><td class="num sv-cc">${won(sm('fee'))}</td><td class="num sv-cc">${won(sm('ship'))}</td>`; }).join('')}<td class="num sv-l sv-tot">${won(actual)}</td><td class="num sv-cc sv-tot">${won(P.dCogs)}</td><td class="num sv-cc sv-tot">${won(P.dFee)}</td><td class="num sv-cc sv-tot">${won(P.dShip)}</td></tr></tfoot>
+          ${chs.map(ch=>cell(dayAmt(b.id,ds,ch),ch,'amount')+cell(dayCost(b.id,ds,ch),ch,'cost')).join('')}
+          <td class="num sv-l sv-tot"><b>${t?won(t):''}</b></td><td class="num sv-cc sv-tot">${tc?won(tc):''}</td></tr>`; }).join('')}</tbody>
+      <tfoot><tr><td>합계</td>${rows.map(r=>{ const ds=dailyOf(b.id,ym).filter(d=>d.channel===r.channel), sm=f=>ds.reduce((a,d)=>a+Number(d[f]||0),0); return `<td class="num sv-l">${won(r.actual)}</td><td class="num sv-cc">${won(sm('cost'))}</td>`; }).join('')}<td class="num sv-l sv-tot">${won(actual)}</td><td class="num sv-cc sv-tot">${won(P.dCogs)}</td></tr></tfoot>
     </table></div>
   </section>
 
@@ -6031,7 +6031,7 @@ function bind(){
       if(!r){ if(!v) return; r={id:uid(),brandId:UI.brand,date:ds,channel:ch,amount:0,cost:0,fee:0,ship:0}; DB.daily.push(r); }
       r[f]=v; r.dirty=true; save(); render();
     };
-    el.onkeydown=e=>{ if(e.key==='Enter'){ e.preventDefault(); const all=[...document.querySelectorAll('[data-day]')]; const i=all.indexOf(el), cols=(monthChannels(UI.brand,UI.ym).length||1)*4; el.blur(); setTimeout(()=>{ const nx=document.querySelectorAll('[data-day]')[i+cols]; if(nx) nx.focus(); },30); } };
+    el.onkeydown=e=>{ if(e.key==='Enter'){ e.preventDefault(); const all=[...document.querySelectorAll('[data-day]')]; const i=all.indexOf(el), cols=(monthChannels(UI.brand,UI.ym).length||1)*2; el.blur(); setTimeout(()=>{ const nx=document.querySelectorAll('[data-day]')[i+cols]; if(nx) nx.focus(); },30); } };
   });
   document.querySelectorAll('[data-act]').forEach(el=>el.onclick=()=>act(el.dataset.act));
   if(UI.tab==='calendar') bindCalendar();
