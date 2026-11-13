@@ -95,7 +95,7 @@ export default async function handler(req, res) {
         Authorization: 'Bearer '+process.env.NOTION_TOKEN,
         'Notion-Version': UPLOAD_VERSION,
       };
-      const c = await fetch(NOTION+'/file_uploads', {
+      const c = await nfetch(NOTION+'/file_uploads', {
         method: 'POST',
         headers: { ...uh, 'Content-Type': 'application/json' },
         body: JSON.stringify({ filename: filename || 'upload', content_type: content_type || 'application/octet-stream' }),
@@ -135,7 +135,7 @@ export default async function handler(req, res) {
     if (action === 'update' || action === 'delete') {
       const { page_id, properties } = body;
       if (!page_id) return res.status(400).json({ message: 'page_id가 없습니다' });
-      const p = await fetch(NOTION+'/pages/'+encodeURIComponent(page_id), { headers: head });
+      const p = await nfetch(NOTION+'/pages/'+encodeURIComponent(page_id), { headers: head });
       const pg = await p.json();
       if (!p.ok) return res.status(p.status).json({ message: pg.message || '페이지를 찾지 못했습니다' });
       if (!isAllowedDb(pg.parent?.database_id)) return res.status(403).json({ message: '허용되지 않은 DB의 페이지입니다' });
@@ -218,11 +218,22 @@ async function loadBrands(head) {
 }
 
 /* ---------- 도우미 ---------- */
+/* 노션 요청 제한(429)에 걸리면 Retry-After 만큼 기다렸다 다시 (최대 3번, 서버 시간 제한 안에서) */
+const sleep = ms => new Promise(r => setTimeout(r, ms));
+async function nfetch(url, opts) {
+  for (let i = 0; ; i++) {
+    const r = await fetch(url, opts);
+    if (r.status !== 429 || i >= 3) return r;
+    const ra = Number(r.headers.get('retry-after'));
+    await sleep(Math.min(2500, (ra > 0 ? ra * 1000 : 0) || 600 * 2 ** i) + Math.random() * 300);
+  }
+}
+
 async function queryAll(head, database_id, { filter, sorts, page_size }) {
   let results = [];
   let cursor;
   do {
-    const r = await fetch(NOTION+'/databases/'+database_id+'/query', {
+    const r = await nfetch(NOTION+'/databases/'+database_id+'/query', {
       method: 'POST',
       headers: head,
       body: JSON.stringify({ filter, sorts, page_size: page_size || 100, start_cursor: cursor }),

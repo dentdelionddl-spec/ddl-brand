@@ -5647,7 +5647,15 @@ function askAdminKey(){
     __keyAsk=null; r(!!v);
   }));
 }
+/* 노션 요청은 한 번에 최대 2개씩 — 한꺼번에 몰려 요청 제한에 걸리지 않게 */
+let __apiActive=0; const __apiQ=[];
 async function api(payload, retried){
+  if(__apiActive>=2) await new Promise(r=>__apiQ.push(r));
+  __apiActive++;
+  try{ return await __api(payload, retried); }
+  finally{ __apiActive--; const n=__apiQ.shift(); if(n) n(); }
+}
+async function __api(payload, retried, tries=0){
   const url=DB.settings.workerUrl;
   if(!url) throw new Error('노션 프록시 주소가 없습니다');
   const key=adminKey();
@@ -5660,8 +5668,13 @@ async function api(payload, retried){
   const json=await res.json().catch(()=>({}));
   if(res.status===401 && !retried){
     /* 그 사이 다른 요청에서 비밀번호를 새로 받았으면 그대로 다시 시도 */
-    if(adminKey() && adminKey()!==key) return api(payload,true);
-    if(!key){ keyBar(); } else if(await askAdminKey()) return api(payload,true); /* 비밀번호가 아예 없으면 상단 입력 칸으로 */
+    if(adminKey() && adminKey()!==key) return __api(payload,true);
+    if(!key){ keyBar(); } else if(await askAdminKey()) return __api(payload,true); /* 비밀번호가 아예 없으면 상단 입력 칸으로 */
+  }
+  /* 요청 제한에 걸리면 잠깐 기다렸다 다시 (1·2·4·8초) */
+  if((res.status===429 || /rate limited/i.test(json.message||'')) && tries<4){
+    await new Promise(r=>setTimeout(r,1000*2**tries+Math.random()*400));
+    return __api(payload, retried, tries+1);
   }
   if(!res.ok) throw new Error(json.message||`요청 실패 (${res.status})`);
   return json;
