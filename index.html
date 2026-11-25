@@ -2676,6 +2676,15 @@ html:root body .mlist.is-sorting .mc:not(.is-lift){transition:transform .2s cubi
   html body #view .pv-t td.m-st{position:absolute;right:16px;top:14px}
   html body #view .pv-t td.m-edit{display:none !important}
 }
+/* 일정(업무 제외): 유형별 형광 포인트색 — 진한 바탕 틴트 + 검정 글씨 */
+html:root body .calx .cell .ev:not(.ev--task):not(.ev--mid):not(.ev--end){background:color-mix(in srgb,var(--c) 26%,#fff) !important;color:#14161C !important;box-shadow:inset 4px 0 0 var(--c),0 0 0 1px color-mix(in srgb,var(--c) 70%,#14161C 10%) inset !important}
+html:root body .calx .cell .ev:not(.ev--task) .evchk{border-color:#14161C !important}
+html:root body .calx .cell .ev:not(.ev--task) .evchk[aria-pressed="true"]{background:#14161C !important;border-color:#14161C !important}
+html:root body .calx .ev:not(.ev--task).ev--mid::before,html:root body .calx .ev:not(.ev--task).ev--end::before{background:var(--c) !important}
+html:root body .mc:not(.mc--task){background:color-mix(in srgb,var(--c) 24%,#fff) !important;box-shadow:inset 4px 0 0 var(--c),0 0 0 1px color-mix(in srgb,var(--c) 70%,#14161C 10%) inset !important}
+html:root body .mc:not(.mc--task) .mt__t,html:root body .mc:not(.mc--task) .mc__tag{color:#14161C !important}
+html:root body .mc:not(.mc--task) .mt__m{color:#4A4F5C !important}
+html:root body .mc:not(.mc--task) .mc__tag{background:color-mix(in srgb,var(--c) 45%,#fff) !important}
 </style>
 </head>
 <body>
@@ -2696,8 +2705,8 @@ const TYPE_HUE = {'EGC':252,'UGC':340,'온라인':205,'오프라인':150,'이벤
 /* 업무 영역 표시색 — 무채색 카드 왼쪽 선만 같은 색 계열에서 고름 */
 const AREA_HUES=[205,150,22,252,340,42,180];
 /* 캘린더 유형 색: 무채색에 가까운 같은 톤 — 콘텐츠는 차가운 회청, 제품은 녹회, 판매는 따뜻한 흙빛 */
-const TYPE_TONE={'피드':'#4E5C72','릴스':'#2C313B','스레드':'#7C879A','UGC':'#7A6A7E','EGC':'#4E5C72',
-  '제품 업로드':'#5C7264','제품 입고':'#878057','공구':'#A26E4C','기획전':'#9A8460','이벤트':'#B4CC1E','온라인':'#5B7884','오프라인':'#7B7265'};
+const TYPE_TONE={'피드':'#7CFF4F','릴스':'#4D7CFF','스레드':'#9DFF00','UGC':'#B26BFF','EGC':'#7CFF4F',
+  '제품 업로드':'#00F5D4','제품 입고':'#D4FF00','공구':'#FF5E5B','기획전':'#FFE600','이벤트':'#FF4FD8','온라인':'#00D1FF','오프라인':'#FF9F1C'};
 const AREA_TONES=['#4E5C72','#5C7264','#A26E4C','#878057','#6C6578','#5B7884','#9A8460'];
 const toneOf=t=>TYPE_TONE[t]||'#646A75';
 const AREA_TONE={'모객':'#4E5C72','제품':'#5C7264','이벤트':'#A26E4C','접객':'#6C6578','기타':'#878057'};
