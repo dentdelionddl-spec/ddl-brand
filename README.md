@@ -9,6 +9,7 @@
 ```
 
 공개 일정은 `/api/schedule` 이 같은 테이블을 읽습니다.
+콘텐츠 **분석** 탭은 `/api/threads-performance` 가 `threads_performance` 를 읽습니다. 같은 관리자·공유 키를 쓰고, 서비스 롤 키는 서버에만 있습니다. 수집기 적용 순서는 `supabase/README.md` 에 있습니다.
 
 ---
 

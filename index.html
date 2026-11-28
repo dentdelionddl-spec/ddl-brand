@@ -1561,6 +1561,40 @@ html body .ustat__n{font-size:24px;font-weight:700}
 html body .ustat__l{font-size:12px;color:var(--ink2);margin-top:4px}
 @media(max-width:760px){.trw{grid-template-columns:16px minmax(0,1fr) auto}.trw__d{display:none}.tprog{display:none}html body .ustat__c:nth-child(odd){border-left:0 !important}html body .ustat{row-gap:14px}}
 
+/* 스레드 성과 — 분석 탭. 기존 카드·숫자 띠 안에서 곡선과 글 목록만 추가 */
+.tp-note{margin:0 0 12px;padding:12px 14px;border-radius:var(--r-lg);background:var(--card);box-shadow:var(--sh);display:flex;justify-content:space-between;gap:12px;align-items:flex-end}
+.tp-note b{display:block;font-size:18px;letter-spacing:-.02em;margin-top:2px}
+.tp-note small{color:var(--ink2);font-size:12px}
+.tp-tools{display:flex;flex-wrap:wrap;gap:8px 14px;align-items:center;margin:12px 0}
+.tp-tools .eyebrow{min-width:42px}
+.tp-chart{background:var(--card);border-radius:var(--r-lg);box-shadow:var(--sh);padding:14px 14px 8px;margin-bottom:12px}
+.tp-chart svg{width:100%;height:auto;display:block}
+.tp-chart text{font-size:11px;fill:var(--mut)}
+.tp-chart .tp-grid{stroke:rgba(17,18,20,.08);stroke-width:1}
+.tp-legend{display:flex;flex-direction:column;gap:6px;margin-top:8px}
+.tp-legend button{display:grid;grid-template-columns:10px minmax(0,1fr) auto;gap:8px;align-items:center;text-align:left;background:transparent;border:0;padding:4px 0;cursor:pointer;font:inherit;color:inherit}
+.tp-legend i{width:10px;height:10px;border-radius:99px}
+.tp-legend span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:12px}
+.tp-post{background:var(--card);border-radius:var(--r-lg);box-shadow:var(--sh);margin-bottom:8px;overflow:hidden}
+.tp-post.is-on{box-shadow:0 0 0 2px var(--ink), var(--sh)}
+.tp-post__main{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:12px;width:100%;text-align:left;background:transparent;border:0;padding:14px 14px 8px;cursor:pointer;font:inherit;color:inherit}
+.tp-post__copy p{margin:6px 0 0;font-size:13px;line-height:1.55;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}
+.tp-meta{display:flex;gap:8px;align-items:center;color:var(--mut);font-size:12px}
+.tp-pill{font-weight:700;color:var(--ink)}
+.tp-nums{display:flex;gap:12px}
+.tp-nums div{text-align:right}
+.tp-nums strong{display:block;font-size:16px}
+.tp-nums span{font-size:11px;color:var(--mut)}
+.tp-ms{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:6px;padding:0 14px 12px}
+.tp-ms span{background:rgba(17,18,20,.04);border-radius:8px;padding:6px;font-size:11px;color:var(--mut)}
+.tp-ms strong{display:block;color:var(--ink);font-size:13px}
+.tp-ms .is-missing strong{color:var(--alert)}
+.tp-detail{padding:0 14px 14px;display:grid;gap:8px;font-size:13px}
+.tp-detail small{display:block;color:var(--mut);font-size:12px}
+.tp-more{width:100%;margin-top:4px}
+.tp-search{height:30px;border:0;border-radius:var(--r-sm);padding:0 10px;box-shadow:0 0 0 1px var(--line) inset;background:transparent;font:inherit;min-width:160px}
+@media(max-width:760px){.tp-note{flex-direction:column;align-items:flex-start}.tp-post__main{grid-template-columns:1fr}.tp-nums{justify-content:flex-start}.tp-ms{grid-template-columns:repeat(3,minmax(0,1fr))}}
+
 /* 헤더(제목·탭·월 이동)와 카드의 좌우 끝선을 같은 세로선에 맞춤 */
 @media(min-width:761px){ html body .app--side > .main > .topbar{padding-left:0 !important;padding-right:0 !important} }
 
@@ -2786,6 +2820,9 @@ const NOTION_HUB='https://app.notion.com/p/3bd4f7cd6b86816cbc56ef161bf47379';
 const PROXY_URL=/^(localhost|127\.0\.0\.1)$/.test(location.hostname)
   ? location.origin+'/api/notion'
   : 'https://ddl-brand.vercel.app/api/notion';
+const PERF_URL=/^(localhost|127\.0\.0\.1)$/.test(location.hostname)
+  ? location.origin+'/api/threads-performance'
+  : 'https://ddl-brand.vercel.app/api/threads-performance';
 const POLL_MS=(()=>{ const n=Number(new URLSearchParams(location.search).get('poll')); return n>=500 && n<=60000 ? n : 5000; })();
 
 const blank = () => ({
@@ -4355,57 +4392,199 @@ function statsExport(scope){
   document.body.appendChild(a); a.click(); setTimeout(()=>{ URL.revokeObjectURL(a.href); a.remove(); },500);
   toast(rows.length+'건 내려받았습니다',2000);
 }
+/* 분석 탭은 수집된 스레드 성과를 따로 읽는다. 부트스트랩·5초 폴링·localStorage 스냅샷에는 넣지 않는다. */
+const TP={ cache:{}, token:{}, scroll:false };
+const TP_BRANDS={
+  aube:{label:'오브서울'}, factory:{label:'미싱맨'}, vivicate:{label:'비비케이트'},
+  ootn:{label:'오오티엔'}, ruhel:{label:'루엘'}, usuel:{label:'유주엘'}, arikiv:{label:'아리키브'}, ddl:{label:'DDL'}
+};
+const TP_METRICS=[['views','조회'],['likes','좋아요'],['replies','답글'],['reposts','재게시']];
+const TP_HORIZONS=[['t1','T+1'],['t2','T+2'],['t3','T+3'],['t7','T+7'],['t14','T+14'],['t30','T+30']];
+const TP_COLORS=['#675ff2','#0f8b6d','#d26c3c','#3677b5','#9a4f93'];
+const TP_FULL=new Intl.NumberFormat('ko-KR');
+const TP_COMPACT=new Intl.NumberFormat('ko-KR',{notation:'compact',maximumFractionDigits:1});
+function tpPref(){ UI.tp=UI.tp||{range:'all',sort:'recent',metric:'views',limit:5,visible:12,query:'',focus:'',open:''}; return UI.tp; }
+function tpNum(v, compact){ return typeof v==='number' && isFinite(v) ? (compact?TP_COMPACT:TP_FULL).format(v) : '—'; }
+function tpWhen(value){
+  if(!value) return '수집 기록 없음';
+  try{
+    return new Intl.DateTimeFormat('ko-KR',{timeZone:'Asia/Seoul',year:'numeric',month:'numeric',day:'numeric',hour:'2-digit',minute:'2-digit',hourCycle:'h23'}).format(new Date(value))+' KST';
+  }catch(e){ return '수집 기록 없음'; }
+}
+function tpDay(value){
+  if(!value) return '날짜 미정';
+  const d=new Date(value);
+  if(Number.isNaN(d.getTime())) return '날짜 미정';
+  return new Intl.DateTimeFormat('ko-KR',{timeZone:'Asia/Seoul',month:'short',day:'numeric'}).format(d);
+}
+function tpPos(age, minAge, maxAge){
+  if(![age,minAge,maxAge].every(v=>typeof v==='number' && isFinite(v)) || maxAge<=minAge) return 0;
+  const offset=Math.min(Math.max(age-minAge,0), maxAge-minAge);
+  return Math.log1p(offset)/Math.log1p(maxAge-minAge);
+}
+function tpInRange(row, range){
+  if(range==='all') return true;
+  if(!row.publishedAt) return false;
+  return new Date(row.publishedAt).getTime() >= Date.now()-Number(range)*86400000;
+}
+function tpMetricOf(row, metric){
+  const done=row.milestones&&row.milestones.t7&&row.milestones.t7.status==='complete' ? row.milestones.t7.metrics?.[metric] : null;
+  const latest=row.metrics?row.metrics[metric]:null;
+  return typeof done==='number' ? done : (typeof latest==='number'?latest:0);
+}
+async function apiPerf(brand){
+  const headers={'Content-Type':'application/json'};
+  const key=adminKey();
+  if(key) headers['X-Admin-Key']=encodeURIComponent(key);
+  else if(SHARE_KEY) headers['X-Share-Key']=encodeURIComponent(SHARE_KEY);
+  else if(EMBED&&EMBED.brand) headers['X-Embed-Brand']=encodeURIComponent(EMBED.brand);
+  const res=await fetch(PERF_URL,{method:'POST',headers,body:JSON.stringify({brandId:brand.id, brandName:brand.name||'', brandKo:brand.ko||''})});
+  const json=await res.json().catch(()=>({}));
+  if(res.status===401 && !key && await askAdminKey()) return apiPerf(brand);
+  if(!res.ok) throw new Error(json.message||'성과를 읽지 못했습니다');
+  return json;
+}
+function scheduleThreadsPerformance(){
+  if(UI.tab!=='plans' || (UI.planTab||'plan')!=='stat') return;
+  const b=brandOf(UI.brand); if(!b) return;
+  const hit=TP.cache[b.id];
+  if(hit && Date.now()-hit.at<(hit.error?15000:60000)) return;
+  if(TP.token[b.id]) return;
+  const token=(TP.token[b.id]=(TP.token[b.id]||0)+1);
+  apiPerf(b).then(data=>{
+    if(TP.token[b.id]!==token) return;
+    TP.cache[b.id]={at:Date.now(), data};
+    delete TP.token[b.id];
+    if(UI.brand===b.id && UI.tab==='plans' && (UI.planTab||'plan')==='stat') render();
+  }).catch(err=>{
+    if(TP.token[b.id]!==token) return;
+    TP.cache[b.id]={at:Date.now(), error:err.message||'성과를 읽지 못했습니다'};
+    delete TP.token[b.id];
+    if(UI.brand===b.id && UI.tab==='plans' && (UI.planTab||'plan')==='stat') render();
+  });
+}
+function tpChart(rows, metric, compact){
+  const sets=rows.map((row,index)=>{
+    const points=(row.series||[]).filter(p=>typeof p.ageHours==='number' && typeof p.metrics?.[metric]==='number').map(p=>({age:p.ageHours, value:p.metrics[metric]}));
+    return points.length>=2 ? {row, points, color:TP_COLORS[index]||`hsl(${(index*137.5)%360} 55% 43%)`} : null;
+  }).filter(Boolean);
+  if(!sets.length) return '<p class="eyebrow">시계열 관측이 2점 이상인 글이 있으면 반응 곡선이 나옵니다.</p>';
+  const width=760, height=compact?176:240, pad={l:54,r:18,t:16,b:32};
+  const ages=sets.flatMap(s=>s.points.map(p=>p.age));
+  const minAge=Math.min(...ages), maxAge=Math.max(...ages);
+  const maxValue=Math.max(...sets.flatMap(s=>s.points.map(p=>p.value)),1);
+  const x=age=>pad.l+tpPos(age,minAge,maxAge)*(width-pad.l-pad.r);
+  const y=value=>pad.t+(1-value/maxValue)*(height-pad.t-pad.b);
+  const ticks=[24,48,72,168,336,720].filter(h=>h>=minAge && h<=maxAge);
+  const grids=[0,0.5,1].map(ratio=>{
+    const value=maxValue*(1-ratio), pos=pad.t+ratio*(height-pad.t-pad.b);
+    return `<line x1="${pad.l}" x2="${width-pad.r}" y1="${pos}" y2="${pos}" class="tp-grid" /><text x="${pad.l-8}" y="${pos+4}" text-anchor="end">${tpNum(value,true)}</text>`;
+  }).join('');
+  const axis=ticks.map(h=>`<line x1="${x(h)}" x2="${x(h)}" y1="${pad.t}" y2="${height-pad.b}" class="tp-grid" /><text x="${x(h)}" y="${height-8}" text-anchor="middle">${Math.round(h/24)}일</text>`).join('');
+  const lines=sets.map(s=>{
+    const d=s.points.map((p,i)=>`${i?'L':'M'}${x(p.age).toFixed(1)},${y(p.value).toFixed(1)}`).join(' ');
+    const dots=s.points.map(p=>`<circle cx="${x(p.age).toFixed(1)}" cy="${y(p.value).toFixed(1)}" r="${compact?2.4:3}" fill="${s.color}" />`).join('');
+    return `<g data-tpfocus="${esc(s.row.id)}" style="cursor:pointer"><path d="${d}" fill="none" stroke="${s.color}" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" />${dots}</g>`;
+  }).join('');
+  const legend=compact?'':`<div class="tp-legend">${sets.map(s=>`<button type="button" data-tpfocus="${esc(s.row.id)}"><i style="background:${s.color}"></i><span>${esc(s.row.body||s.row.title||'본문 없음')}</span><strong>${tpNum(s.points.at(-1).value,true)}</strong></button>`).join('')}</div>`;
+  return `<div class="tp-chart"><svg viewBox="0 0 ${width} ${height}" role="img" aria-label="글별 반응 곡선">${grids}${axis}${lines}</svg>${compact?'':`<p class="eyebrow">각 선은 그 글의 첫 실제 관측점부터 표시합니다.</p>`}${legend}</div>`;
+}
+function tpSummary(rows){
+  const nums=name=>rows.map(r=>r.metrics&&typeof r.metrics[name]==='number'?r.metrics[name]:null);
+  const sum=name=>nums(name).reduce((a,v)=>a+(typeof v==='number'?v:0),0);
+  const med=values=>{ const s=values.filter(v=>typeof v==='number').sort((a,b)=>a-b); if(!s.length) return null; const m=Math.floor(s.length/2); return s.length%2?s[m]:(s[m-1]+s[m])/2; };
+  const coverage={};
+  TP_HORIZONS.forEach(([k])=>{ const statuses=rows.map(r=>(r.milestones&&r.milestones[k]&&r.milestones[k].status)||'pending'); coverage[k]={complete:statuses.filter(s=>s==='complete').length, pending:statuses.filter(s=>s==='pending').length, missing:statuses.filter(s=>s==='missing').length}; });
+  return {posts:rows.length, views:sum('views'), likes:sum('likes'), replies:sum('replies'), medianViews:med(nums('views')), coverage};
+}
+function tpFiltered(data){
+  const pref=tpPref();
+  const rows=[...(data.rows||[])].filter(row=>tpInRange(row, pref.range));
+  const q=String(pref.query||'').trim().toLocaleLowerCase('ko-KR');
+  const listed=q? rows.filter(row=>[row.body,row.title,row.brandLabel,row.brand].some(v=>String(v||'').toLocaleLowerCase('ko-KR').includes(q))) : rows;
+  const sorted=[...listed].sort((a,b)=>{
+    if(pref.sort==='views') return (b.metrics?.views||0)-(a.metrics?.views||0);
+    if(pref.sort==='replies') return (b.metrics?.replies||0)-(a.metrics?.replies||0);
+    if(pref.sort==='likes') return (b.metrics?.likes||0)-(a.metrics?.likes||0);
+    return String(b.publishedAt||'').localeCompare(String(a.publishedAt||''));
+  });
+  const ranked=[...rows].filter(row=>(row.series||[]).length>=2).sort((a,b)=>tpMetricOf(b,pref.metric)-tpMetricOf(a,pref.metric)).slice(0, pref.limit||5);
+  return {rows, sorted, ranked};
+}
 function statsView(){
   const b=brandOf(UI.brand);
-  const all=statRows(b.id);
-  const ym=UI.ym;
-  const rows=all.filter(s=>(s.date||'').startsWith(ym));
-  const metric=UI.statMetric||'views';
-  const mLabel={views:'조회수',likes:'좋아요',replies:'댓글',saves:'저장',profile:'프로필 유입',follows:'팔로우 전환'};
-  const rank=(key,label)=>{
-    const r=avgBy(rows,key,metric);
-    if(!r.length) return `<div class="eyebrow">${label} 데이터 없음</div>`;
-    return `<div class="rank">${r.map(x=>`<div class="rank__r"><span class="rank__k">${esc(x.k)}</span><span class="eyebrow">${x.n}편</span><b class="mono">${x.avg.toLocaleString()}</b></div>`).join('')}</div>`;
-  };
-  const sum=k=>rows.reduce((a,s)=>a+Number(s[k]||0),0);
+  const pack=TP.cache[b.id];
+  const label=(TP_BRANDS[b.id]&&TP_BRANDS[b.id].label)||b.ko||b.name;
+  if(!pack) return `<div class="card"><div class="empty"><b>${esc(label)} 성과를 읽고 있습니다</b>수집된 글과 조회 곡선을 불러오는 중입니다.</div></div>`;
+  if(pack.error) return `<div class="card"><div class="empty"><b>성과를 읽지 못했습니다</b>${esc(pack.error)}</div></div>`;
+  const data=pack.data||{};
+  const pref=tpPref();
+  const view=tpFiltered(data);
+  const summary=tpSummary(view.rows);
+  const stale=data.collectedAt && (Date.now()-new Date(data.collectedAt).getTime()>36*3600*1000);
+  const sourceNote=data.collectedAtSource==='log'
+    ? '수집 로그의 마지막 성공 시각입니다.'
+    : '수집 로그가 아직 없어, 글에 남아 있는 마지막 관측 시각입니다.';
+  const t2=summary.coverage&&summary.coverage.t2 || {complete:0};
+  const shown=view.sorted.slice(0, pref.visible||12);
+  const chip=(attr,value,text,on)=>`<button type="button" class="btn btn--sm sub" ${attr}="${esc(value)}" aria-pressed="${on?'true':'false'}">${text}</button>`;
   return `
-    <div class="subrow subrow--metric">
-      <span class="eyebrow">기준 지표</span>
-      ${Object.entries(mLabel).map(([k,l])=>`<button class="btn btn--sm sub" data-statmetric="${k}" aria-pressed="${!!(metric===k)}">${l}</button>`).join('')}
-    </div>
-    <div class="subrow subrow--act">
-      <div class="spacer" style="flex:1"></div>
-      <button class="btn btn--sm" data-act="stat-xls">이 달 엑셀</button>
-      <button class="btn btn--sm" data-act="stat-xls-all">전체 엑셀</button>
-      <button class="btn btn--primary btn--sm" data-act="stat-new">기록 추가</button>
-    </div>
+    <section class="tp-note">
+      <div><span class="eyebrow">마지막 수집</span><b>${esc(tpWhen(data.collectedAt))}</b><small>${esc(sourceNote)}${stale?' 이 시각 이후 새 수집이 없습니다.':''}</small></div>
+      <div><span class="eyebrow">최신 글</span><b>${esc(tpDay(data.latestPublishedAt||summary.latestPublishedAt))}</b><small>${esc(label)} 글만 표시</small></div>
+    </section>
     <div class="ustat">
-      <div class="ustat__c"><div class="ustat__n">${rows.length}</div><div class="ustat__l">이 달 발행</div></div>
-      <div class="ustat__c"><div class="ustat__n">${sum('views').toLocaleString()}</div><div class="ustat__l">조회수 합</div></div>
-      <div class="ustat__c"><div class="ustat__n">${sum('saves').toLocaleString()}</div><div class="ustat__l">저장 합</div></div>
-      <div class="ustat__c"><div class="ustat__n">${sum('profile').toLocaleString()}</div><div class="ustat__l">프로필 유입 합</div></div>
+      <div class="ustat__c"><div class="ustat__n">${tpNum(summary.posts)}</div><div class="ustat__l">누적 글 수</div></div>
+      <div class="ustat__c"><div class="ustat__n">${tpNum(summary.views,true)}</div><div class="ustat__l">누적 조회수</div></div>
+      <div class="ustat__c"><div class="ustat__n">${tpNum(summary.medianViews,true)}</div><div class="ustat__l">글당 중앙값 조회수</div></div>
+      <div class="ustat__c"><div class="ustat__n">${tpNum((summary.likes||0)+(summary.replies||0),true)}</div><div class="ustat__l">좋아요+답글</div></div>
     </div>
-    ${funnelCard(b.id, ym, rows)}
-    <div class="grid g2">
-      <section class="card"><div class="card__hd"><h3>훅유형별 평균 ${mLabel[metric]}</h3></div><div class="card__bd">${rank('hook','훅유형')}</div></section>
-      <section class="card"><div class="card__hd"><h3>소재출처별 평균 ${mLabel[metric]}</h3></div><div class="card__bd">${rank('source','소재출처')}</div></section>
-      <section class="card"><div class="card__hd"><h3>목적태그별 평균 ${mLabel[metric]}</h3></div><div class="card__bd">${rank('purpose','목적태그')}</div></section>
-      <section class="card"><div class="card__hd"><h3>화자위치별 평균 ${mLabel[metric]}</h3></div><div class="card__bd">${rank('voice','화자위치')}</div></section>
+    <div class="tp-tools">
+      <span class="eyebrow">브랜드</span>
+      <button type="button" class="btn btn--sm sub" aria-pressed="true">${esc(label)}</button>
+      <span class="eyebrow">기간</span>
+      ${[['7','7일'],['30','30일'],['all','전체']].map(([v,l])=>chip('data-tprange',v,l,pref.range===v)).join('')}
     </div>
-    <div class="areahd"><h3>${ymLabel(ym)} 기록</h3><span class="line"></span><span class="eyebrow">${rows.length}편</span></div>
-    ${rows.length? rows.map(s=>`<div class="tk tk--click" data-edit-stat="${s.id}">
-      <div class="tk__t">
-        <div class="tk__title">${esc(s.title||'(제목 없음)')}</div>
-        <div class="tk__meta">
-          <span class="eyebrow">${(s.date||'').slice(5)}</span>
-          ${s.purpose?`<span class="mchip mchip--p">${esc(s.purpose)}</span>`:''}
-          ${s.hook?`<span class="mchip mchip--h">${esc(s.hook)}</span>`:''}
-          ${s.source?`<span class="mchip mchip--a">${esc(s.source)}</span>`:''}
-          <span class="eyebrow mono">조회 ${Number(s.views||0).toLocaleString()} · 저장 ${Number(s.saves||0).toLocaleString()} · 유입 ${Number(s.profile||0).toLocaleString()}</span>
+    <section class="card" style="margin-bottom:12px"><div class="card__hd"><h3>글별 반응 곡선</h3><span class="eyebrow" style="margin-left:auto">${esc(label)} · 조회 상위 ${view.ranked.length}개</span></div>
+      <div class="card__bd">
+        <div class="tp-tools" style="margin-top:0">
+          ${TP_METRICS.map(([k,l])=>chip('data-tpmetric',k,l,pref.metric===k)).join('')}
+          <span class="eyebrow">표시</span>
+          ${[5,10,20].map(n=>chip('data-tplimit',String(n),n+'개',Number(pref.limit)===n)).join('')}
         </div>
+        ${tpChart(view.ranked, pref.metric, false)}
       </div>
-    </div>`).join('')
-    : `<div class="card"><div class="empty"><b>이 달 기록이 없습니다</b>발행한 글의 성과와 속성을 넣으면 위 순위가 자동으로 계산됩니다.</div></div>`}`;
+    </section>
+    <details class="card" style="margin-bottom:12px;padding:12px 14px"><summary>수집 상태 · T+2 ${t2.complete||0}/${summary.posts||0}건 완료</summary>
+      <div class="tp-ms" style="padding:10px 0 0">${TP_HORIZONS.map(([k,l])=>{ const c=summary.coverage&&summary.coverage[k]||{complete:0,pending:0,missing:0}; return `<span>${l}<strong>${c.complete}</strong>${c.pending?`대기 ${c.pending}`:c.missing?`누락 ${c.missing}`:'완료'}</span>`; }).join('')}</div>
+    </details>
+    <div class="areahd"><h3>글 목록</h3><span class="line"></span><span class="eyebrow">${view.sorted.length}개 중 ${Math.min(pref.visible||12, view.sorted.length)}개</span></div>
+    <div class="tp-tools">
+      <input class="tp-search" data-tpq value="${esc(pref.query||'')}" placeholder="본문 검색" aria-label="게시물 검색" />
+      ${[['recent','최신'],['views','조회 TOP'],['replies','답글 TOP'],['likes','좋아요 TOP']].map(([v,l])=>chip('data-tpsort',v,l,pref.sort===v)).join('')}
+    </div>
+    ${shown.map(row=>tpPost(row, pref)).join('') || '<div class="card"><div class="empty"><b>이 조건의 글이 없습니다</b>기간이나 검색어를 바꿔 보세요.</div></div>'}
+    ${(pref.visible||12)<view.sorted.length?`<button type="button" class="btn tp-more" data-tpmore>더 보기 <span class="eyebrow">${view.sorted.length-(pref.visible||12)}건 남음</span></button>`:''}
+    <p class="eyebrow" style="margin-top:12px">조회·좋아요·답글은 글별 누적값입니다. 프로필 유입과 팔로워 변화는 같은 기간의 계정 전체 값이라 합계에 넣지 않습니다.</p>`;
+}
+function tpPost(row, pref){
+  const open=pref.open===row.id;
+  const copy=row.body||row.title||'본문 없음';
+  const ms=TP_HORIZONS.map(([k,l])=>{
+    const item=row.milestones&&row.milestones[k];
+    const status=item&&item.status||'pending';
+    return `<span class="${status==='missing'?'is-missing':''}">${l}<strong>${tpNum(item&&item.metrics?item.metrics.views:null,true)}</strong></span>`;
+  }).join('');
+  const account=row.accountContext||{};
+  const hasAccount=account.profileViews!=null || account.followersDelta!=null;
+  return `<article class="tp-post ${pref.focus===row.id?'is-on':''}" id="tp-post-${esc(row.id)}">
+    <button type="button" class="tp-post__main" data-tpopen="${esc(row.id)}" aria-expanded="${open?'true':'false'}">
+      <div class="tp-post__copy"><div class="tp-meta"><span class="tp-pill">${esc(row.brandLabel||'')}</span><span>${esc(tpDay(row.publishedAt))}</span>${row.hasImage?'<span>이미지</span>':''}</div><p>${esc(copy)}</p></div>
+      <div class="tp-nums"><div><strong>${tpNum(row.metrics&&row.metrics.views,true)}</strong><span>조회</span></div><div><strong>${tpNum(row.metrics&&row.metrics.likes,true)}</strong><span>좋아요</span></div><div><strong>${tpNum(row.metrics&&row.metrics.replies,true)}</strong><span>답글</span></div></div>
+    </button>
+    <div class="tp-ms">${ms}</div>
+    ${open?`<div class="tp-detail"><div><span class="eyebrow">발행 후 ${esc((TP_METRICS.find(m=>m[0]===pref.metric)||['','조회'])[1])} 누적 추이</span>${tpChart([row], pref.metric, true)}</div><div><span class="eyebrow">이 글의 마지막 관측</span><strong>${esc(tpWhen(row.latestObservedAt))}</strong></div>${hasAccount?`<div><span class="eyebrow">계정 참고값</span><strong>프로필 ${tpNum(account.profileViews)} · 팔로우 변화 ${tpNum(account.followersDelta)}</strong><small>이 수치는 같은 기간 계정 전체 값이며 이 글의 직접 성과로 합산하지 않습니다.</small></div>`:''}${row.permalink?`<a href="${esc(row.permalink)}" target="_blank" rel="noreferrer">Threads 원문</a>`:''}</div>`:''}
+  </article>`;
 }
 function statModal(id){
   const isNew=!id;
@@ -6178,6 +6357,29 @@ function bind(){
   });
   document.querySelectorAll('[data-act]').forEach(el=>el.onclick=()=>act(el.dataset.act));
   if(UI.tab==='calendar') bindCalendar();
+  bindThreadsPerformance();
+  scheduleThreadsPerformance();
+}
+function bindThreadsPerformance(){
+  const pref=UI.tp; if(!pref || UI.tab!=='plans' || (UI.planTab||'plan')!=='stat') return;
+  const apply=(key,value,reset)=>{ pref[key]=key==='limit'?Number(value):value; if(reset){ pref.visible=12; pref.focus=''; } saveUI(); render(); };
+  document.querySelectorAll('[data-tprange]').forEach(el=>el.onclick=()=>apply('range', el.dataset.tprange, true));
+  document.querySelectorAll('[data-tpsort]').forEach(el=>el.onclick=()=>apply('sort', el.dataset.tpsort, true));
+  document.querySelectorAll('[data-tpmetric]').forEach(el=>el.onclick=()=>apply('metric', el.dataset.tpmetric, false));
+  document.querySelectorAll('[data-tplimit]').forEach(el=>el.onclick=()=>apply('limit', el.dataset.tplimit, false));
+  document.querySelectorAll('[data-tpmore]').forEach(el=>el.onclick=()=>{ pref.visible=(pref.visible||12)+12; render(); });
+  document.querySelectorAll('[data-tpopen]').forEach(el=>el.onclick=()=>{ pref.open=pref.open===el.dataset.tpopen?'':el.dataset.tpopen; render(); });
+  document.querySelectorAll('[data-tpfocus]').forEach(el=>el.onclick=()=>{
+    const id=el.dataset.tpfocus; if(!id) return;
+    pref.focus=id; pref.open=id; pref.query='';
+    const data=(TP.cache[UI.brand]||{}).data;
+    if(data){ const idx=tpFiltered(data).sorted.findIndex(r=>r.id===id); if(idx>=0) pref.visible=Math.max(pref.visible||12, idx+1); }
+    TP.scroll=true; saveUI(); render();
+  });
+  const q=document.querySelector('[data-tpq]');
+  if(q) q.oninput=()=>{ pref.query=q.value; pref.visible=12; pref.focus=''; TP.focusQ=true; render(); };
+  if(TP.focusQ){ const box=document.querySelector('[data-tpq]'); if(box){ box.focus(); const n=box.value.length; try{ box.setSelectionRange(n,n); }catch(e){} } TP.focusQ=false; }
+  if(TP.scroll && pref.focus){ const el=document.getElementById('tp-post-'+pref.focus); if(el) el.scrollIntoView({block:'center'}); TP.scroll=false; }
 }
 
 function act(a){
