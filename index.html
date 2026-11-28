@@ -1657,7 +1657,7 @@ html body #view .tp .card__hd h3{white-space:nowrap !important;flex:0 0 auto !im
 }
 
 /* 글별 성과 막대 — 일별 매출 그래프와 같은 막대 규칙 */
-.tp-bars{display:grid;grid-template-columns:40px minmax(0,1fr);gap:12px;height:200px;padding:8px 0 22px}
+.tp-bars{display:grid;grid-template-columns:40px minmax(0,1fr);gap:12px;height:200px;padding:20px 0 22px}
 .tp-bars .tp-yl{position:relative}
 .tp-bars__plot{position:relative;display:flex;align-items:flex-end;gap:2px;border-bottom:1px solid var(--line)}
 .tp-bars__plot::before{content:'';position:absolute;left:0;right:0;top:50%;border-top:1px dashed var(--line2)}
@@ -1670,6 +1670,8 @@ html body #view .tp .card__hd h3{white-space:nowrap !important;flex:0 0 auto !im
 .tp-col:hover i{background:#5A5E68}
 .tp-col.is-top:hover i{background:#C2EB00}
 .tp-col span{position:absolute;top:calc(100% + 6px);left:0;font-size:10.5px;color:var(--mut);white-space:nowrap}
+.tp-over{position:absolute;bottom:calc(100% + 2px);left:50%;transform:translateX(-50%);font-size:10.5px;font-weight:700;color:var(--ink);white-space:nowrap;pointer-events:none}
+.tp-col:has(.tp-over) i{border-top:2px dashed #fff;border-radius:0}
 .tp-med{position:absolute;left:0;right:0;border-top:1.5px dashed #14161C;z-index:1;pointer-events:none}
 .tp-med span{position:absolute;right:0;bottom:3px;padding:1px 6px;border-radius:4px;background:#14161C;color:var(--neon);font-size:10.5px;font-weight:700;white-space:nowrap}
 .tp-key{display:flex;flex-wrap:wrap;gap:6px 14px;margin:6px 0 4px;font-size:11.5px;color:var(--mut)}
@@ -4635,7 +4637,10 @@ function tpBars(rows, metric, label){
   const topIds=new Set(ranked.slice(0,3).map(i=>i.r.id));
   const above=ranked.filter(i=>med && i.v>=med*1.5);
   const nice=v=>{ const p=Math.pow(10,Math.floor(Math.log10(v||1))); const n=v/p; return (n<=1?1:n<=2?2:n<=5?5:10)*p; };
-  const top=nice(max), Y=v=>v/top*100;
+  /* 튀는 글 하나 때문에 나머지가 바닥에 깔리지 않게: 상위 10% 지점 기준으로 높이를 잡고, 넘는 막대는 잘라서 값 표시 */
+  const vals=items.map(i=>i.v).sort((a,b)=>a-b), p90=vals[Math.floor((vals.length-1)*.9)]||0;
+  const cap=Math.max(p90*1.3, med*2.5, 1);
+  const top=nice(max<=cap*1.15?max:cap), Y=v=>Math.min(v/top,1)*100;
   const yl=[1,.5,0].map(r=>`<span style="top:${(1-r)*100}%">${tpNum(top*r,true)}</span>`).join('');
   const dayOf=r=>tpDay(r.publishedAt);
   let lastM='';
@@ -4645,7 +4650,7 @@ function tpBars(rows, metric, label){
     const x=med? i.v/med : null;
     const cls=i.young?'is-young':topIds.has(i.r.id)?'is-top':(x!=null&&x>=1.5?'is-hi':'');
     const tip=`${dayOf(i.r)}${i.young?' · 집계 중':''}\n${(i.r.body||i.r.title||'').replace(/\s+/g,' ').slice(0,60)}\n조회 ${tpNum(i.views)} · 좋아요 ${tpNum(i.r.metrics&&i.r.metrics.likes)} · 답글 ${tpNum(i.r.metrics&&i.r.metrics.replies)}${x!=null&&!i.young?` · 중앙값의 ${x.toFixed(1)}배`:''}`;
-    return `<button type="button" class="tp-col ${cls}" data-tpfocus="${esc(i.r.id)}" title="${esc(tip)}"><i style="height:${Math.max(Y(i.v),1.5)}%"></i>${showM?`<span>${m}</span>`:''}</button>`;
+    return `<button type="button" class="tp-col ${cls}" data-tpfocus="${esc(i.r.id)}" title="${esc(tip)}"><i style="height:${Math.max(Y(i.v),1.5)}%"></i>${i.v>top?`<b class="tp-over">${tpNum(i.v,true)}</b>`:''}${showM?`<span>${m}</span>`:''}</button>`;
   }).join('');
   const row=(i,n)=>{ const x=med?i.v/med:null; return `<button type="button" class="tp-hit" data-tpfocus="${esc(i.r.id)}">
       <em class="${n<3?'is-top':''}">${n+1}</em><span class="tp-hit__d">${esc(dayOf(i.r))}</span>
