@@ -3042,9 +3042,9 @@ function paintLoad(){
   if(app.dataset.gate===sig && document.getElementById('loadgate')) return;
   const inner = st==='error'
     ? `<b>데이터를 불러오지 못했습니다</b><span>${esc(LOAD.err||'잠시 후 다시 시도합니다')}<br>서버의 데이터는 그대로 있습니다. 자동으로 다시 시도합니다.</span><button class="btn btn--primary" id="loadretry" type="button">지금 다시 시도</button>`
-    : st==='auth' ? `<b>DDL 브랜드 관리</b><span>등록된 구글 계정으로 로그인해 주세요.</span>
+    : st==='auth' ? `<b>DDL 브랜드 관리</b><span>팀원 구글 계정으로만 로그인할 수 있어요.</span>
         <button class="gbtn" id="glogin" type="button"><svg viewBox="0 0 48 48" aria-hidden="true"><path fill="#FFC107" d="M43.6 20.5H42V20H24v8h11.3C33.7 32.7 29.2 36 24 36c-6.6 0-12-5.4-12-12s5.4-12 12-12c3.1 0 5.8 1.2 7.9 3.1l5.7-5.7C34 6.1 29.3 4 24 4 12.9 4 4 12.9 4 24s8.9 20 20 20 20-8.9 20-20c0-1.3-.1-2.4-.4-3.5z"/><path fill="#FF3D00" d="M6.3 14.7l6.6 4.8C14.7 15.1 19 12 24 12c3.1 0 5.8 1.2 7.9 3.1l5.7-5.7C34 6.1 29.3 4 24 4 16.3 4 9.7 8.3 6.3 14.7z"/><path fill="#4CAF50" d="M24 44c5.2 0 9.9-2 13.4-5.2l-6.2-5.2C29.2 35.1 26.7 36 24 36c-5.2 0-9.6-3.3-11.3-8l-6.5 5C9.5 39.6 16.2 44 24 44z"/><path fill="#1976D2" d="M43.6 20.5H42V20H24v8h11.3c-.8 2.2-2.2 4.2-4.1 5.6l6.2 5.2C37 39.2 44 34 44 24c0-1.3-.1-2.4-.4-3.5z"/></svg>Google 계정으로 로그인</button>
-        ${GAUTH.error?`<em class="gerr">${esc(GAUTH.error)}</em>${GAUTH.token?'<button class="glink" id="glogout" type="button">다른 계정으로 로그인</button>':''}`:''}
+        ${GAUTH.error?`<em class="gerr">${esc(GAUTH.error)}</em>`:''}
         <button class="glink" id="gkey" type="button">관리자 비밀번호로 들어가기</button>`
     : `<i class="spin" aria-label="불러오는 중"></i><span>불러오는 중…</span>`;
   app.innerHTML=`<div class="sharewait" id="loadgate"><img src="${LOGO_SRC}" alt="DDL">${inner}</div>`;
@@ -3316,7 +3316,7 @@ function sideNav(){
       </div>`;
     })()}
     <div class="snav__ft">
-      ${item('data-act="me"', GAUTH.email&&!adminKey()?(GAUTH.member||GAUTH.email.split('@')[0])+' · 계정':(DB.settings.me?('나 · '+DB.settings.me):'담당자 선택'), ICON.user, false)}
+      ${item('data-act="me"', GAUTH.token?(GAUTH.member||GAUTH.email.split('@')[0])+' · 계정':(DB.settings.me?('나 · '+DB.settings.me):'담당자 선택'), ICON.user, false)}
       ${item('data-brand="__set"','설정',ICON.gear,UI.brand==='__set')}
     </div>
   </aside>`;
@@ -4135,7 +4135,7 @@ function accountModal(){
   });
 }
 function meModal(){
-  if(GAUTH.email && !adminKey()) return accountModal();
+  if(GAUTH.token) return accountModal();
   const cur=DB.settings.me||'';
   const names=OWNERS;
   modal({
@@ -4565,8 +4565,8 @@ function tpMetricOf(row, metric){
 async function apiPerf(brand){
   const headers={'Content-Type':'application/json'};
   const key=adminKey();
-  if(key) headers['X-Admin-Key']=encodeURIComponent(key);
-  else if(GAUTH.token) headers['Authorization']='Bearer '+GAUTH.token;
+  if(GAUTH.token) headers['Authorization']='Bearer '+GAUTH.token;
+  else if(key) headers['X-Admin-Key']=encodeURIComponent(key);
   else if(SHARE_KEY) headers['X-Share-Key']=encodeURIComponent(SHARE_KEY);
   else if(EMBED&&EMBED.brand) headers['X-Embed-Brand']=encodeURIComponent(EMBED.brand);
   const res=await fetch(PERF_URL,{method:'POST',headers,body:JSON.stringify({brandId:brand.id, brandName:brand.name||'', brandKo:brand.ko||''})});
@@ -5583,14 +5583,14 @@ function settingsView(){
       </div>
     </section>
 
-    <section class="card">
+    ${GAUTH.token?'':`<section class="card">
       <div class="card__hd"><h3>관리자 비밀번호</h3></div>
       <div class="card__bd">
         <label class="f"><span>이 브라우저에만 저장됩니다</span>
           <input type="password" id="setAdminKey" value="${esc(adminKey())}" autocomplete="off" placeholder="ADMIN_KEY" /></label>
         <button class="btn btn--primary" data-act="save-admin">비밀번호 저장</button>
       </div>
-    </section>
+    </section>`}
   </div>`;
 }
 
@@ -6093,12 +6093,12 @@ async function initGoogleAuth(){
     GAUTH.client=window.supabase.createClient(SB_URL, SB_PUB, { auth:{ persistSession:true, autoRefreshToken:true, detectSessionInUrl:true, flowType:'pkce', storageKey:SB_STORE } });
     const { data } = await GAUTH.client.auth.getSession();
     const sess=data&&data.session;
-    if(sess){ GAUTH.token=sess.access_token; GAUTH.email=(sess.user&&sess.user.email)||''; }
+    if(sess){ GAUTH.token=sess.access_token; GAUTH.email=(sess.user&&sess.user.email)||''; if(adminKey()) setAdminKey(''); }
     if(/[?&]code=/.test(location.search)) history.replaceState(null,'',location.pathname+location.search.replace(/[?&](code|state)=[^&]*/g,'').replace(/^&/,'?')+location.hash);
     GAUTH.client.auth.onAuthStateChange((ev, sess2)=>{
       const was=!!GAUTH.token;
       GAUTH.token=sess2?sess2.access_token:''; GAUTH.email=sess2&&sess2.user?sess2.user.email||'':'';
-      if(was && !GAUTH.token && !adminKey()){ clearSnap(); location.reload(); }
+      if(was && !GAUTH.token && !adminKey() && ev==='SIGNED_OUT' && !GAUTH.error){ clearSnap(); location.reload(); }
     });
   }catch(e){ GAUTH.client=null; }
 }
@@ -6114,7 +6114,7 @@ async function googleLogout(){
   clearSnap(); location.reload();
 }
 async function whoami(){
-  if(!GAUTH.token || adminKey()) return;
+  if(!GAUTH.token) return;
   try{ const r=await api({action:'whoami'}); GAUTH.member=r.member||''; GAUTH.email=r.email||GAUTH.email;
     if(GAUTH.member && DB.settings.me!==GAUTH.member){ DB.settings.me=GAUTH.member; saveUI(); render(); } }catch(e){}
 }
@@ -6129,6 +6129,7 @@ function needLogin(msg){
 const viewOnly=()=>!hasAuth() && (!!SHARE_KEY || !!(EMBED&&EMBED.ro));
 let __keyAsk=null, __keyDeclined=false;
 function askAdminKey(){
+  if(GAUTH.token) return Promise.resolve(false);
   if(__keyDeclined || SHARE_KEY || (EMBED&&EMBED.ro)) return Promise.resolve(false);
   return __keyAsk ||= new Promise(r=>setTimeout(()=>{
     const v=(prompt('관리자 비밀번호를 입력하세요')||'').trim();
@@ -6149,8 +6150,8 @@ async function __api(payload, retried, tries=0){
   const key=adminKey();
   const headers={'Content-Type':'application/json'};
   /* 헤더에는 한글을 못 실으니 인코딩해서 보냄 (서버에서 되돌림) */
-  if(key) headers['X-Admin-Key']=encodeURIComponent(key);
-  else if(GAUTH.token) headers['Authorization']='Bearer '+GAUTH.token;
+  if(GAUTH.token) headers['Authorization']='Bearer '+GAUTH.token;
+  else if(key) headers['X-Admin-Key']=encodeURIComponent(key);
   else if(SHARE_KEY) headers['X-Share-Key']=encodeURIComponent(SHARE_KEY);
   else if(EMBED&&EMBED.brand) headers['X-Embed-Brand']=encodeURIComponent(EMBED.brand);
   const ctl=new AbortController(); const to=setTimeout(()=>ctl.abort(),30000);
@@ -6163,7 +6164,7 @@ async function __api(payload, retried, tries=0){
     /* 그 사이 다른 요청에서 비밀번호를 새로 받았으면 그대로 다시 시도 */
     if(adminKey() && adminKey()!==key) return __api(payload,true);
     if(!key && GAUTH.token && GAUTH.client){ try{ const { data }=await GAUTH.client.auth.refreshSession(); if(data&&data.session){ GAUTH.token=data.session.access_token; return __api(payload,true); } }catch(e){} GAUTH.token=''; }
-    if(!key){ needLogin(json.message); } else if(await askAdminKey()) return __api(payload,true); /* 비밀번호가 아예 없으면 상단 입력 칸으로 */
+    if(!key || GAUTH.token){ needLogin(json.message); } else if(await askAdminKey()) return __api(payload,true); /* 비밀번호가 아예 없으면 상단 입력 칸으로 */
   }
   /* 요청 제한에 걸리면 잠깐 기다렸다 다시 (1·2·4·8초) */
   if((res.status===429 || /rate limited/i.test(json.message||'')) && tries<4){
@@ -6222,7 +6223,8 @@ function bootSync(){
         await __pullAll(true, undefined, {strict:true, initial:true});
         break;
       }catch(e){
-        if(e && (e.status===401 || (e.status===403 && GAUTH.token && !adminKey())) && !SHARE_KEY && !EMBED){
+        if(e && (e.status===401 || (e.status===403 && GAUTH.token)) && !SHARE_KEY && !EMBED){
+          if(GAUTH.token && e.status===403){ try{ await GAUTH.client.auth.signOut(); }catch(_){} GAUTH.token=''; }
           if(first){ clearSnap(); if(adminKey()) setAdminKey(''); GAUTH.error=e.message||''; syncUI(''); LOAD.state='loading'; setLoad('auth'); } else showSaveError(e.message||'로그인이 필요합니다');
           return;
         }
