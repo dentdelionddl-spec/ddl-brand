@@ -1656,6 +1656,45 @@ html body #view .tp .card__hd h3{white-space:nowrap !important;flex:0 0 auto !im
   .tp-cov__c:nth-child(4){border-left:0;padding-left:0}
 }
 
+/* 글별 성과 막대 — 일별 매출 그래프와 같은 막대 규칙 */
+.tp-bars{display:grid;grid-template-columns:40px minmax(0,1fr);gap:12px;height:200px;padding:8px 0 22px}
+.tp-bars .tp-yl{position:relative}
+.tp-bars__plot{position:relative;display:flex;align-items:flex-end;gap:2px;border-bottom:1px solid var(--line)}
+.tp-bars__plot::before{content:'';position:absolute;left:0;right:0;top:50%;border-top:1px dashed var(--line2)}
+.tp-bars__plot::after{content:'';position:absolute;left:0;right:0;top:0;border-top:1px dashed var(--line2)}
+.tp-col{all:unset;position:relative;flex:1 1 0;min-width:2px;max-width:22px;height:100%;display:flex;align-items:flex-end;cursor:pointer}
+.tp-col i{display:block;width:100%;background:#D6D8DD;border-radius:2px 2px 0 0;transition:background .12s}
+.tp-col.is-hi i{background:#14161C}
+.tp-col.is-top i{background:var(--neon);box-shadow:inset 0 0 0 1px #14161C}
+.tp-col.is-young i{background:repeating-linear-gradient(135deg,#E3E5E9 0 3px,#F3F4F7 3px 6px)}
+.tp-col:hover i{background:#5A5E68}
+.tp-col.is-top:hover i{background:#C2EB00}
+.tp-col span{position:absolute;top:calc(100% + 6px);left:0;font-size:10.5px;color:var(--mut);white-space:nowrap}
+.tp-med{position:absolute;left:0;right:0;border-top:1.5px dashed #14161C;z-index:1;pointer-events:none}
+.tp-med span{position:absolute;right:0;bottom:3px;padding:1px 6px;border-radius:4px;background:#14161C;color:var(--neon);font-size:10.5px;font-weight:700;white-space:nowrap}
+.tp-key{display:flex;flex-wrap:wrap;gap:6px 14px;margin:6px 0 4px;font-size:11.5px;color:var(--mut)}
+.tp-key i{display:inline-block;width:8px;height:8px;border-radius:2px;margin-right:6px;vertical-align:-0px}
+.tp-key .k-top{background:var(--neon);box-shadow:inset 0 0 0 1px #14161C}
+.tp-key .k-hi{background:#14161C}
+.tp-key .k-n{background:#D6D8DD}
+.tp-key .k-young{background:repeating-linear-gradient(135deg,#E3E5E9 0 2px,#F3F4F7 2px 4px);box-shadow:inset 0 0 0 1px #D6D8DD}
+.tp-hits{margin-top:14px;border-top:1px solid var(--line)}
+.tp-hit{all:unset;box-sizing:border-box;display:grid;grid-template-columns:22px 64px minmax(0,1fr) 64px 72px 60px;gap:10px;align-items:center;width:100%;padding:9px 0;border-bottom:1px solid var(--line2);font-size:13px;cursor:pointer;font-variant-numeric:tabular-nums}
+.tp-hit:last-child{border-bottom:0}
+.tp-hit:not(.tp-hit--hd):hover{background:rgba(255,255,255,.6)}
+.tp-hit--hd{cursor:default;font-size:12px;color:var(--mut);padding:10px 0 8px}
+.tp-hit--hd b{font-weight:500}
+.tp-hit em{font-style:normal;font-size:11px;color:var(--mut);text-align:center}
+.tp-hit em.is-top{display:inline-grid;place-items:center;width:18px;height:18px;border-radius:4px;background:var(--neon);color:#14161C;font-weight:700}
+.tp-hit__d{color:var(--mut);font-size:12px}
+.tp-hit__t{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--ink)}
+.tp-hit b,.tp-hit__x,.tp-hit__r{text-align:right}
+.tp-hit b{font-weight:700}
+.tp-hit__x{font-weight:600}
+.tp-hit__r{color:var(--ink2)}
+.tp .card__hd .eyebrow b{color:var(--ink);font-weight:700}
+@media(max-width:760px){.tp-hit{grid-template-columns:20px minmax(0,1fr) 56px 56px}.tp-hit__d,.tp-hit__r{display:none}.tp-bars{height:170px}}
+
 /* 헤더(제목·탭·월 이동)와 카드의 좌우 끝선을 같은 세로선에 맞춤 */
 @media(min-width:761px){ html body .app--side > .main > .topbar{padding-left:0 !important;padding-right:0 !important} }
 
@@ -4577,6 +4616,55 @@ function tpChart(rows, metric, compact){
         ${grid}${area}${lines}</svg>${ends}${tag}<div class="tp-xl">${xl}</div></div>
     </div>${compact?'':`<p class="eyebrow">발행 후 경과일 기준 · 형광 면은 조회 1위 글 · 목록에 마우스를 올리면 그 글만 강조</p>`}${legend}</div>`;
 }
+/* 글별 성과: 발행일 순 막대 + 중앙값 선. 발행 48시간 안 된 글은 아직 쌓이는 중이라 중앙값·배수 계산에서 뺀다 */
+function tpBars(rows, metric, label){
+  const mLabel=(TP_METRICS.find(m=>m[0]===metric)||['','조회'])[1];
+  const seg=`<div class="pv-seg">${TP_METRICS.map(([v,l])=>`<button type="button" class="${metric===v?'is-on':''}" data-tpmetric="${v}" aria-pressed="${metric===v}">${l}</button>`).join('')}</div>`;
+  const head=(sub)=>`<div class="card__hd"><h3>글별 성과</h3><span class="eyebrow">${sub}</span><div class="tp-hdtools">${seg}</div></div>`;
+  const now=Date.now();
+  const items=rows.filter(r=>r.publishedAt).map(r=>{
+    const v=r.metrics&&typeof r.metrics[metric]==='number'?r.metrics[metric]:0;
+    const views=r.metrics&&r.metrics.views||0, eng=(r.metrics&&r.metrics.likes||0)+(r.metrics&&r.metrics.replies||0);
+    return {r, v, views, rate:views?eng/views*100:null, young:(now-new Date(r.publishedAt).getTime())<48*3600*1000};
+  }).sort((a,b)=>String(a.r.publishedAt).localeCompare(String(b.r.publishedAt)));
+  if(!items.length) return `<section class="card">${head(esc(label))}<div class="card__bd"><div class="empty"><b>이 기간에 글이 없습니다</b>기간을 바꿔 보세요.</div></div></section>`;
+  const settled=items.filter(i=>!i.young).map(i=>i.v).sort((a,b)=>a-b);
+  const med=settled.length? (settled.length%2?settled[(settled.length-1)/2]:(settled[settled.length/2-1]+settled[settled.length/2])/2) : 0;
+  const max=Math.max(...items.map(i=>i.v), med, 1);
+  const ranked=items.filter(i=>!i.young).sort((a,b)=>b.v-a.v);
+  const topIds=new Set(ranked.slice(0,3).map(i=>i.r.id));
+  const above=ranked.filter(i=>med && i.v>=med*1.5);
+  const nice=v=>{ const p=Math.pow(10,Math.floor(Math.log10(v||1))); const n=v/p; return (n<=1?1:n<=2?2:n<=5?5:10)*p; };
+  const top=nice(max), Y=v=>v/top*100;
+  const yl=[1,.5,0].map(r=>`<span style="top:${(1-r)*100}%">${tpNum(top*r,true)}</span>`).join('');
+  const dayOf=r=>tpDay(r.publishedAt);
+  let lastM='';
+  const bars=items.map((i,idx)=>{
+    const d=new Date(i.r.publishedAt); const m=(d.getMonth()+1)+'월';
+    const showM=m!==lastM; lastM=m;
+    const x=med? i.v/med : null;
+    const cls=i.young?'is-young':topIds.has(i.r.id)?'is-top':(x!=null&&x>=1.5?'is-hi':'');
+    const tip=`${dayOf(i.r)}${i.young?' · 집계 중':''}\n${(i.r.body||i.r.title||'').replace(/\s+/g,' ').slice(0,60)}\n조회 ${tpNum(i.views)} · 좋아요 ${tpNum(i.r.metrics&&i.r.metrics.likes)} · 답글 ${tpNum(i.r.metrics&&i.r.metrics.replies)}${x!=null&&!i.young?` · 중앙값의 ${x.toFixed(1)}배`:''}`;
+    return `<button type="button" class="tp-col ${cls}" data-tpfocus="${esc(i.r.id)}" title="${esc(tip)}"><i style="height:${Math.max(Y(i.v),1.5)}%"></i>${showM?`<span>${m}</span>`:''}</button>`;
+  }).join('');
+  const row=(i,n)=>{ const x=med?i.v/med:null; return `<button type="button" class="tp-hit" data-tpfocus="${esc(i.r.id)}">
+      <em class="${n<3?'is-top':''}">${n+1}</em><span class="tp-hit__d">${esc(dayOf(i.r))}</span>
+      <span class="tp-hit__t">${esc((i.r.body||i.r.title||'본문 없음').replace(/\s+/g,' '))}</span>
+      <b>${tpNum(i.v,true)}</b><span class="tp-hit__x">${x!=null?x.toFixed(1)+'배':'—'}</span><span class="tp-hit__r">${i.rate!=null?i.rate.toFixed(1)+'%':'—'}</span></button>`; };
+  const list=ranked.slice(0,5);
+  const young=items.filter(i=>i.young).length;
+  return `<section class="card">${head(`${esc(label)} · ${items.length}개 글 · ${mLabel} 중앙값 <b>${tpNum(med,true)}</b> · 1.5배 넘은 글 <b>${above.length}</b>개`)}
+    <div class="card__bd">
+      <div class="tp-bars"><div class="tp-yl">${yl}</div>
+        <div class="tp-bars__plot"><div class="tp-med" style="bottom:${Y(med)}%"><span>중앙값 ${tpNum(med,true)}</span></div>${bars}</div></div>
+      <div class="tp-key"><span><i class="k-top"></i>상위 3개</span><span><i class="k-hi"></i>중앙값 1.5배 이상</span><span><i class="k-n"></i>그 외</span>${young?`<span><i class="k-young"></i>발행 48시간 안 됨 (집계 중 ${young}개, 중앙값에서 제외)</span>`:''}</div>
+      <div class="tp-hits">
+        <div class="tp-hit tp-hit--hd"><em></em><span class="tp-hit__d">발행일</span><span class="tp-hit__t">${mLabel} 상위 글</span><b>${mLabel}</b><span class="tp-hit__x">중앙값 대비</span><span class="tp-hit__r">반응률</span></div>
+        ${list.map(row).join('')}
+      </div>
+      <p class="eyebrow">반응률 = (좋아요+답글) ÷ 조회 · 막대에 마우스를 올리면 본문과 수치, 누르면 아래 글 목록에서 열림</p>
+    </div></section>`;
+}
 function tpSummary(rows){
   const nums=name=>rows.map(r=>r.metrics&&typeof r.metrics[name]==='number'?r.metrics[name]:null);
   const sum=name=>nums(name).reduce((a,v)=>a+(typeof v==='number'?v:0),0);
@@ -4628,10 +4716,7 @@ function statsView(){
       <div class="ustat__c"><div class="ustat__n">${tpNum(summary.medianViews,true)}</div><div class="ustat__l">글당 중앙값 조회수</div></div>
       <div class="ustat__c"><div class="ustat__n">${tpNum((summary.likes||0)+(summary.replies||0),true)}</div><div class="ustat__l">좋아요+답글</div></div>
     </div>
-    <section class="card"><div class="card__hd"><h3>글별 반응 곡선</h3><span class="eyebrow">${esc(label)} · 조회 상위 ${view.ranked.length}개</span>
-        <div class="tp-hdtools">${seg('data-tpmetric',TP_METRICS,pref.metric)}${seg('data-tplimit',[[5,'5개'],[10,'10개'],[20,'20개']],Number(pref.limit))}</div></div>
-      <div class="card__bd">${tpChart(view.ranked, pref.metric, false)}</div>
-    </section>
+    ${tpBars(view.rows, pref.metric, label)}
     <section class="card"><div class="card__hd"><h3>글 목록</h3><span class="eyebrow">${view.sorted.length}개 중 ${Math.min(pref.visible||12, view.sorted.length)}개</span>
         <div class="tp-hdtools"><input class="tp-search" data-tpq value="${esc(pref.query||'')}" placeholder="본문 검색" aria-label="게시물 검색" />${seg('data-tpsort',[['recent','최신'],['views','조회'],['replies','답글'],['likes','좋아요']],pref.sort)}</div></div>
       <div class="tp-list">${shown.map(row=>tpPost(row, pref)).join('') || '<div class="empty"><b>이 조건의 글이 없습니다</b>기간이나 검색어를 바꿔 보세요.</div>'}</div>
