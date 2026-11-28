@@ -1697,6 +1697,17 @@ html body #view .tp .card__hd h3{white-space:nowrap !important;flex:0 0 auto !im
 .tp .card__hd .eyebrow b{color:var(--ink);font-weight:700}
 @media(max-width:760px){.tp-hit{grid-template-columns:20px minmax(0,1fr) 56px 56px}.tp-hit__d,.tp-hit__r{display:none}.tp-bars{height:170px}}
 
+/* 구글 로그인 화면·계정 */
+.gbtn{display:inline-flex;align-items:center;gap:10px;height:42px;padding:0 18px;margin-top:14px;border:1px solid var(--line);border-radius:var(--r-md);background:#fff;font:600 14px var(--sans);color:var(--ink);cursor:pointer;box-shadow:0 1px 2px rgba(16,20,32,.06)}
+.gbtn:hover{border-color:rgba(17,18,20,.2)}
+.gbtn svg{width:18px;height:18px}
+.gerr{font-style:normal;font-size:12px;color:var(--alert);max-width:340px;margin-top:6px}
+.glink{border:0;background:transparent;font:500 12px var(--sans);color:var(--mut);text-decoration:underline;cursor:pointer;margin-top:4px}
+.acct{display:flex;flex-direction:column;gap:2px;padding:12px 14px;border-radius:var(--r-md);background:rgba(17,18,20,.04)}
+.acct b{font-size:15px}.acct span{font-size:12px;color:var(--mut)}
+.mem{display:flex;flex-direction:column;gap:8px}
+.mem__r{display:grid;grid-template-columns:minmax(0,1fr) 120px auto;gap:8px;align-items:center}
+#view .mem__r input,#view .mem__r select{padding:0 12px;font:500 13px var(--sans);background:rgba(255,255,255,.92);border:1px solid var(--line);border-radius:var(--r-md);outline:0}
 /* 헤더(제목·탭·월 이동)와 카드의 좌우 끝선을 같은 세로선에 맞춤 */
 @media(min-width:761px){ html body .app--side > .main > .topbar{padding-left:0 !important;padding-right:0 !important} }
 
@@ -3018,7 +3029,7 @@ function syncUI(msg, retry){
   const b=el.querySelector('button'); if(b) b.onclick=()=>{ if(LOAD.kick) LOAD.kick(); };
 }
 function bootFromCache(){
-  if(!(adminKey()||SHARE_KEY||EMBED)) return;
+  if(!(adminKey()||hasStoredLogin()||SHARE_KEY||EMBED)) return;
   if(loadSnap()){ LOAD.state='cached'; serverBrands=true; document.body.classList.add('syncing'); }
 }
 function setLoad(state, err){
@@ -3031,11 +3042,17 @@ function paintLoad(){
   if(app.dataset.gate===sig && document.getElementById('loadgate')) return;
   const inner = st==='error'
     ? `<b>데이터를 불러오지 못했습니다</b><span>${esc(LOAD.err||'잠시 후 다시 시도합니다')}<br>서버의 데이터는 그대로 있습니다. 자동으로 다시 시도합니다.</span><button class="btn btn--primary" id="loadretry" type="button">지금 다시 시도</button>`
-    : st==='auth' ? `<b>관리자 비밀번호가 필요합니다</b><span>화면 위쪽 칸에 입력해 주세요.</span>`
+    : st==='auth' ? `<b>DDL 브랜드 관리</b><span>등록된 구글 계정으로 로그인해 주세요.</span>
+        <button class="gbtn" id="glogin" type="button"><svg viewBox="0 0 48 48" aria-hidden="true"><path fill="#FFC107" d="M43.6 20.5H42V20H24v8h11.3C33.7 32.7 29.2 36 24 36c-6.6 0-12-5.4-12-12s5.4-12 12-12c3.1 0 5.8 1.2 7.9 3.1l5.7-5.7C34 6.1 29.3 4 24 4 12.9 4 4 12.9 4 24s8.9 20 20 20 20-8.9 20-20c0-1.3-.1-2.4-.4-3.5z"/><path fill="#FF3D00" d="M6.3 14.7l6.6 4.8C14.7 15.1 19 12 24 12c3.1 0 5.8 1.2 7.9 3.1l5.7-5.7C34 6.1 29.3 4 24 4 16.3 4 9.7 8.3 6.3 14.7z"/><path fill="#4CAF50" d="M24 44c5.2 0 9.9-2 13.4-5.2l-6.2-5.2C29.2 35.1 26.7 36 24 36c-5.2 0-9.6-3.3-11.3-8l-6.5 5C9.5 39.6 16.2 44 24 44z"/><path fill="#1976D2" d="M43.6 20.5H42V20H24v8h11.3c-.8 2.2-2.2 4.2-4.1 5.6l6.2 5.2C37 39.2 44 34 44 24c0-1.3-.1-2.4-.4-3.5z"/></svg>Google 계정으로 로그인</button>
+        ${GAUTH.error?`<em class="gerr">${esc(GAUTH.error)}</em>${GAUTH.token?'<button class="glink" id="glogout" type="button">다른 계정으로 로그인</button>':''}`:''}
+        <button class="glink" id="gkey" type="button">관리자 비밀번호로 들어가기</button>`
     : `<i class="spin" aria-label="불러오는 중"></i><span>불러오는 중…</span>`;
   app.innerHTML=`<div class="sharewait" id="loadgate"><img src="${LOGO_SRC}" alt="DDL">${inner}</div>`;
   app.dataset.gate=sig;
   const b=document.getElementById('loadretry'); if(b) b.onclick=()=>{ if(LOAD.kick) LOAD.kick(); };
+  const g=document.getElementById('glogin'); if(g) g.onclick=()=>googleLogin();
+  const go=document.getElementById('glogout'); if(go) go.onclick=()=>googleLogout();
+  const k=document.getElementById('gkey'); if(k) k.onclick=()=>keyBar();
 }
 function showSaveError(msg){
   let el=document.getElementById('saveerr');
@@ -3299,7 +3316,7 @@ function sideNav(){
       </div>`;
     })()}
     <div class="snav__ft">
-      ${item('data-act="me"', DB.settings.me?('나 · '+DB.settings.me):'담당자 선택', ICON.user, false)}
+      ${item('data-act="me"', GAUTH.email&&!adminKey()?(GAUTH.member||GAUTH.email.split('@')[0])+' · 계정':(DB.settings.me?('나 · '+DB.settings.me):'담당자 선택'), ICON.user, false)}
       ${item('data-brand="__set"','설정',ICON.gear,UI.brand==='__set')}
     </div>
   </aside>`;
@@ -4107,7 +4124,18 @@ function actionCard(a,b){
     </div>
   </section>`;
 }
+function accountModal(){
+  modal({
+    title:'내 계정',
+    body:`<p style="margin:0;color:var(--mut);font-size:13px">구글 계정으로 로그인되어 있습니다. 업무·캘린더의 ‘내 것만 보기’는 이 계정에 연결된 이름으로 걸러집니다.</p>
+      <div class="acct"><b>${esc(GAUTH.member||'이름 미연결')}</b><span>${esc(GAUTH.email)}</span></div>
+      ${GAUTH.member?'':'<p style="margin:0;font-size:12px;color:var(--alert)">설정 → 구글 로그인 계정에서 이 이메일에 이름을 연결해 주세요.</p>'}`,
+    saveLabel:'로그아웃',
+    onSave:()=>{ googleLogout(); }
+  });
+}
 function meModal(){
+  if(GAUTH.email && !adminKey()) return accountModal();
   const cur=DB.settings.me||'';
   const names=OWNERS;
   modal({
@@ -4538,6 +4566,7 @@ async function apiPerf(brand){
   const headers={'Content-Type':'application/json'};
   const key=adminKey();
   if(key) headers['X-Admin-Key']=encodeURIComponent(key);
+  else if(GAUTH.token) headers['Authorization']='Bearer '+GAUTH.token;
   else if(SHARE_KEY) headers['X-Share-Key']=encodeURIComponent(SHARE_KEY);
   else if(EMBED&&EMBED.brand) headers['X-Embed-Brand']=encodeURIComponent(EMBED.brand);
   const res=await fetch(PERF_URL,{method:'POST',headers,body:JSON.stringify({brandId:brand.id, brandName:brand.name||'', brandKo:brand.ko||''})});
@@ -5547,6 +5576,14 @@ function settingsView(){
     </section>
 
     <section class="card">
+      <div class="card__hd"><h3>구글 로그인 계정</h3><span class="eyebrow" style="margin-left:auto">여기 등록된 이메일만 로그인할 수 있어요</span></div>
+      <div class="card__bd">
+        <div class="mem" id="memList">${(DB.settings.members||[]).map((m,i)=>`<div class="mem__r"><input type="email" data-mem-email="${i}" value="${esc(m.email||'')}" placeholder="name@gmail.com" /><select data-mem-name="${i}"><option value="">이름</option>${OWNERS.map(n=>`<option ${n===m.name?'selected':''}>${esc(n)}</option>`).join('')}</select><button class="btn btn--sm btn--del" data-mem-del="${i}" type="button">삭제</button></div>`).join('')||'<p class="eyebrow" style="margin:0">아직 등록된 계정이 없습니다.</p>'}</div>
+        <div style="display:flex;gap:8px;margin-top:12px"><button class="btn btn--sm" data-act="mem-add" type="button">계정 추가</button><button class="btn btn--primary btn--sm" data-act="mem-save" type="button">계정 저장</button></div>
+      </div>
+    </section>
+
+    <section class="card">
       <div class="card__hd"><h3>관리자 비밀번호</h3></div>
       <div class="card__bd">
         <label class="f"><span>이 브라우저에만 저장됩니다</span>
@@ -6042,8 +6079,54 @@ async function notionDrop(...recs){
 const ADMIN_STORE=KEY+':admin';
 const adminKey=()=>store.get(ADMIN_STORE)||'';
 const setAdminKey=v=>{ try{ v? localStorage.setItem(ADMIN_STORE,v) : localStorage.removeItem(ADMIN_STORE); }catch(e){ mem[ADMIN_STORE]=v||null; } };
+/* 구글 로그인 (Supabase Auth). 공개(publishable) 키만 브라우저에 둠 — 비밀 키 아님 */
+const SB_URL='https://adigccfynizkaijnqrhq.supabase.co';
+const SB_PUB='sb_publishable_6UmzWIRAjdexu17sM54ugQ_q3nhWGUy';
+const SB_STORE='ddl-brand-auth';
+const GAUTH={client:null, token:'', email:'', member:'', error:''};
+const hasAuth=()=>!!adminKey() || !!GAUTH.token;
+const hasStoredLogin=()=>{ try{ return !!localStorage.getItem(SB_STORE); }catch(e){ return false; } };
+async function initGoogleAuth(){
+  if(SHARE_KEY || EMBED) return;
+  try{
+    await loadSupabaseJs();
+    GAUTH.client=window.supabase.createClient(SB_URL, SB_PUB, { auth:{ persistSession:true, autoRefreshToken:true, detectSessionInUrl:true, flowType:'pkce', storageKey:SB_STORE } });
+    const { data } = await GAUTH.client.auth.getSession();
+    const sess=data&&data.session;
+    if(sess){ GAUTH.token=sess.access_token; GAUTH.email=(sess.user&&sess.user.email)||''; }
+    if(/[?&]code=/.test(location.search)) history.replaceState(null,'',location.pathname+location.search.replace(/[?&](code|state)=[^&]*/g,'').replace(/^&/,'?')+location.hash);
+    GAUTH.client.auth.onAuthStateChange((ev, sess2)=>{
+      const was=!!GAUTH.token;
+      GAUTH.token=sess2?sess2.access_token:''; GAUTH.email=sess2&&sess2.user?sess2.user.email||'':'';
+      if(was && !GAUTH.token && !adminKey()){ clearSnap(); location.reload(); }
+    });
+  }catch(e){ GAUTH.client=null; }
+}
+async function googleLogin(){
+  if(!GAUTH.client){ await initGoogleAuth(); }
+  if(!GAUTH.client){ toast('구글 로그인을 준비하지 못했습니다',3000); return; }
+  const { error } = await GAUTH.client.auth.signInWithOAuth({ provider:'google', options:{ redirectTo: location.origin+location.pathname, queryParams:{ prompt:'select_account' } } });
+  if(error) toast('구글 로그인 실패: '+error.message,4000);
+}
+async function googleLogout(){
+  try{ if(GAUTH.client) await GAUTH.client.auth.signOut(); }catch(e){}
+  GAUTH.token=''; GAUTH.email=''; GAUTH.member='';
+  clearSnap(); location.reload();
+}
+async function whoami(){
+  if(!GAUTH.token || adminKey()) return;
+  try{ const r=await api({action:'whoami'}); GAUTH.member=r.member||''; GAUTH.email=r.email||GAUTH.email;
+    if(GAUTH.member && DB.settings.me!==GAUTH.member){ DB.settings.me=GAUTH.member; saveUI(); render(); } }catch(e){}
+}
+/* 로그인 안 됐으면 로그인 화면 */
+function needLogin(msg){
+  if(hasAuth() || SHARE_KEY || EMBED) return;
+  GAUTH.error=msg||GAUTH.error||'';
+  if(!isReady()){ clearSnap(); syncUI(''); setLoad('auth'); }
+  else showSaveError(msg||'로그인이 필요합니다');
+}
 /* 공유·읽기전용 임베드는 비밀번호 없이 그 브랜드만 읽음 */
-const viewOnly=()=>!adminKey() && (!!SHARE_KEY || !!(EMBED&&EMBED.ro));
+const viewOnly=()=>!hasAuth() && (!!SHARE_KEY || !!(EMBED&&EMBED.ro));
 let __keyAsk=null, __keyDeclined=false;
 function askAdminKey(){
   if(__keyDeclined || SHARE_KEY || (EMBED&&EMBED.ro)) return Promise.resolve(false);
@@ -6067,6 +6150,7 @@ async function __api(payload, retried, tries=0){
   const headers={'Content-Type':'application/json'};
   /* 헤더에는 한글을 못 실으니 인코딩해서 보냄 (서버에서 되돌림) */
   if(key) headers['X-Admin-Key']=encodeURIComponent(key);
+  else if(GAUTH.token) headers['Authorization']='Bearer '+GAUTH.token;
   else if(SHARE_KEY) headers['X-Share-Key']=encodeURIComponent(SHARE_KEY);
   else if(EMBED&&EMBED.brand) headers['X-Embed-Brand']=encodeURIComponent(EMBED.brand);
   const ctl=new AbortController(); const to=setTimeout(()=>ctl.abort(),30000);
@@ -6078,13 +6162,15 @@ async function __api(payload, retried, tries=0){
   if(res.status===401 && !retried){
     /* 그 사이 다른 요청에서 비밀번호를 새로 받았으면 그대로 다시 시도 */
     if(adminKey() && adminKey()!==key) return __api(payload,true);
-    if(!key){ keyBar(); } else if(await askAdminKey()) return __api(payload,true); /* 비밀번호가 아예 없으면 상단 입력 칸으로 */
+    if(!key && GAUTH.token && GAUTH.client){ try{ const { data }=await GAUTH.client.auth.refreshSession(); if(data&&data.session){ GAUTH.token=data.session.access_token; return __api(payload,true); } }catch(e){} GAUTH.token=''; }
+    if(!key){ needLogin(json.message); } else if(await askAdminKey()) return __api(payload,true); /* 비밀번호가 아예 없으면 상단 입력 칸으로 */
   }
   /* 요청 제한에 걸리면 잠깐 기다렸다 다시 (1·2·4·8초) */
   if((res.status===429 || /rate limited/i.test(json.message||'')) && tries<4){
     await new Promise(r=>setTimeout(r,1000*2**tries+Math.random()*400));
     return __api(payload, retried, tries+1);
   }
+  if(res.status===403 && !key && GAUTH.token){ GAUTH.error=json.message||''; }
   if(!res.ok){ const err=new Error(json.message||`요청 실패 (${res.status})`); err.status=res.status; throw err; }
   return json;
 }
@@ -6095,7 +6181,7 @@ async function testConn(){
 let writeTimer=null, writing=false, writeAgain=false;
 function queueWrite(){
   if(viewOnly() || !isReady()) return;
-  if(!adminKey()){ showSaveError('관리자 비밀번호가 필요합니다'); keyBar(); return; }
+  if(!hasAuth()){ needLogin('로그인이 필요합니다'); return; }
   clearTimeout(writeTimer);
   writeTimer=setTimeout(flushWrites, 200);
 }
@@ -6124,7 +6210,7 @@ async function flushWrites(){
 /* 처음 읽기: 모든 표를 성공적으로 읽기 전까지는 로딩 화면. 실패하면 기본값 대신 오류 + 자동 재시도 */
 let __booting=null;
 function bootSync(){
-  if(!adminKey() && !SHARE_KEY && !EMBED){ if(!isReady()){ clearSnap(); syncUI(''); setLoad('auth'); } keyBar(); return Promise.resolve(); }
+  if(!hasAuth() && !SHARE_KEY && !EMBED){ needLogin(); return Promise.resolve(); }
   if(__booting) return __booting;
   __booting=(async()=>{
     const first=!isReady();
@@ -6136,8 +6222,8 @@ function bootSync(){
         await __pullAll(true, undefined, {strict:true, initial:true});
         break;
       }catch(e){
-        if(e && e.status===401 && !SHARE_KEY && !EMBED){
-          if(first){ clearSnap(); setAdminKey(''); syncUI(''); LOAD.state='loading'; setLoad('auth'); keyBar(); } else showSaveError('관리자 비밀번호가 맞지 않습니다');
+        if(e && (e.status===401 || (e.status===403 && GAUTH.token && !adminKey())) && !SHARE_KEY && !EMBED){
+          if(first){ clearSnap(); if(adminKey()) setAdminKey(''); GAUTH.error=e.message||''; syncUI(''); LOAD.state='loading'; setLoad('auth'); } else showSaveError(e.message||'로그인이 필요합니다');
           return;
         }
         if(!first){ showSaveError(e.message||'데이터를 불러오지 못했습니다'); return; }
@@ -6151,6 +6237,7 @@ function bootSync(){
     LOAD.state='ready'; LOAD.err=''; syncUI('');
     render();
     saveSnap();
+    whoami();
     startLive().catch(()=>startPollLoop());
   })().finally(()=>{ __booting=null; });
   return __booting;
@@ -6158,7 +6245,7 @@ function bootSync(){
 /* 이 브라우저에 관리자 비밀번호가 없으면 화면 맨 위에 입력 칸 — 한 번 넣으면 이 브라우저에 저장 */
 function keyBar(){
   const old=document.getElementById('keybar');
-  if(adminKey() || SHARE_KEY || EMBED || !DB.settings.workerUrl){ if(old) old.remove(); return; }
+  if(hasAuth() || SHARE_KEY || EMBED || !DB.settings.workerUrl){ if(old) old.remove(); return; }
   if(old) return;
   const bar=document.createElement('div'); bar.id='keybar';
   bar.innerHTML=`<span>관리자 비밀번호를 한 번만 넣어 주세요. 이 브라우저에 저장됩니다.</span>
@@ -6175,6 +6262,20 @@ function keyBar(){
   };
   document.getElementById('keybar_ok').onclick=go;
   document.getElementById('keybar_in').onkeydown=e=>{ if(e.key==='Enter') go(); };
+}
+async function pushMembers(list){
+  const s=DB.settings; const dbId=s.db&&s.db.config;
+  if(!dbId) throw new Error('설정 표를 찾지 못했습니다');
+  const res=await api({action:'query', database_id:dbId});
+  const row=(res.results||[]).find(p=>(p.properties['항목']?.title?.[0]?.plain_text||'')==='members');
+  const props={ '항목':{title:[{text:{content:'members'}}]},
+    '값':{rich_text:[{text:{content:JSON.stringify(list)}}]},
+    '수정시각':{rich_text:[{text:{content:new Date().toISOString()}}]} };
+  if(row) await api({action:'update', page_id:row.id, properties:props});
+  else await api({action:'create', database_id:dbId, properties:props});
+}
+function readMembers(){
+  return [...document.querySelectorAll('[data-mem-email]')].map(el=>({ email:el.value.trim().toLowerCase(), name:(document.querySelector(`[data-mem-name="${el.dataset.memEmail}"]`)||{}).value||'' }));
 }
 async function pushBrands(){
   const s=DB.settings; const dbId=s.db&&s.db.config;
@@ -6194,6 +6295,8 @@ async function pushBrands(){
 function applyConfig(res){
   const rows=(res&&res.results)||[];
   const find=n=>rows.find(p=>(p.properties['항목']?.title?.[0]?.plain_text||'')===n);
+  const memRaw=(find('members')?.properties['값']?.rich_text||[]).map(t=>t.plain_text).join('');
+  if(memRaw){ try{ const ml=JSON.parse(memRaw); if(Array.isArray(ml)) DB.settings.members=ml; }catch(e){} }
   const raw=find('brands')?.properties['값']?.rich_text?.[0]?.plain_text;
   if(raw){
     const list=JSON.parse(raw);
@@ -6523,6 +6626,7 @@ function bind(){
     el.onkeydown=e=>{ if(e.key==='Enter'){ e.preventDefault(); const all=[...document.querySelectorAll('[data-day]')]; const i=all.indexOf(el), cols=(monthChannels(UI.brand,UI.ym).length||1)*2; el.blur(); setTimeout(()=>{ const nx=document.querySelectorAll('[data-day]')[i+cols]; if(nx) nx.focus(); },30); } };
   });
   document.querySelectorAll('[data-act]').forEach(el=>el.onclick=()=>act(el.dataset.act));
+  document.querySelectorAll('[data-mem-del]').forEach(el=>el.onclick=()=>{ const i=Number(el.dataset.memDel); DB.settings.members=readMembers().filter((_,j)=>j!==i); render(); });
   if(UI.tab==='calendar') bindCalendar();
   bindThreadsPerformance();
   scheduleThreadsPerformance();
@@ -6576,6 +6680,13 @@ function act(a){
   if(a==='cost-new') return costModal(null);
   if(a==='action-new') return actionModal(null);
   if(a==='brand-new') return brandModal(null);
+  if(a==='mem-add'){ DB.settings.members=[...readMembers(),{email:'',name:''}]; render(); return; }
+  if(a==='mem-save'){
+    const list=readMembers().filter(m=>m.email);
+    if(list.some(m=>!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(m.email))) return toast('이메일 형식을 확인해 주세요',2500);
+    pushMembers(list).then(()=>{ DB.settings.members=list; render(); toast('구글 로그인 계정을 저장했습니다'); }).catch(e=>toast('저장 실패: '+e.message,3500));
+    return;
+  }
   if(a==='save-admin'){
     setAdminKey(($('#setAdminKey')&&$('#setAdminKey').value||'').trim()); __keyDeclined=false;
     const bar=document.getElementById('keybar'); if(bar) bar.remove();
@@ -6613,7 +6724,7 @@ if(SHARE_KEY){
   else pullBrands().catch(()=>{}).finally(()=>{ window.__shareChecked=true; render(); });
 }
 render();
-bootSync();
+initGoogleAuth().finally(()=>{ bootSync(); });
 /* 다른 탭의 변경: Realtime이 연결되면 그 신호를 받고, 아니면 5초마다 변경분만 읽음 */
 let liveSince=null, pollTimer=null, rtClient=null;
 const RT_TABLES=['content_calendar','weekly_plan','sales','products','content_plans','costs','action_plan','app_settings','references','threads_performance','daily_sales','oem_inquiries_yj','visit_stats_yj'];
@@ -6658,7 +6769,7 @@ async function startLive(){
   try{ await loadSupabaseJs(); }catch(e){ startPollLoop(); return; }
   if(rtClient){ try{ rtClient.removeAllChannels(); }catch(e){} }
   const sb=window.supabase.createClient(rt.url, rt.anonKey||rt.token, {
-    auth:{ persistSession:false, autoRefreshToken:false, detectSessionInUrl:false },
+    auth:{ persistSession:false, autoRefreshToken:false, detectSessionInUrl:false, storageKey:'ddl-rt' },
   });
   rtClient=sb;
   sb.realtime.setAuth(rt.token);

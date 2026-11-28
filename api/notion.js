@@ -14,7 +14,7 @@
 
 import { createHash, timingSafeEqual } from 'node:crypto';
 import { gzipSync } from 'node:zlib';
-import { realtimeToken } from '../lib/supabase.js';
+import { realtimeToken, requireConfig, authHeaders } from '../lib/supabase.js';
 import {
   TABLES, archiveRow, createRow, findRow, listRows, tableKey, updateRow, uploadFile,
 } from '../lib/pages.js';
@@ -57,7 +57,7 @@ export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', allowed.includes('*') ? '*' : (allowed.includes(origin) ? origin : allowed[0]));
   res.setHeader('Vary', 'Origin');
   res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, X-Admin-Key, X-Share-Key, X-Embed-Brand');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Admin-Key, X-Share-Key, X-Embed-Brand');
   res.setHeader('Access-Control-Max-Age', '86400');
 
   if (req.method === 'OPTIONS') return res.status(204).end();
@@ -68,11 +68,19 @@ export default async function handler(req, res) {
 
   try {
     const { action } = body;
+    if (action === 'authcfg') {
+      /* 구글 로그인 준비용 공개 정보. 공개(publishable) 키만, 비밀 키는 절대 아님 */
+      return res.status(200).json({ url: String(process.env.SUPABASE_URL || '').replace(/\/+$/, ''), anonKey: process.env.SUPABASE_PUBLISHABLE_KEY || process.env.SUPABASE_ANON_KEY || '' });
+    }
     const who = await authorize(req);
     if (who.error) return res.status(who.status).json({ message: who.error });
 
     if (action === 'ping' || action === 'clock') {
       return res.status(200).json({ ok: true, now: new Date(Date.now() - CHANGES_OVERLAP_MS).toISOString() });
+    }
+
+    if (action === 'whoami') {
+      return res.status(200).json({ via: who.via || (who.admin ? 'admin' : who.scope), email: who.email || '', member: who.member || '' });
     }
 
     if (action === 'realtime') {
@@ -176,7 +184,44 @@ export default async function handler(req, res) {
   }
 }
 
+let memberCache = { at: 0, list: [] };
+const tokenCache = new Map();
+export function resetMemberCache() { memberCache = { at: 0, list: [] }; tokenCache.clear(); }
+
+/* 구글 로그인 허용 계정: config 표의 'members' 행 [{email, name}] */
+async function loadMembers() {
+  if (Date.now() - memberCache.at < 60_000) return memberCache.list;
+  const pages = await listRows('config', {});
+  const row = pages.find((p) => titleOf(p.properties?.['항목']) === 'members');
+  const raw = (row?.properties?.['값']?.rich_text || []).map((t) => t.plain_text).join('');
+  let list = [];
+  try { list = JSON.parse(raw); } catch { list = []; }
+  memberCache = { at: Date.now(), list: Array.isArray(list) ? list : [] };
+  return memberCache.list;
+}
+
+/* Supabase Auth에 토큰을 보여 주고 로그인한 사람의 이메일을 받음 */
+async function googleUser(token) {
+  const hit = tokenCache.get(token);
+  if (hit && Date.now() - hit.at < 60_000) return hit.user;
+  const { url, key } = requireConfig();
+  const r = await fetch(url + '/auth/v1/user', { headers: { ...authHeaders(key), apikey: key, Authorization: 'Bearer ' + token } });
+  const user = r.ok ? await r.json().catch(() => null) : null;
+  if (tokenCache.size > 200) tokenCache.clear();
+  tokenCache.set(token, { at: Date.now(), user });
+  return user;
+}
+
 export async function authorize(req) {
+  const bearer = String(req.headers?.authorization || '').replace(/^Bearer\s+/i, '').trim();
+  if (bearer && !header(req, 'x-admin-key')) {
+    const user = await googleUser(bearer);
+    const email = String(user?.email || '').toLowerCase();
+    if (!email) return { status: 401, error: '로그인이 만료됐습니다. 다시 로그인해 주세요' };
+    const m = (await loadMembers()).find((x) => String(x.email || '').toLowerCase().trim() === email);
+    if (!m) return { status: 403, error: `등록되지 않은 구글 계정입니다 (${email}). 설정에서 계정을 추가해 달라고 요청하세요` };
+    return { admin: true, via: 'google', email, member: m.name || '' };
+  }
   const admin = header(req, 'x-admin-key');
   if (admin) {
     if (!process.env.ADMIN_KEY) return { status: 500, error: 'ADMIN_KEY 환경변수가 설정되지 않았습니다' };
