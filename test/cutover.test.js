@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import fs from 'fs';
 import { createHmac } from 'node:crypto';
 import { columnsFromProperties, rowToPage, TABLES } from '../lib/pages.js';
-import { authHeaders, signJwt } from '../lib/supabase.js';
+import { authHeaders, signJwt, storagePathFromId } from '../lib/supabase.js';
 import handler, { resetAuthCache } from '../api/notion.js';
 import schedule from '../api/schedule.js';
 
@@ -218,6 +218,71 @@ test('changes since returns only newer and deleted rows', async () => {
   assert.equal(res.body.deleted.contents.length, 1);
   assert.equal(res.body.upserts.contents.length, 0);
   assert.ok(res.body.now);
+});
+
+test('adding and removing attachments keeps migrated file paths', async () => {
+  process.env.SUPABASE_URL = 'https://example.supabase.co';
+  process.env.SUPABASE_SERVICE_ROLE_KEY = 'sb_secret_test';
+  process.env.ADMIN_KEY = 'admin-secret';
+  resetAuthCache();
+  const cal = 'notion-files/content_calendar/page1111/photo.jpg';
+  const plan = 'notion-files/content_plans/page1111/plan.png';
+  const added = 'ddl-brand/cccccccc-cccc-4ccc-8ccc-cccccccccccc/new.jpg';
+  const calls = [];
+  global.fetch = async (url, opts = {}) => {
+    const body = opts.body ? JSON.parse(opts.body) : null;
+    calls.push({ url: String(url), method: opts.method || 'GET', body });
+    if ((opts.method || 'GET') === 'GET') {
+      return jsonResponse([{
+        notion_page_id: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
+        '제목': '일정',
+        '브랜드': 'VIVICATE',
+        files_storage: [{ path: cal, name: 'photo.jpg' }, { path: plan, name: 'plan.png' }],
+        properties: {},
+      }]);
+    }
+    return jsonResponse([{ ...body, notion_page_id: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa' }]);
+  };
+  const files = (paths) => ({
+    files: paths.map((path) => ({ name: path.split('/').pop(), type: 'file_upload', file_upload: { id: path } })),
+  });
+  const pageId = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa';
+  const add = resMock();
+  await handler(req({
+    action: 'update',
+    page_id: pageId,
+    properties: { '첨부': files([cal, plan, added]) },
+  }, { 'x-admin-key': 'admin-secret' }), add);
+  assert.equal(add.statusCode, 200);
+  const stored = () => calls.filter((c) => c.method === 'PATCH').at(-1).body.files_storage.map((f) => f.path);
+  assert.deepEqual(stored(), [
+    cal,
+    plan,
+    'notion-files/' + added,
+  ]);
+
+  const remove = resMock();
+  await handler(req({
+    action: 'update',
+    page_id: pageId,
+    properties: { '첨부': files([plan]) },
+  }, { 'x-admin-key': 'admin-secret' }), remove);
+  assert.equal(remove.statusCode, 200);
+  assert.deepEqual(stored(), [plan]);
+
+  const clear = resMock();
+  await handler(req({
+    action: 'update',
+    page_id: pageId,
+    properties: { '첨부': { files: [] } },
+  }, { 'x-admin-key': 'admin-secret' }), clear);
+  assert.equal(clear.statusCode, 200);
+  assert.deepEqual(stored(), []);
+  assert.equal(storagePathFromId('notion-files/content_calendar/../secret.jpg'), null);
+  assert.equal(storagePathFromId('other/page/a.jpg'), null);
+  assert.match(HTML, /id:f\.path/);
+  assert.equal(HTML.includes('설정 · 동기화'), false);
+  assert.match(HTML, /brandtitle">설정</);
 });
 
 test('public schedule reads vivicate rows from Supabase', async () => {

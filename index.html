@@ -3124,7 +3124,7 @@ function mineBtn(){
 }
 function topbar(){
   if(UI.brand==='__set') return `<header class="topbar"><div class="tophead">
-      <h1 class="brandtitle">설정 · 동기화</h1><div class="spacer"></div>
+      <h1 class="brandtitle">설정</h1><div class="spacer"></div>
     </div></header>`;
   if(UI.brand==='__sched') return `<header class="topbar">
       <div class="tophead"><div><h1 class="brandtitle">캘린더<span class="brandko">전체 브랜드</span></h1></div><div class="spacer"></div>${monthNav()}</div>
@@ -5529,7 +5529,7 @@ const KIND={
     props:c=>({ '제목':{title:[{text:{content:c.title||c.type}}]}, '브랜드':{select:{name:brandOf(c.brandId)?.name||''}},
       '유형':{select:{name:c.type}}, '날짜':{date:{start:c.date, ...(c.end&&c.end!==c.date?{end:c.end}:{})}}, '완료':{checkbox:!!c.done},
       '메모':{rich_text:[{text:{content:c.memo||''}}]},
-            ...((c.att||[]).length && c.att.every(a=>a.id)?{'첨부':{files:c.att.map(a=>({type:'file_upload', file_upload:{id:a.id}, name:a.name}))}}:{}),
+            ...(Array.isArray(c.att) && c.att.every(a=>a.id)?{'첨부':{files:c.att.map(a=>({type:'file_upload', file_upload:{id:a.id}, name:a.name}))}}:{}),
       '로컬ID':{rich_text:[{text:{content:c.id}}]} }) },
   tasks:{ db:'tasks',
     props:t=>({ 'Task':{title:[{text:{content:t.title}}]}, 'Brand':{select:{name:brandOf(t.brandId)?.name||''}},
@@ -5563,7 +5563,7 @@ const KIND={
       ...(p.purpose?{'목적':{select:{name:p.purpose}}}:{}),
       ...(p.hook?{'훅유형':{select:{name:p.hook}}}:{}),
       ...(p.assetNote?{'소재 메모':{rich_text:[{text:{content:p.assetNote}}]}}:{}),
-      ...((p.att||[]).length && p.att.every(a=>a.id)?{'첨부':{files:p.att.map(a=>({type:'file_upload', file_upload:{id:a.id}, name:a.name}))}}:{}),
+      ...(Array.isArray(p.att) && p.att.every(a=>a.id)?{'첨부':{files:p.att.map(a=>({type:'file_upload', file_upload:{id:a.id}, name:a.name}))}}:{}),
       ...(p.date?{'발행일':{date:{start:p.date}}}:{}),
       '완료':{checkbox:!!p.done}, '로컬ID':{rich_text:[{text:{content:p.id}}]} }) },
   actions:{ db:'actions',
@@ -5830,7 +5830,7 @@ const brandByName=nm=>{
         date:P['날짜']?.date?.start||TODAY, end:P['날짜']?.date?.end||'',
         type:(TYPE_ALIAS[sel(P['유형'])]||sel(P['유형'])||'EGC'),
         title:ttl(P['제목']), memo:txt(P['메모']), done:!!P['완료']?.checkbox,
-                att:(P['첨부']?.files||[]).map(f=>({name:f.name, url:f.file?.url||f.external?.url||'', mime:(/\.(mp4|mov|webm)$/i.test(f.name||'')?'video/mp4':'image/jpeg'), id:(rec.att||[]).find(a=>a.name===f.name)?.id })) });
+                att:(P['첨부']?.files||[]).map(f=>({name:f.name, url:f.file?.url||f.external?.url||'', mime:(/\.(mp4|mov|webm)$/i.test(f.name||'')?'video/mp4':'image/jpeg'), id:f.path||f.file_upload?.id||(rec.att||[]).find(a=>a.name===f.name)?.id||''})) });
         const fl=P['첨부']?.files||[];
         if(fl.length && !(rec.att||[]).length) rec.attView=fl.map(f=>({name:f.name, url:f.file?.url||f.external?.url||''}));
       }
@@ -5848,7 +5848,7 @@ const brandByName=nm=>{
       if(kind==='sales'){ Object.assign(rec,{brandId:brandByName(sel(P['브랜드'])), ym:txt(P['월']),
         channel:sel(P['채널']), goal:P['목표']?.number||0, actual:P['실적']?.number||0}); }
       if(kind==='plans'){ Object.assign(rec,{brandId:brandByName(sel(P['브랜드'])), ym:txt(P['월']),
-        att:(P['첨부']?.files||[]).map(f=>({name:f.name, url:f.file?.url||f.external?.url||'', mime:(/\.(mp4|mov|webm)$/i.test(f.name||'')?'video/mp4':'image/jpeg'), id:(rec.att||[]).find(a=>a.name===f.name)?.id })),
+        att:(P['첨부']?.files||[]).map(f=>({name:f.name, url:f.file?.url||f.external?.url||'', mime:(/\.(mp4|mov|webm)$/i.test(f.name||'')?'video/mp4':'image/jpeg'), id:f.path||f.file_upload?.id||(rec.att||[]).find(a=>a.name===f.name)?.id||''})),
         asset:sel(P['소재'])||'', assetNote:txt(P['소재 메모']),
         purpose:sel(P['목적'])||'', hook:sel(P['훅유형'])||'',
         week:sel(P['주차'])||'1주차', kind:sel(P['형식'])||'영상', date:P['발행일']?.date?.start||'', axis:txt(P['축']), title:ttl(P['주제']),
