@@ -1,6 +1,7 @@
 # Edge Function config for the Threads collector.
 # verify_jwt stays off: the service role key may be an sb_secret, which is
-# not a JWT. index.js compares the bearer to SUPABASE_SERVICE_ROLE_KEY.
+# not a JWT. index.js accepts that key, or the Vault cron secret via
+# public.threads_collector_auth.
 
 [functions.threads-collector]
 verify_jwt = false
