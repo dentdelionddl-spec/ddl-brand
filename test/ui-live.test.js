@@ -37,6 +37,16 @@ function salesPage(goal) {
   };
 }
 
+const ID_KEYS = {
+  '22c3381ad8e44f239be74fdd3243eba3': 'contents', '1b390d2a35db48d796e26edaa0834a6a': 'tasks',
+  '5ca27a6560214303bc77b2da9e48ce02': 'sales', 'ddd18f71b6c9475abc59f74881cff410': 'products',
+  '30a5544647d84123b4ad5e106c48c64e': 'plans', 'e33ee267da7d43fd86f72c28fa888114': 'costs',
+  '21f72c37590f48dba49455f0c705b4ab': 'actions', '46b8ab2d1ddc47f7b5f8c0bfa4748ab9': 'config',
+  'ae4c78c3a8324090b2617774d9ae3f01': 'refs', '691bda8c1aec4253964f2adda0e18c05': 'stats',
+  'c0a051c168524e599f630c949a78f985': 'daily', 'b400cf41ae804765b1b15e3a4b004ba1': 'inquiries',
+  '22b96ecfb203408295a3f8755c6935b6': 'traffic',
+};
+
 function startServer() {
   const state = { goal: 100000, editedAt: '2026-11-01T00:00:00.000Z' };
   const server = http.createServer((req, res) => {
@@ -66,6 +76,15 @@ function startServer() {
       let payload = { ok: true, now };
       if (body.action === 'clock' || body.action === 'ping') payload = { ok: true, now };
       else if (body.action === 'realtime') payload = { realtime: false, reason: 'test' };
+      else if (body.action === 'bootstrap') {
+        const results = {};
+        for (const id of body.database_ids || []) {
+          const key = ID_KEYS[String(id).replace(/-/g, '')];
+          if (!key) continue;
+          results[key] = key === 'config' ? [brandsPage()] : key === 'sales' ? [salesPage(state.goal)] : [];
+        }
+        payload = { now, results, errors: {} };
+      }
       else if (body.action === 'query') {
         if (db.startsWith('46b8ab2d')) payload = { results: [brandsPage()] };
         else if (db.startsWith('5ca27a65')) payload = { results: [salesPage(state.goal)] };

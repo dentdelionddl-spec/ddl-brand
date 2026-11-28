@@ -15,7 +15,17 @@ const brandsPage = () => ({ id: 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb', properti
   '값': { rich_text: [{ plain_text: JSON.stringify(BRANDS) }] },
 } });
 
-function startServer({ latency = 0, failTasks = 0 } = {}) {
+const ID_KEYS = {
+  '22c3381ad8e44f239be74fdd3243eba3': 'contents', '1b390d2a35db48d796e26edaa0834a6a': 'tasks',
+  '5ca27a6560214303bc77b2da9e48ce02': 'sales', 'ddd18f71b6c9475abc59f74881cff410': 'products',
+  '30a5544647d84123b4ad5e106c48c64e': 'plans', 'e33ee267da7d43fd86f72c28fa888114': 'costs',
+  '21f72c37590f48dba49455f0c705b4ab': 'actions', '46b8ab2d1ddc47f7b5f8c0bfa4748ab9': 'config',
+  'ae4c78c3a8324090b2617774d9ae3f01': 'refs', '691bda8c1aec4253964f2adda0e18c05': 'stats',
+  'c0a051c168524e599f630c949a78f985': 'daily', 'b400cf41ae804765b1b15e3a4b004ba1': 'inquiries',
+  '22b96ecfb203408295a3f8755c6935b6': 'traffic',
+};
+
+function startServer({ latency = 0, failTasks = 0, noBootstrap = false, noConfig = false, bootLatency = 0 } = {}) {
   const state = { writes: [], failTasks, log: [] };
   const server = http.createServer((req, res) => {
     if (req.method === 'GET' && (req.url === '/' || req.url.startsWith('/?'))) {
@@ -35,6 +45,17 @@ function startServer({ latency = 0, failTasks = 0 } = {}) {
       if (body.action === 'clock' || body.action === 'ping') return send(200, { ok: true, now: new Date().toISOString() });
       if (body.action === 'realtime') return send(200, { realtime: false });
       if (body.action === 'changes') return send(200, { now: new Date().toISOString(), upserts: {}, deleted: {} });
+      if (body.action === 'bootstrap') {
+        if (noBootstrap) return send(400, { message: '모르는 action: bootstrap' });
+        if (bootLatency) await new Promise((r) => setTimeout(r, bootLatency));
+        if (state.failTasks > 0) { state.failTasks--; return send(502, { message: 'upstream' }); }
+        const results = {};
+        for (const id of body.database_ids || []) {
+          const key = ID_KEYS[String(id).replace(/-/g, '')];
+          if (key) results[key] = key === 'config' ? (noConfig ? [] : [brandsPage()]) : [];
+        }
+        return send(200, { now: new Date().toISOString(), results, errors: {} });
+      }
       if (body.action === 'query') {
         // 업무 표(tasks)는 처음 몇 번 실패시킴
         if (db.startsWith('1b390d2a') && state.failTasks > 0) { state.failTasks--; return send(502, { message: 'upstream' }); }
@@ -88,5 +109,85 @@ test('a failed read shows retry state and writes nothing', { timeout: 30000, ski
     await page.click('#loadretry');
     await page.waitForSelector('[data-brand="newbrand"]', { timeout: 15000 });
     assert.deepEqual(state.writes, []);
+  } finally { await browser.close(); await new Promise((r) => server.close(r)); }
+});
+
+const snapOf = (page) => page.evaluate(() => {
+  const k = Object.keys(localStorage).find((x) => x.includes(':snap:'));
+  return k ? JSON.parse(localStorage.getItem(k)) : null;
+});
+
+test('second visit shows the cached server data at once (never defaults), locks writes, then swaps in fresh data', { timeout: 40000, skip: !CHROME && 'chrome not found' }, async () => {
+  const { server, port, state } = await startServer({ bootLatency: 2500 });
+  const browser = await launch();
+  try {
+    const page = await open(browser, port);
+    await page.waitForSelector('[data-brand="newbrand"]', { timeout: 15000 });
+    await page.waitForFunction(() => Object.keys(localStorage).some((x) => x.includes(':snap:')), { timeout: 8000 });
+    const snap = await snapOf(page);
+    assert.deepEqual(snap.brands.map((b) => b.name), ['VIVICATE', 'NEWBRAND']);
+    assert.ok(!JSON.stringify(snap).includes('RUHEL') && !JSON.stringify(snap).includes('OOTN'));
+    assert.deepEqual(state.writes, []);
+
+    /* 두 번째 방문: 서버가 2.5초 늦어도 캐시가 바로 보여야 함 */
+    const t0 = Date.now();
+    await page.reload({ waitUntil: 'domcontentloaded' });
+    await page.waitForSelector('[data-brand="newbrand"]', { timeout: 1500 });
+    assert.ok(Date.now() - t0 < 1500, 'cached data should paint before the server answers');
+    const during = await page.evaluate(() => ({ state: LOAD.state, locked: document.body.classList.contains('syncing'), pill: !!document.getElementById('syncpill'),
+      side: [...document.querySelectorAll('.snav__l')].map((e) => e.textContent.trim()) }));
+    assert.equal(during.state, 'cached');
+    assert.equal(during.locked, true);
+    assert.equal(during.pill, true);
+    assert.ok(!during.side.includes('OOTN') && !during.side.includes('RUHEL') && !during.side.includes('USUEL'));
+    /* 캐시 상태에서는 쓰기가 막혀 있음 */
+    assert.equal(await page.evaluate(() => { queueWrite(); return 'ok'; }), 'ok');
+    await new Promise((r) => setTimeout(r, 400));
+    assert.deepEqual(state.writes, []);
+
+    await page.waitForFunction(() => LOAD.state === 'ready', { timeout: 10000 });
+    assert.equal(await page.evaluate(() => !document.getElementById('syncpill') && !document.body.classList.contains('syncing')), true);
+  } finally { await browser.close(); await new Promise((r) => server.close(r)); }
+});
+
+test('a snapshot is never saved when the server has no brand list (defaults stay out of the cache)', { timeout: 30000, skip: !CHROME && 'chrome not found' }, async () => {
+  const { server, port } = await startServer({ noConfig: true });
+  const browser = await launch();
+  try {
+    const page = await open(browser, port);
+    await page.waitForFunction(() => LOAD.state === 'ready', { timeout: 15000 });
+    await page.evaluate(() => saveSnap());
+    await new Promise((r) => setTimeout(r, 3500));
+    assert.equal(await snapOf(page), null);
+  } finally { await browser.close(); await new Promise((r) => server.close(r)); }
+});
+
+test('a snapshot with default brands or an old version is ignored', { timeout: 30000, skip: !CHROME && 'chrome not found' }, async () => {
+  const { server, port } = await startServer({ bootLatency: 1500 });
+  const browser = await launch();
+  try {
+    const page = await open(browser, port);
+    await page.waitForFunction(() => LOAD.state === 'ready', { timeout: 15000 });
+    await page.evaluateOnNewDocument(() => {
+      const bad = { v: 99, t: Date.now(), brands: [{ id: 'ootn', name: 'OOTN' }] };
+      for (const k of ['contents', 'tasks', 'sales', 'products', 'plans', 'costs', 'actions', 'refs', 'stats', 'daily']) bad[k] = [];
+      localStorage.setItem('ddl-brand-commerce-v1:snap:admin', JSON.stringify(bad));
+    });
+    await page.reload({ waitUntil: 'domcontentloaded' });
+    const st = await page.evaluate(() => ({ state: LOAD.state, side: document.querySelectorAll('.snav__l').length }));
+    assert.equal(st.state, 'loading');
+    assert.equal(st.side, 0);
+    await page.waitForFunction(() => LOAD.state === 'ready', { timeout: 15000 });
+  } finally { await browser.close(); await new Promise((r) => server.close(r)); }
+});
+
+test('an older server without bootstrap still loads (per-table fallback)', { timeout: 30000, skip: !CHROME && 'chrome not found' }, async () => {
+  const { server, port, state } = await startServer({ noBootstrap: true });
+  const browser = await launch();
+  try {
+    const page = await open(browser, port);
+    await page.waitForSelector('[data-brand="newbrand"]', { timeout: 15000 });
+    assert.deepEqual(state.writes, []);
+    assert.ok(state.log.some((x) => x.startsWith('query:')));
   } finally { await browser.close(); await new Promise((r) => server.close(r)); }
 });
