@@ -3029,7 +3029,7 @@ function syncUI(msg, retry){
   const b=el.querySelector('button'); if(b) b.onclick=()=>{ if(LOAD.kick) LOAD.kick(); };
 }
 function bootFromCache(){
-  if(!(adminKey()||hasStoredLogin()||SHARE_KEY||EMBED)) return;
+  if(!(hasStoredLogin()||SHARE_KEY||EMBED)) return;
   if(loadSnap()){ LOAD.state='cached'; serverBrands=true; document.body.classList.add('syncing'); }
 }
 function setLoad(state, err){
@@ -4562,14 +4562,12 @@ function tpMetricOf(row, metric){
 }
 async function apiPerf(brand){
   const headers={'Content-Type':'application/json'};
-  const key=adminKey();
   if(GAUTH.token) headers['Authorization']='Bearer '+GAUTH.token;
-  else if(key) headers['X-Admin-Key']=encodeURIComponent(key);
   else if(SHARE_KEY) headers['X-Share-Key']=encodeURIComponent(SHARE_KEY);
   else if(EMBED&&EMBED.brand) headers['X-Embed-Brand']=encodeURIComponent(EMBED.brand);
   const res=await fetch(PERF_URL,{method:'POST',headers,body:JSON.stringify({brandId:brand.id, brandName:brand.name||'', brandKo:brand.ko||''})});
   const json=await res.json().catch(()=>({}));
-  if(res.status===401 && !key && await askAdminKey()) return apiPerf(brand);
+  if(res.status===401) needLogin(json&&json.message);
   if(!res.ok) throw new Error(json.message||'성과를 읽지 못했습니다');
   return json;
 }
@@ -5581,14 +5579,7 @@ function settingsView(){
       </div>
     </section>
 
-    ${GAUTH.token?'':`<section class="card">
-      <div class="card__hd"><h3>관리자 비밀번호</h3></div>
-      <div class="card__bd">
-        <label class="f"><span>이 브라우저에만 저장됩니다</span>
-          <input type="password" id="setAdminKey" value="${esc(adminKey())}" autocomplete="off" placeholder="ADMIN_KEY" /></label>
-        <button class="btn btn--primary" data-act="save-admin">비밀번호 저장</button>
-      </div>
-    </section>`}
+
   </div>`;
 }
 
@@ -6073,16 +6064,14 @@ async function notionDrop(...recs){
   for(const id of ids){ try{ await api({action:'delete', page_id:id}); }catch(e){ fail++; msg=e.message||msg; } }
   if(fail) showSaveError(msg||'삭제하지 못했습니다');
 }
-/* 관리자 비밀번호: 이 브라우저에만 저장 (내보내기 파일·노션에는 들어가지 않음) */
-const ADMIN_STORE=KEY+':admin';
-const adminKey=()=>store.get(ADMIN_STORE)||'';
-const setAdminKey=v=>{ try{ v? localStorage.setItem(ADMIN_STORE,v) : localStorage.removeItem(ADMIN_STORE); }catch(e){ mem[ADMIN_STORE]=v||null; } };
 /* 구글 로그인 (Supabase Auth). 공개(publishable) 키만 브라우저에 둠 — 비밀 키 아님 */
 const SB_URL='https://adigccfynizkaijnqrhq.supabase.co';
 const SB_PUB='sb_publishable_6UmzWIRAjdexu17sM54ugQ_q3nhWGUy';
 const SB_STORE='ddl-brand-auth';
 const GAUTH={client:null, token:'', email:'', member:'', error:''};
-const hasAuth=()=>!!adminKey() || !!GAUTH.token;
+const hasAuth=()=>!!GAUTH.token;
+/* 예전 관리자 비밀번호는 더 쓰지 않음: 이 브라우저에 남아 있으면 지움 */
+try{ localStorage.removeItem(KEY+':admin'); }catch(e){}
 const hasStoredLogin=()=>{ try{ return !!localStorage.getItem(SB_STORE); }catch(e){ return false; } };
 async function initGoogleAuth(){
   if(SHARE_KEY || EMBED) return;
@@ -6091,12 +6080,12 @@ async function initGoogleAuth(){
     GAUTH.client=window.supabase.createClient(SB_URL, SB_PUB, { auth:{ persistSession:true, autoRefreshToken:true, detectSessionInUrl:true, flowType:'pkce', storageKey:SB_STORE } });
     const { data } = await GAUTH.client.auth.getSession();
     const sess=data&&data.session;
-    if(sess){ GAUTH.token=sess.access_token; GAUTH.email=(sess.user&&sess.user.email)||''; if(adminKey()) setAdminKey(''); }
+    if(sess){ GAUTH.token=sess.access_token; GAUTH.email=(sess.user&&sess.user.email)||''; }
     if(/[?&]code=/.test(location.search)) history.replaceState(null,'',location.pathname+location.search.replace(/[?&](code|state)=[^&]*/g,'').replace(/^&/,'?')+location.hash);
     GAUTH.client.auth.onAuthStateChange((ev, sess2)=>{
       const was=!!GAUTH.token;
       GAUTH.token=sess2?sess2.access_token:''; GAUTH.email=sess2&&sess2.user?sess2.user.email||'':'';
-      if(was && !GAUTH.token && !adminKey() && ev==='SIGNED_OUT' && !GAUTH.error){ clearSnap(); location.reload(); }
+      if(was && !GAUTH.token && ev==='SIGNED_OUT' && !GAUTH.error){ clearSnap(); location.reload(); }
     });
   }catch(e){ GAUTH.client=null; }
 }
@@ -6125,16 +6114,6 @@ function needLogin(msg){
 }
 /* 공유·읽기전용 임베드는 비밀번호 없이 그 브랜드만 읽음 */
 const viewOnly=()=>!hasAuth() && (!!SHARE_KEY || !!(EMBED&&EMBED.ro));
-let __keyAsk=null, __keyDeclined=false;
-function askAdminKey(){
-  if(GAUTH.token) return Promise.resolve(false);
-  if(__keyDeclined || SHARE_KEY || (EMBED&&EMBED.ro)) return Promise.resolve(false);
-  return __keyAsk ||= new Promise(r=>setTimeout(()=>{
-    const v=(prompt('관리자 비밀번호를 입력하세요')||'').trim();
-    if(v) setAdminKey(v); else __keyDeclined=true;
-    __keyAsk=null; r(!!v);
-  }));
-}
 /* 노션 요청은 한 번에 최대 2개씩 — 한꺼번에 몰려 요청 제한에 걸리지 않게 */
 let __apiActive=0; const __apiQ=[];
 async function api(payload, retried){
@@ -6145,11 +6124,10 @@ async function api(payload, retried){
 }
 async function __api(payload, retried, tries=0){
   const url=PROXY_URL;
-  const key=adminKey();
+  const key='';
   const headers={'Content-Type':'application/json'};
   /* 헤더에는 한글을 못 실으니 인코딩해서 보냄 (서버에서 되돌림) */
   if(GAUTH.token) headers['Authorization']='Bearer '+GAUTH.token;
-  else if(key) headers['X-Admin-Key']=encodeURIComponent(key);
   else if(SHARE_KEY) headers['X-Share-Key']=encodeURIComponent(SHARE_KEY);
   else if(EMBED&&EMBED.brand) headers['X-Embed-Brand']=encodeURIComponent(EMBED.brand);
   const ctl=new AbortController(); const to=setTimeout(()=>ctl.abort(),30000);
@@ -6160,9 +6138,8 @@ async function __api(payload, retried, tries=0){
   const json=await res.json().catch(()=>({}));
   if(res.status===401 && !retried){
     /* 그 사이 다른 요청에서 비밀번호를 새로 받았으면 그대로 다시 시도 */
-    if(adminKey() && adminKey()!==key) return __api(payload,true);
     if(!key && GAUTH.token && GAUTH.client){ try{ const { data }=await GAUTH.client.auth.refreshSession(); if(data&&data.session){ GAUTH.token=data.session.access_token; return __api(payload,true); } }catch(e){} GAUTH.token=''; }
-    if(!key || GAUTH.token){ needLogin(json.message); } else if(await askAdminKey()) return __api(payload,true); /* 비밀번호가 아예 없으면 상단 입력 칸으로 */
+    needLogin(json.message); /* 비밀번호가 아예 없으면 상단 입력 칸으로 */
   }
   /* 요청 제한에 걸리면 잠깐 기다렸다 다시 (1·2·4·8초) */
   if((res.status===429 || /rate limited/i.test(json.message||'')) && tries<4){
@@ -6223,7 +6200,7 @@ function bootSync(){
       }catch(e){
         if(e && (e.status===401 || (e.status===403 && GAUTH.token)) && !SHARE_KEY && !EMBED){
           if(GAUTH.token && e.status===403){ try{ await GAUTH.client.auth.signOut(); }catch(_){} GAUTH.token=''; }
-          if(first){ clearSnap(); if(adminKey()) setAdminKey(''); GAUTH.error=e.message||''; syncUI(''); LOAD.state='loading'; setLoad('auth'); } else showSaveError(e.message||'로그인이 필요합니다');
+          if(first){ clearSnap(); GAUTH.error=e.message||''; syncUI(''); LOAD.state='loading'; setLoad('auth'); } else showSaveError(e.message||'로그인이 필요합니다');
           return;
         }
         if(!first){ showSaveError(e.message||'데이터를 불러오지 못했습니다'); return; }
@@ -6241,27 +6218,6 @@ function bootSync(){
     startLive().catch(()=>startPollLoop());
   })().finally(()=>{ __booting=null; });
   return __booting;
-}
-/* 이 브라우저에 관리자 비밀번호가 없으면 화면 맨 위에 입력 칸 — 한 번 넣으면 이 브라우저에 저장 */
-function keyBar(){
-  const old=document.getElementById('keybar');
-  if(hasAuth() || SHARE_KEY || EMBED || !DB.settings.workerUrl){ if(old) old.remove(); return; }
-  if(old) return;
-  const bar=document.createElement('div'); bar.id='keybar';
-  bar.innerHTML=`<span>관리자 비밀번호를 한 번만 넣어 주세요. 이 브라우저에 저장됩니다.</span>
-    <input type="password" id="keybar_in" placeholder="관리자 비밀번호" autocomplete="current-password">
-    <button type="button" id="keybar_ok">연결</button><em id="keybar_msg"></em>`;
-  document.body.prepend(bar);
-  const go=async()=>{
-    const v=document.getElementById('keybar_in').value.trim(); if(!v) return;
-    setAdminKey(v); __keyDeclined=false;
-    const msg=document.getElementById('keybar_msg'); msg.textContent='확인 중…';
-    try{ await api({action:'ping'},true); }catch(e){ setAdminKey(''); msg.textContent='연결 실패: '+e.message; return; }
-    bar.remove();
-    try{ await bootSync(); }catch(e){ showSaveError(e.message||'데이터를 불러오지 못했습니다'); }
-  };
-  document.getElementById('keybar_ok').onclick=go;
-  document.getElementById('keybar_in').onkeydown=e=>{ if(e.key==='Enter') go(); };
 }
 async function pushMembers(list){
   const s=DB.settings; const dbId=s.db&&s.db.config;
@@ -6686,11 +6642,6 @@ function act(a){
     if(list.some(m=>!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(m.email))) return toast('이메일 형식을 확인해 주세요',2500);
     pushMembers(list).then(()=>{ DB.settings.members=list; render(); toast('구글 로그인 계정을 저장했습니다'); }).catch(e=>toast('저장 실패: '+e.message,3500));
     return;
-  }
-  if(a==='save-admin'){
-    setAdminKey(($('#setAdminKey')&&$('#setAdminKey').value||'').trim()); __keyDeclined=false;
-    const bar=document.getElementById('keybar'); if(bar) bar.remove();
-    bootSync(); return;
   }
   if(a==='export'){
     const blob=new Blob([JSON.stringify(DB,null,2)],{type:'application/json'});

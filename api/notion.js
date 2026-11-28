@@ -6,7 +6,6 @@
 // 필요한 환경변수
 //   SUPABASE_URL
 //   SUPABASE_SERVICE_ROLE_KEY
-//   ADMIN_KEY
 // 선택
 //   ALLOW_ORIGIN
 //   SUPABASE_JWT_SECRET   실시간 구독용 짧은 JWT. 없으면 8초 폴링
@@ -28,7 +27,7 @@ const INQ_PROPS = ['접수일시', '유입 경로', '진행 상태'];
 export const config = { api: { bodyParser: { sizeLimit: '10mb' } } };
 
 let brandCache = { at: 0, list: [] };
-export function resetAuthCache() { brandCache = { at: 0, list: [] }; }
+export function resetAuthCache() { brandCache = { at: 0, list: [] }; memberCache = { at: 0, list: [] }; tokenCache.clear(); }
 
 const CHANGES_OVERLAP_MS = 4000;
 
@@ -57,7 +56,7 @@ export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', allowed.includes('*') ? '*' : (allowed.includes(origin) ? origin : allowed[0]));
   res.setHeader('Vary', 'Origin');
   res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Admin-Key, X-Share-Key, X-Embed-Brand');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Share-Key, X-Embed-Brand');
   res.setHeader('Access-Control-Max-Age', '86400');
 
   if (req.method === 'OPTIONS') return res.status(204).end();
@@ -214,7 +213,9 @@ async function googleUser(token) {
 
 export async function authorize(req) {
   const bearer = String(req.headers?.authorization || '').replace(/^Bearer\s+/i, '').trim();
-  if (bearer && !header(req, 'x-admin-key')) {
+  /* 관리자 비밀번호 접속은 없앰. 팀원 구글 계정(Bearer) · 공유 링크 · 임베드만 */
+  if (header(req, 'x-admin-key')) return { status: 401, error: '관리자 비밀번호 접속은 종료됐습니다. 팀원 구글 계정으로 로그인해 주세요' };
+  if (bearer) {
     const user = await googleUser(bearer);
     const email = String(user?.email || '').toLowerCase();
     if (!email) return { status: 401, error: '로그인이 만료됐습니다. 다시 로그인해 주세요' };
@@ -222,14 +223,9 @@ export async function authorize(req) {
     if (!m) return { status: 403, error: `등록되지 않은 구글 계정입니다 (${email}). 설정에서 계정을 추가해 달라고 요청하세요` };
     return { admin: true, via: 'google', email, member: m.name || '' };
   }
-  const admin = header(req, 'x-admin-key');
-  if (admin) {
-    if (!process.env.ADMIN_KEY) return { status: 500, error: 'ADMIN_KEY 환경변수가 설정되지 않았습니다' };
-    return sameSecret(admin, process.env.ADMIN_KEY) ? { admin: true } : { status: 401, error: '관리자 비밀번호가 맞지 않습니다' };
-  }
   const share = header(req, 'x-share-key');
   const embed = header(req, 'x-embed-brand').toLowerCase();
-  if (!share && !embed) return { status: 401, error: '관리자 비밀번호가 필요합니다' };
+  if (!share && !embed) return { status: 401, error: '팀원 구글 계정으로 로그인해 주세요' };
 
   const brands = await loadBrands();
   if (share) {

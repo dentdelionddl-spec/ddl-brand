@@ -7,6 +7,28 @@ import { authHeaders, signJwt, storagePathFromId } from '../lib/supabase.js';
 import handler, { resetAuthCache } from '../api/notion.js';
 import schedule from '../api/schedule.js';
 
+/* 팀원 구글 로그인 흉내: /auth/v1/user는 팀원 이메일을, app_settings에는 members 행을 덧붙임 */
+const TEAM = { authorization: 'Bearer team-token' };
+let __innerFetch = null;
+const __teamFetch = async (url, opts = {}) => {
+  const u = String(url);
+  if (u.includes('/auth/v1/user')) {
+    const ok = String(opts.headers?.Authorization || '') === 'Bearer team-token';
+    return { ok, status: ok ? 200 : 401, async text() { return JSON.stringify(ok ? { email: 'team@ddl.kr' } : {}); }, async json() { return ok ? { email: 'team@ddl.kr' } : {}; } };
+  }
+  const r = await __innerFetch(url, opts);
+  if (u.includes('/rest/v1/app_settings') && (!opts.method || opts.method === 'GET') && r.ok) {
+    let rows = []; try { rows = JSON.parse(await r.text()); } catch {}
+    if (!Array.isArray(rows)) rows = [];
+    rows.push({ notion_page_id: 'dddddddd-dddd-4ddd-8ddd-dddddddddddd', 항목: 'members', 값: JSON.stringify([{ email: 'team@ddl.kr', name: '승호' }]) });
+    const text = JSON.stringify(rows);
+    return { ok: true, status: 200, async text() { return text; }, async json() { return rows; } };
+  }
+  return r;
+};
+Object.defineProperty(globalThis, 'fetch', { configurable: true, get() { return __teamFetch; }, set(v) { __innerFetch = v; } });
+
+
 const SQL = fs.readFileSync(new URL('../supabase/migrations/20261128143000_ddl_brand_supabase_cutover.sql', import.meta.url), 'utf8');
 const HTML = fs.readFileSync(new URL('../index.html', import.meta.url), 'utf8');
 
@@ -102,11 +124,10 @@ test('the page is a live app, not a Notion sync client', () => {
   assert.equal(HTML.includes("store.set(KEY, JSON.stringify(DB))"), false);
 });
 
-test('admin create writes Supabase and does not send the service key as Bearer', async () => {
+test('team member create writes Supabase and does not send the service key as Bearer', async () => {
   process.env.SUPABASE_URL = 'https://example.supabase.co';
   process.env.SUPABASE_SERVICE_ROLE_KEY = 'sb_secret_test';
-  process.env.ADMIN_KEY = 'admin-secret';
-  process.env.SUPABASE_JWT_SECRET = 'jwt-secret';
+    process.env.SUPABASE_JWT_SECRET = 'jwt-secret';
   resetAuthCache();
   const calls = [];
   global.fetch = async (url, opts = {}) => {
@@ -126,7 +147,7 @@ test('admin create writes Supabase and does not send the service key as Bearer',
       '브랜드': { select: { name: 'VIVICATE' } },
       '날짜': { date: { start: '2026-11-28' } },
     },
-  }, { 'x-admin-key': 'admin-secret' }), res);
+  }, TEAM), res);
   assert.equal(res.statusCode, 200);
   assert.ok(res.body.id);
   const post = calls.find((c) => c.opts.method === 'POST');
@@ -139,12 +160,11 @@ test('admin create writes Supabase and does not send the service key as Bearer',
 test('realtime token is short-lived, read-only, and scoped', async () => {
   process.env.SUPABASE_URL = 'https://example.supabase.co';
   process.env.SUPABASE_SERVICE_ROLE_KEY = 'sb_secret_test';
-  process.env.ADMIN_KEY = 'admin-secret';
-  process.env.SUPABASE_JWT_SECRET = 'jwt-secret';
+    process.env.SUPABASE_JWT_SECRET = 'jwt-secret';
   resetAuthCache();
   global.fetch = async () => jsonResponse([]);
   const res = resMock();
-  await handler(req({ action: 'realtime' }, { 'x-admin-key': 'admin-secret' }), res);
+  await handler(req({ action: 'realtime' }, TEAM), res);
   assert.equal(res.body.realtime, true);
   assert.equal(res.body.token.includes('sb_secret_test'), false);
   const payload = JSON.parse(Buffer.from(res.body.token.split('.')[1], 'base64url').toString());
@@ -162,12 +182,11 @@ test('realtime token is short-lived, read-only, and scoped', async () => {
 test('missing jwt secret falls back instead of minting a service token', async () => {
   process.env.SUPABASE_URL = 'https://example.supabase.co';
   process.env.SUPABASE_SERVICE_ROLE_KEY = 'sb_secret_test';
-  process.env.ADMIN_KEY = 'admin-secret';
-  delete process.env.SUPABASE_JWT_SECRET;
+    delete process.env.SUPABASE_JWT_SECRET;
   resetAuthCache();
   global.fetch = async () => jsonResponse([]);
   const res = resMock();
-  await handler(req({ action: 'realtime' }, { 'x-admin-key': 'admin-secret' }), res);
+  await handler(req({ action: 'realtime' }, TEAM), res);
   assert.equal(res.body.realtime, false);
   assert.equal(res.body.token, undefined);
 });
@@ -175,8 +194,7 @@ test('missing jwt secret falls back instead of minting a service token', async (
 test('share link can read only its brand and cannot write', async () => {
   process.env.SUPABASE_URL = 'https://example.supabase.co';
   process.env.SUPABASE_SERVICE_ROLE_KEY = 'sb_secret_test';
-  process.env.ADMIN_KEY = 'admin-secret';
-  resetAuthCache();
+    resetAuthCache();
   global.fetch = async (url) => {
     if (String(url).includes('app_settings')) {
       return jsonResponse([{
@@ -204,8 +222,7 @@ test('share link can read only its brand and cannot write', async () => {
 test('changes since returns only newer and deleted rows', async () => {
   process.env.SUPABASE_URL = 'https://example.supabase.co';
   process.env.SUPABASE_SERVICE_ROLE_KEY = 'sb_secret_test';
-  process.env.ADMIN_KEY = 'admin-secret';
-  resetAuthCache();
+    resetAuthCache();
   let seen = '';
   global.fetch = async (url) => {
     seen = String(url);
@@ -214,7 +231,7 @@ test('changes since returns only newer and deleted rows', async () => {
     ]);
   };
   const res = resMock();
-  await handler(req({ action: 'changes', since: '2026-11-28T00:00:00.000Z' }, { 'x-admin-key': 'admin-secret' }), res);
+  await handler(req({ action: 'changes', since: '2026-11-28T00:00:00.000Z' }, TEAM), res);
   assert.equal(res.statusCode, 200);
   assert.ok(seen.includes('last_edited_time.gt'));
   assert.ok(Array.isArray(res.body.deleted.contents));
@@ -228,8 +245,7 @@ test('changes since returns only newer and deleted rows', async () => {
 test('adding and removing attachments keeps migrated file paths', async () => {
   process.env.SUPABASE_URL = 'https://example.supabase.co';
   process.env.SUPABASE_SERVICE_ROLE_KEY = 'sb_secret_test';
-  process.env.ADMIN_KEY = 'admin-secret';
-  resetAuthCache();
+    resetAuthCache();
   const cal = 'notion-files/content_calendar/page1111/photo.jpg';
   const plan = 'notion-files/content_plans/page1111/plan.png';
   const added = 'ddl-brand/cccccccc-cccc-4ccc-8ccc-cccccccccccc/new.jpg';
@@ -257,7 +273,7 @@ test('adding and removing attachments keeps migrated file paths', async () => {
     action: 'update',
     page_id: pageId,
     properties: { '첨부': files([cal, plan, added]) },
-  }, { 'x-admin-key': 'admin-secret' }), add);
+  }, TEAM), add);
   assert.equal(add.statusCode, 200);
   const stored = () => calls.filter((c) => c.method === 'PATCH').at(-1).body.files_storage.map((f) => f.path);
   assert.deepEqual(stored(), [
@@ -271,7 +287,7 @@ test('adding and removing attachments keeps migrated file paths', async () => {
     action: 'update',
     page_id: pageId,
     properties: { '첨부': files([plan]) },
-  }, { 'x-admin-key': 'admin-secret' }), remove);
+  }, TEAM), remove);
   assert.equal(remove.statusCode, 200);
   assert.deepEqual(stored(), [plan]);
 
@@ -280,7 +296,7 @@ test('adding and removing attachments keeps migrated file paths', async () => {
     action: 'update',
     page_id: pageId,
     properties: { '첨부': { files: [] } },
-  }, { 'x-admin-key': 'admin-secret' }), clear);
+  }, TEAM), clear);
   assert.equal(clear.statusCode, 200);
   assert.deepEqual(stored(), []);
   assert.equal(storagePathFromId('notion-files/content_calendar/../secret.jpg'), null);
@@ -347,8 +363,7 @@ function jsonResponse(body, status = 200) {
 test('bootstrap reads every requested table in one call and keeps the safe `now`', async () => {
   process.env.SUPABASE_URL = 'https://example.supabase.co';
   process.env.SUPABASE_SERVICE_ROLE_KEY = 'sb_secret_test';
-  process.env.ADMIN_KEY = 'admin-secret';
-  resetAuthCache();
+    resetAuthCache();
   const seen = [];
   global.fetch = async (url) => {
     const u = String(url);
@@ -358,7 +373,7 @@ test('bootstrap reads every requested table in one call and keeps the safe `now`
     return jsonResponse([]);
   };
   const res = resMock();
-  await handler(req({ action: 'bootstrap', database_ids: [TABLES.tasks.id, TABLES.contents.id, TABLES.config.id, 'not-a-table'] }, { 'x-admin-key': 'admin-secret' }), res);
+  await handler(req({ action: 'bootstrap', database_ids: [TABLES.tasks.id, TABLES.contents.id, TABLES.config.id, 'not-a-table'] }, TEAM), res);
   assert.equal(res.statusCode, 200);
   assert.deepEqual(Object.keys(res.body.results).sort(), ['config', 'contents', 'tasks']);
   assert.equal(res.body.results.tasks.length, 1);
@@ -371,15 +386,14 @@ test('bootstrap reads every requested table in one call and keeps the safe `now`
 test('bootstrap: one failing table is reported, not hidden, and scoped links cannot read other tables', async () => {
   process.env.SUPABASE_URL = 'https://example.supabase.co';
   process.env.SUPABASE_SERVICE_ROLE_KEY = 'sb_secret_test';
-  process.env.ADMIN_KEY = 'admin-secret';
-  resetAuthCache();
+    resetAuthCache();
   global.fetch = async (url) => {
     const u = String(url);
     if (u.includes('/rest/v1/weekly_plan')) return jsonResponse({ message: 'boom' }, 500);
     return jsonResponse([]);
   };
   const res = resMock();
-  await handler(req({ action: 'bootstrap', database_ids: [TABLES.tasks.id, TABLES.contents.id] }, { 'x-admin-key': 'admin-secret' }), res);
+  await handler(req({ action: 'bootstrap', database_ids: [TABLES.tasks.id, TABLES.contents.id] }, TEAM), res);
   assert.equal(res.statusCode, 200);
   assert.ok(res.body.errors.tasks);
   assert.equal(res.body.results.tasks, undefined);
@@ -403,14 +417,13 @@ test('bootstrap: one failing table is reported, not hidden, and scoped links can
 test('large responses are gzipped when the browser accepts it', async () => {
   process.env.SUPABASE_URL = 'https://example.supabase.co';
   process.env.SUPABASE_SERVICE_ROLE_KEY = 'sb_secret_test';
-  process.env.ADMIN_KEY = 'admin-secret';
-  resetAuthCache();
+    resetAuthCache();
   const many = Array.from({ length: 80 }, (_, i) => row('VIVICATE', `aaaaaaaa-aaaa-4aaa-8aaa-${String(i).padStart(12, '0')}`));
   global.fetch = async () => jsonResponse(many);
   const res = resMock();
   let sent = null;
   res.end = (buf) => { sent = buf; return res; };
-  await handler(req({ action: 'bootstrap', database_ids: [TABLES.tasks.id] }, { 'x-admin-key': 'admin-secret', 'accept-encoding': 'gzip, br' }), res);
+  await handler(req({ action: 'bootstrap', database_ids: [TABLES.tasks.id] }, { ...TEAM, 'accept-encoding': 'gzip, br' }), res);
   assert.equal(res.headers['Content-Encoding'], 'gzip');
   const { gunzipSync } = await import('node:zlib');
   const parsed = JSON.parse(gunzipSync(sent).toString('utf8'));
@@ -423,4 +436,23 @@ test('function region is Seoul (next to the Supabase project) and config stays l
   assert.deepEqual(vercel.regions, ['icn1']);
   const pkg = JSON.parse(fs.readFileSync(new URL('../package.json', import.meta.url), 'utf8'));
   assert.equal(Object.keys(pkg.dependencies || {}).length, 0);
+});
+
+test('admin password is no longer accepted; non-member Google accounts are refused', async () => {
+  process.env.SUPABASE_URL = 'https://example.supabase.co';
+  process.env.SUPABASE_SERVICE_ROLE_KEY = 'sb_secret_test';
+  process.env.ADMIN_KEY = 'admin-secret';
+  resetAuthCache();
+  global.fetch = async () => jsonResponse([]);
+  const old = resMock();
+  await handler(req({ action: 'bootstrap' }, { 'x-admin-key': 'admin-secret' }), old);
+  assert.equal(old.statusCode, 401);
+  const stranger = resMock();
+  await handler(req({ action: 'bootstrap' }, { authorization: 'Bearer someone-else' }), stranger);
+  assert.equal(stranger.statusCode, 401);
+  const team = resMock();
+  await handler(req({ action: 'whoami' }, TEAM), team);
+  assert.equal(team.statusCode, 200);
+  assert.equal(team.body.member, '승호');
+  delete process.env.ADMIN_KEY;
 });

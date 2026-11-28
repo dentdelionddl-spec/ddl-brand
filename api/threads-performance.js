@@ -1,5 +1,5 @@
 // Read-only Threads performance for the analysis tab.
-// Same admin / share / embed check as /api/notion. The service role
+// Same team Google login / share / embed check as /api/notion. The service role
 // key stays on the server. This does not write and does not call Notion.
 
 import { gzipSync } from 'node:zlib';
@@ -38,7 +38,7 @@ export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', allowed.includes('*') ? '*' : (allowed.includes(origin) ? origin : allowed[0]));
   res.setHeader('Vary', 'Origin');
   res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, X-Admin-Key, X-Share-Key, X-Embed-Brand');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Share-Key, X-Embed-Brand');
   res.setHeader('Access-Control-Max-Age', '86400');
   if (req.method === 'OPTIONS') return res.status(204).end();
   if (req.method !== 'POST') return res.status(405).json({ message: 'POST만 받습니다' });

@@ -25,6 +25,28 @@ import { runJob } from '../supabase/functions/threads-collector/job.js';
 import handler from '../api/threads-performance.js';
 import { resetAuthCache } from '../api/notion.js';
 
+/* 팀원 구글 로그인 흉내: /auth/v1/user는 팀원 이메일을, app_settings에는 members 행을 덧붙임 */
+const TEAM = { authorization: 'Bearer team-token' };
+let __innerFetch = null;
+const __teamFetch = async (url, opts = {}) => {
+  const u = String(url);
+  if (u.includes('/auth/v1/user')) {
+    const ok = String(opts.headers?.Authorization || '') === 'Bearer team-token';
+    return { ok, status: ok ? 200 : 401, async text() { return JSON.stringify(ok ? { email: 'team@ddl.kr' } : {}); }, async json() { return ok ? { email: 'team@ddl.kr' } : {}; } };
+  }
+  const r = await __innerFetch(url, opts);
+  if (u.includes('/rest/v1/app_settings') && (!opts.method || opts.method === 'GET') && r.ok) {
+    let rows = []; try { rows = JSON.parse(await r.text()); } catch {}
+    if (!Array.isArray(rows)) rows = [];
+    rows.push({ notion_page_id: 'dddddddd-dddd-4ddd-8ddd-dddddddddddd', 항목: 'members', 값: JSON.stringify([{ email: 'team@ddl.kr', name: '승호' }]) });
+    const text = JSON.stringify(rows);
+    return { ok: true, status: 200, async text() { return text; }, async json() { return rows; } };
+  }
+  return r;
+};
+Object.defineProperty(globalThis, 'fetch', { configurable: true, get() { return __teamFetch; }, set(v) { __innerFetch = v; } });
+
+
 const rich = (value) => ({ rich_text: value ? [{ plain_text: value }] : [] });
 const title = (value) => ({ title: value ? [{ plain_text: value }] : [] });
 const num = (value) => ({ number: value });
@@ -173,11 +195,10 @@ const performanceRow = (brand, id, views) => ({
   }),
 });
 
-test('read endpoint uses the admin key, filters a brand, and falls back when the log is missing', async () => {
+test('read endpoint uses the team Google login, filters a brand, and falls back when the log is missing', async () => {
   process.env.SUPABASE_URL = 'https://example.supabase.co';
   process.env.SUPABASE_SERVICE_ROLE_KEY = 'sb_secret_test';
-  process.env.ADMIN_KEY = 'admin-secret';
-  resetAuthCache();
+    resetAuthCache();
   global.fetch = async (url) => {
     const u = String(url);
     if (u.includes('/rest/v1/threads_collector_runs')) {
@@ -196,7 +217,7 @@ test('read endpoint uses the admin key, filters a brand, and falls back when the
   assert.equal(denied.statusCode, 401);
 
   const res = resMock();
-  await handler({ method: 'POST', headers: { 'x-admin-key': 'admin-secret' }, body: { brandId: 'aube', brandName: 'AUBE SEOUL' } }, res);
+  await handler({ method: 'POST', headers: TEAM, body: { brandId: 'aube', brandName: 'AUBE SEOUL' } }, res);
   assert.equal(res.statusCode, 200);
   assert.equal(res.body.summary.posts, 1);
   assert.equal(res.body.summary.views, 200);
@@ -211,8 +232,7 @@ test('read endpoint uses the admin key, filters a brand, and falls back when the
 test('share link only receives that brand, and a collector log wins the stamp', async () => {
   process.env.SUPABASE_URL = 'https://example.supabase.co';
   process.env.SUPABASE_SERVICE_ROLE_KEY = 'sb_secret_test';
-  process.env.ADMIN_KEY = 'admin-secret';
-  resetAuthCache();
+    resetAuthCache();
   const brands = [{ id: 'factory', name: '공장', ko: '용저우 공장', shareKey: 'share-secret' }];
   global.fetch = async (url) => {
     const u = String(url);
