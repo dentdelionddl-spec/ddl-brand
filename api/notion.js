@@ -176,7 +176,7 @@ export default async function handler(req, res) {
   }
 }
 
-async function authorize(req) {
+export async function authorize(req) {
   const admin = header(req, 'x-admin-key');
   if (admin) {
     if (!process.env.ADMIN_KEY) return { status: 500, error: 'ADMIN_KEY 환경변수가 설정되지 않았습니다' };
