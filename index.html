@@ -4565,7 +4565,7 @@ function statsView(){
   const t2=summary.coverage&&summary.coverage.t2 || {complete:0};
   const shown=view.sorted.slice(0, pref.visible||12);
   const seg=(attr,items,cur)=>`<div class="pv-seg">${items.map(([v,l])=>`<button type="button" class="${String(cur)===String(v)?'is-on':''}" ${attr}="${esc(v)}" aria-pressed="${String(cur)===String(v)?'true':'false'}">${l}</button>`).join('')}</div>`;
-  const covers=TP_HORIZONS.map(([k,l])=>{ const c=summary.coverage&&summary.coverage[k]||{complete:0,pending:0,missing:0}; return `<div class="tp-cov__c"><span class="eyebrow">${l}</span><b>${c.complete}</b><small class="${c.missing?'is-missing':''}">${c.pending?`대기 ${c.pending}`:c.missing?`누락 ${c.missing}`:'완료'}</small></div>`; }).join('');
+  const covers=TP_HORIZONS.map(([k,l])=>{ const c=summary.coverage&&summary.coverage[k]||{complete:0,pending:0,missing:0}; return `<div class="tp-cov__c"><span class="eyebrow">${l}</span><b>${c.complete}</b><small class="${!c.pending&&c.missing?'is-missing':''}">${c.pending?`대기 ${c.pending}`:c.missing?`누락 ${c.missing}`:'완료'}</small></div>`; }).join('');
   return `<div class="tp">
     <div class="tp-bar">
       ${seg('data-tprange',[['7','7일'],['30','30일'],['all','전체']],pref.range)}
