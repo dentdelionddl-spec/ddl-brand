@@ -1573,15 +1573,27 @@ html body #view .tp .card__hd h3{white-space:nowrap !important;flex:0 0 auto !im
 #view .tp .card__hd > .eyebrow{white-space:nowrap}
 .tp-hdtools{margin-left:auto;display:flex;align-items:center;gap:8px;flex-wrap:nowrap}
 #view .tp .pv-seg{flex:0 0 auto}
-.tp-chart svg{width:100%;height:auto;display:block}
-.tp-chart text{font-size:11px;fill:var(--mut);font-variant-numeric:tabular-nums}
-.tp-chart .tp-grid{stroke:var(--line);stroke-width:1}
-.tp-chart > .eyebrow{margin:8px 0 0}
+.tp-chart{font-variant-numeric:tabular-nums}
+.tp-plot{display:grid;grid-template-columns:40px minmax(0,1fr);gap:10px;height:200px;padding:6px 6px 22px 0}
+.tp-chart.is-compact .tp-plot{height:140px}
+.tp-yl{position:relative}
+.tp-yl span{position:absolute;right:0;transform:translateY(-50%);font-size:10.5px;color:var(--mut);white-space:nowrap}
+.tp-area{position:relative}
+.tp-area svg{position:absolute;inset:0;width:100%;height:100%;overflow:visible}
+.tp-area .tp-grid{stroke:var(--line2);stroke-width:1}
+.tp-area .tp-base{stroke:var(--line);stroke-width:1}
+.tp-area path{fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;cursor:pointer;transition:stroke-width .12s}
+.tp-area path:hover{stroke-width:3}
+.tp-end{position:absolute;width:8px;height:8px;margin:-4px 0 0 -4px;border-radius:50%;background:var(--c);box-shadow:0 0 0 2px #fff;cursor:pointer}
+.tp-xl{position:absolute;left:0;right:0;top:100%;height:22px}
+.tp-xl span{position:absolute;top:7px;transform:translateX(-50%);font-size:10.5px;color:var(--mut);white-space:nowrap}
+.tp-chart > .eyebrow{margin:4px 0 0}
 .tp-legend{display:flex;flex-direction:column;margin-top:12px;border-top:1px solid var(--line2)}
-.tp-legend button{display:grid;grid-template-columns:8px minmax(0,1fr) auto;gap:10px;align-items:center;text-align:left;background:transparent;border:0;border-bottom:1px solid var(--line2);padding:9px 0;cursor:pointer;font:inherit;color:var(--ink)}
+.tp-legend button{display:grid;grid-template-columns:14px 8px minmax(0,1fr) auto;gap:10px;align-items:center;text-align:left;background:transparent;border:0;border-bottom:1px solid var(--line2);padding:9px 0;cursor:pointer;font:inherit;color:var(--ink)}
 .tp-legend button:last-child{border-bottom:0;padding-bottom:0}
 .tp-legend button:hover span{color:var(--ink)}
 .tp-legend i{width:8px;height:8px;border-radius:99px}
+.tp-legend em{font-style:normal;font-size:11px;color:var(--mut);font-variant-numeric:tabular-nums}
 .tp-legend span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:13px;color:var(--ink2)}
 .tp-legend strong{font-size:13px;font-weight:600;font-variant-numeric:tabular-nums}
 .tp-list{display:flex;flex-direction:column}
@@ -4438,7 +4450,7 @@ const TP_BRANDS={
 };
 const TP_METRICS=[['views','조회'],['likes','좋아요'],['replies','답글'],['reposts','재게시']];
 const TP_HORIZONS=[['t1','T+1'],['t2','T+2'],['t3','T+3'],['t7','T+7'],['t14','T+14'],['t30','T+30']];
-const TP_COLORS=['#675ff2','#0f8b6d','#d26c3c','#3677b5','#9a4f93'];
+const TP_COLORS=['#14161C','#5A5E68','#8A8E98','#ABAFB7','#C5C8CF']; /* 매출 그래프와 같은 무채색 단계 */
 const TP_FULL=new Intl.NumberFormat('ko-KR');
 const TP_COMPACT=new Intl.NumberFormat('ko-KR',{notation:'compact',maximumFractionDigits:1});
 function tpPref(){ UI.tp=UI.tp||{range:'all',sort:'recent',metric:'views',limit:5,visible:12,query:'',focus:'',open:''}; return UI.tp; }
@@ -4504,28 +4516,31 @@ function scheduleThreadsPerformance(){
 function tpChart(rows, metric, compact){
   const sets=rows.map((row,index)=>{
     const points=(row.series||[]).filter(p=>typeof p.ageHours==='number' && typeof p.metrics?.[metric]==='number').map(p=>({age:p.ageHours, value:p.metrics[metric]}));
-    return points.length>=2 ? {row, points, color:TP_COLORS[index]||`hsl(${(index*137.5)%360} 55% 43%)`} : null;
+    return points.length>=2 ? {row, points, color:TP_COLORS[index%TP_COLORS.length]} : null;
   }).filter(Boolean);
   if(!sets.length) return '<p class="eyebrow">시계열 관측이 2점 이상인 글이 있으면 반응 곡선이 나옵니다.</p>';
-  const width=760, height=compact?176:240, pad={l:54,r:18,t:16,b:32};
   const ages=sets.flatMap(s=>s.points.map(p=>p.age));
   const minAge=Math.min(...ages), maxAge=Math.max(...ages);
   const maxValue=Math.max(...sets.flatMap(s=>s.points.map(p=>p.value)),1);
-  const x=age=>pad.l+tpPos(age,minAge,maxAge)*(width-pad.l-pad.r);
-  const y=value=>pad.t+(1-value/maxValue)*(height-pad.t-pad.b);
+  /* 좌표는 0~100(%)로만 계산하고, 글자·점은 HTML로 올려 화면 폭이 바뀌어도 크기가 그대로 */
+  const X=age=>tpPos(age,minAge,maxAge)*100;
+  const Y=value=>(1-value/maxValue)*100;
   const ticks=[24,48,72,168,336,720].filter(h=>h>=minAge && h<=maxAge);
-  const grids=[0,0.5,1].map(ratio=>{
-    const value=maxValue*(1-ratio), pos=pad.t+ratio*(height-pad.t-pad.b);
-    return `<line x1="${pad.l}" x2="${width-pad.r}" y1="${pos}" y2="${pos}" class="tp-grid" /><text x="${pad.l-8}" y="${pos+4}" text-anchor="end">${tpNum(value,true)}</text>`;
+  const yRatios=compact?[0,.5,1]:[0,.25,.5,.75,1];
+  const grid=yRatios.map(r=>`<line x1="0" x2="100" y1="${r*100}" y2="${r*100}" class="${r===1?'tp-base':'tp-grid'}" vector-effect="non-scaling-stroke" />`).join('');
+  const yl=yRatios.map(r=>`<span style="top:${r*100}%">${tpNum(maxValue*(1-r),true)}</span>`).join('');
+  const xl=ticks.map(h=>`<span style="left:${X(h)}%">${Math.round(h/24)}일</span>`).join('');
+  const sorted=[...sets].reverse(); /* 1위 선이 맨 위에 그려지게 */
+  const lines=sorted.map(s=>{
+    const d=s.points.map((p,i)=>`${i?'L':'M'}${X(p.age).toFixed(2)},${Y(p.value).toFixed(2)}`).join(' ');
+    return `<path data-tpfocus="${esc(s.row.id)}" d="${d}" stroke="${s.color}" vector-effect="non-scaling-stroke"><title>${esc((s.row.body||s.row.title||'').slice(0,40))}</title></path>`;
   }).join('');
-  const axis=ticks.map(h=>`<line x1="${x(h)}" x2="${x(h)}" y1="${pad.t}" y2="${height-pad.b}" class="tp-grid" /><text x="${x(h)}" y="${height-8}" text-anchor="middle">${Math.round(h/24)}일</text>`).join('');
-  const lines=sets.map(s=>{
-    const d=s.points.map((p,i)=>`${i?'L':'M'}${x(p.age).toFixed(1)},${y(p.value).toFixed(1)}`).join(' ');
-    const dots=s.points.map(p=>`<circle cx="${x(p.age).toFixed(1)}" cy="${y(p.value).toFixed(1)}" r="${compact?2.4:3}" fill="${s.color}" />`).join('');
-    return `<g data-tpfocus="${esc(s.row.id)}" style="cursor:pointer"><path d="${d}" fill="none" stroke="${s.color}" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" />${dots}</g>`;
-  }).join('');
-  const legend=compact?'':`<div class="tp-legend">${sets.map(s=>`<button type="button" data-tpfocus="${esc(s.row.id)}"><i style="background:${s.color}"></i><span>${esc(s.row.body||s.row.title||'본문 없음')}</span><strong>${tpNum(s.points.at(-1).value,true)}</strong></button>`).join('')}</div>`;
-  return `<div class="tp-chart"><svg viewBox="0 0 ${width} ${height}" role="img" aria-label="글별 반응 곡선">${grids}${axis}${lines}</svg>${compact?'':`<p class="eyebrow">각 선은 그 글의 첫 실제 관측점부터 표시합니다.</p>`}${legend}</div>`;
+  const ends=sorted.map(s=>{ const p=s.points.at(-1); return `<i class="tp-end" data-tpfocus="${esc(s.row.id)}" style="left:${X(p.age)}%;top:${Y(p.value)}%;--c:${s.color}"></i>`; }).join('');
+  const legend=compact?'':`<div class="tp-legend">${sets.map((s,i)=>`<button type="button" data-tpfocus="${esc(s.row.id)}"><em>${i+1}</em><i style="background:${s.color}"></i><span>${esc(s.row.body||s.row.title||'본문 없음')}</span><strong>${tpNum(s.points.at(-1).value,true)}</strong></button>`).join('')}</div>`;
+  return `<div class="tp-chart ${compact?'is-compact':''}">
+    <div class="tp-plot"><div class="tp-yl">${yl}</div>
+      <div class="tp-area"><svg viewBox="0 0 100 100" preserveAspectRatio="none" role="img" aria-label="글별 반응 곡선">${grid}${lines}</svg>${ends}<div class="tp-xl">${xl}</div></div>
+    </div>${compact?'':`<p class="eyebrow">발행 후 경과일 기준 · 각 선은 그 글의 첫 관측점부터 표시</p>`}${legend}</div>`;
 }
 function tpSummary(rows){
   const nums=name=>rows.map(r=>r.metrics&&typeof r.metrics[name]==='number'?r.metrics[name]:null);
