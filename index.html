@@ -2072,6 +2072,10 @@ body.share .m .mmain{padding-bottom:32px}
 
 .sharewait .spin{width:22px;height:22px;border-radius:50%;border:2px solid rgba(17,18,20,.12);border-top-color:var(--ink);animation:spin .8s linear infinite}
 @keyframes spin{to{transform:rotate(360deg)}}
+body.syncing #app{pointer-events:none}
+#syncpill{position:fixed;top:10px;right:12px;z-index:9999;display:flex;align-items:center;gap:8px;background:#14161C;color:#fff;font-size:12px;font-weight:600;padding:6px 12px;border-radius:999px;box-shadow:0 6px 18px -8px rgba(0,0,0,.5)}
+#syncpill i{width:11px;height:11px;border-radius:50%;border:2px solid rgba(255,255,255,.3);border-top-color:#fff;animation:spin .8s linear infinite}
+#syncpill button{border:0;background:rgba(255,255,255,.18);color:#fff;border-radius:999px;padding:2px 9px;font-size:11px;cursor:pointer}
 
 /* 기간 일정: 시작·끝 날만 글자, 사이는 얇은 선으로 이어짐 (PC 캘린더) */
 @media(min-width:761px){
@@ -2831,6 +2835,54 @@ const save=()=>{
 /* 서버에서 처음 읽기를 끝내기 전에는 기본값을 보여주거나 저장하지 않습니다 */
 const LOAD={ state:'loading', err:'', kick:null };
 const isReady=()=>LOAD.state==='ready';
+/* ---------- 마지막으로 읽은 서버 데이터 캐시 ----------
+   서버에서 성공적으로 읽은 데이터만 저장한다. 기본값(SEED_BRANDS 등)·아직 저장 안 된 수정은 절대 넣지 않는다.
+   다시 열면 이 캐시를 바로 보여주고(쓰기 잠금), 최신 데이터가 오면 조용히 바꿔 끼운다. */
+const SNAP_V=1, SNAP_MAX_AGE=7*24*3600*1000;
+const SNAP_ARR=['contents','tasks','sales','products','plans','costs','actions','refs','stats','daily'];
+let serverBrands=false, snapTimer=null;
+function snapKey(){
+  const h=str=>{ let x=5381; for(const c of String(str)) x=((x<<5)+x+c.charCodeAt(0))|0; return (x>>>0).toString(36); };
+  return KEY+':snap:'+(SHARE_KEY?'s'+h(SHARE_KEY):(typeof EMBED!=='undefined'&&EMBED)?'e'+EMBED.brand:'admin');
+}
+function snapDirty(){ return SNAP_ARR.some(k=>(DB[k]||[]).some(r=>r.dirty||r._writing)); }
+function snapshotOK(){ return isReady() && serverBrands && !snapDirty(); }
+function scheduleSnap(){ clearTimeout(snapTimer); snapTimer=setTimeout(saveSnap,2500); }
+function clearSnap(){ try{ localStorage.removeItem(snapKey()); }catch(e){} }
+function saveSnap(){
+  if(!snapshotOK()) return;
+  try{
+    const o={ v:SNAP_V, t:Date.now(), brands:DB.brands, inquiries:DB.inquiries||[], traffic:DB.traffic||[], inq:(DB.settings&&DB.settings.inq)||{} };
+    for(const k of SNAP_ARR) o[k]=DB[k]||[];
+    localStorage.setItem(snapKey(), JSON.stringify(o));
+  }catch(e){ clearSnap(); }
+}
+function loadSnap(){
+  try{
+    const raw=localStorage.getItem(snapKey()); if(!raw) return false;
+    const o=JSON.parse(raw);
+    if(!o || o.v!==SNAP_V || !(Date.now()-o.t<SNAP_MAX_AGE) || !Array.isArray(o.brands) || !o.brands.length) return false;
+    for(const k of SNAP_ARR) if(!Array.isArray(o[k])) return false;
+    DB.brands=o.brands.filter(b=>!isRemovedBrand(b));
+    for(const k of SNAP_ARR) DB[k]=o[k];
+    DB.inquiries=Array.isArray(o.inquiries)?o.inquiries:[]; DB.traffic=Array.isArray(o.traffic)?o.traffic:[];
+    if(o.inq && typeof o.inq==='object') DB.settings.inq=o.inq;
+    return true;
+  }catch(e){ return false; }
+}
+function syncUI(msg, retry){
+  document.body.classList.toggle('syncing', !!msg);
+  let el=document.getElementById('syncpill');
+  if(!msg){ if(el) el.remove(); return; }
+  if(!el){ el=document.createElement('div'); el.id='syncpill'; document.body.appendChild(el); }
+  el.innerHTML='<i></i><span></span>'+(retry?'<button type="button">지금 다시 시도</button>':'');
+  el.querySelector('span').textContent=msg;
+  const b=el.querySelector('button'); if(b) b.onclick=()=>{ if(LOAD.kick) LOAD.kick(); };
+}
+function bootFromCache(){
+  if(!(adminKey()||SHARE_KEY||EMBED)) return;
+  if(loadSnap()){ LOAD.state='cached'; serverBrands=true; document.body.classList.add('syncing'); }
+}
 function setLoad(state, err){
   LOAD.state=state; LOAD.err=err||'';
   if(state!=='ready') paintLoad();
@@ -3024,7 +3076,7 @@ function mobileLayout(){
   scrollToToday();
 }
 function render(){
-  if(!isReady()){ paintLoad(); return; }
+  if(!isReady() && LOAD.state!=='cached'){ paintLoad(); return; }
   if(SHARE_KEY){
     const sb=shareBrand();
     if(!sb){
@@ -4174,17 +4226,17 @@ function avgBy(list,key,metric){
   return Object.entries(g).map(([k,v])=>({k, n:v.length, avg: Math.round(v.reduce((a,b)=>a+b,0)/v.length)})).sort((a,b)=>b.avg-a.avg);
 }
 const INQ_DB='b400cf41ae804765b1b15e3a4b004ba1';
+function applyInquiries(res){
+  DB.inquiries=(res.results||[]).map(p=>{ const P=p.properties;
+    return { id:p.id, name:P['\uBE0C\uB79C\uB4DC\u00B7\uD68C\uC0AC\uBA85']?.title?.[0]?.plain_text||'',
+      at:(P['\uC811\uC218\uC77C\uC2DC']?.created_time||'').slice(0,10),
+      src:P['\uC720\uC785 \uACBD\uB85C']?.select?.name||'',
+      status:P['\uC9C4\uD589 \uC0C1\uD0DC']?.select?.name||'' };
+  });
+}
 async function pullInquiries(){
   const s=DB.settings; if(!s.workerUrl) return;
-  try{
-    const res=await api({action:'query', database_id:INQ_DB});
-    DB.inquiries=(res.results||[]).map(p=>{ const P=p.properties;
-      return { id:p.id, name:P['\uBE0C\uB79C\uB4DC\u00B7\uD68C\uC0AC\uBA85']?.title?.[0]?.plain_text||'',
-        at:(P['\uC811\uC218\uC77C\uC2DC']?.created_time||'').slice(0,10),
-        src:P['\uC720\uC785 \uACBD\uB85C']?.select?.name||'',
-        status:P['\uC9C4\uD589 \uC0C1\uD0DC']?.select?.name||'' };
-    });
-  }catch(e){}
+  try{ applyInquiries(await api({action:'query', database_id:INQ_DB})); }catch(e){}
 }
 function inqCount(bid, ym, onlyThreads){
   if(bid!==TRAFFIC_BRAND) return null;
@@ -4193,17 +4245,17 @@ function inqCount(bid, ym, onlyThreads){
 }
 const TRAFFIC_DB='22b96ecfb203408295a3f8755c6935b6';
 const TRAFFIC_BRAND='factory';
+function applyTraffic(res){
+  DB.traffic=(res.results||[]).map(p=>{ const P=p.properties;
+    return { id:p.id, date:P['일자']?.date?.start || (P['날짜']?.title?.[0]?.plain_text||''),
+      visits:P['방문']?.number||0, uniq:P['순방문']?.number||0,
+      threads:P['스레드']?.number||0, insta:P['인스타']?.number||0,
+      direct:P['직접']?.number||0, etc:P['기타']?.number||0 };
+  });
+}
 async function pullTraffic(){
   const s=DB.settings; if(!s.workerUrl) return;
-  try{
-    const res=await api({action:'query', database_id:TRAFFIC_DB});
-    DB.traffic=(res.results||[]).map(p=>{ const P=p.properties;
-      return { id:p.id, date:P['일자']?.date?.start || (P['날짜']?.title?.[0]?.plain_text||''),
-        visits:P['방문']?.number||0, uniq:P['순방문']?.number||0,
-        threads:P['스레드']?.number||0, insta:P['인스타']?.number||0,
-        direct:P['직접']?.number||0, etc:P['기타']?.number||0 };
-    });
-  }catch(e){}
+  try{ applyTraffic(await api({action:'query', database_id:TRAFFIC_DB})); }catch(e){}
 }
 function trafficOf(bid, ym, key){
   if(bid!==TRAFFIC_BRAND) return null;
@@ -5720,37 +5772,39 @@ async function flushWrites(){
   }
   writing=false;
   if(fail) showSaveError(msg||'저장하지 못했습니다');
-  else clearSaveError();
+  else { clearSaveError(); scheduleSnap(); }
   if(writeAgain){ writeAgain=false; queueWrite(); }
 }
 /* 처음 읽기: 모든 표를 성공적으로 읽기 전까지는 로딩 화면. 실패하면 기본값 대신 오류 + 자동 재시도 */
 let __booting=null;
 function bootSync(){
-  if(!adminKey() && !SHARE_KEY && !EMBED){ if(!isReady()) setLoad('auth'); keyBar(); return Promise.resolve(); }
+  if(!adminKey() && !SHARE_KEY && !EMBED){ if(!isReady()){ clearSnap(); syncUI(''); setLoad('auth'); } keyBar(); return Promise.resolve(); }
   if(__booting) return __booting;
   __booting=(async()=>{
     const first=!isReady();
-    if(first) setLoad('loading');
+    const cached=first && LOAD.state==='cached';
+    if(cached) syncUI('최신 데이터 확인 중…');
+    else if(first) setLoad('loading');
     for(let attempt=0; ; attempt++){
       try{
-        const clock=await api({action:'clock'});
-        liveSince=clock.now;
-        await __pullAll(true, undefined, {strict:true});
+        await __pullAll(true, undefined, {strict:true, initial:true});
         break;
       }catch(e){
         if(e && e.status===401 && !SHARE_KEY && !EMBED){
-          if(first){ setAdminKey(''); setLoad('auth'); keyBar(); } else showSaveError('관리자 비밀번호가 맞지 않습니다');
+          if(first){ clearSnap(); setAdminKey(''); syncUI(''); LOAD.state='loading'; setLoad('auth'); keyBar(); } else showSaveError('관리자 비밀번호가 맞지 않습니다');
           return;
         }
         if(!first){ showSaveError(e.message||'데이터를 불러오지 못했습니다'); return; }
-        setLoad('error', e.message||'');
-        const wait=Math.min(2000*Math.pow(2,attempt), 15000);
+        const wait=Math.min(1500*Math.pow(2,attempt), 15000);
+        if(cached) syncUI('서버에 연결하지 못했습니다 · 다시 시도 중…', true); else setLoad('error', e.message||'');
         await new Promise(r=>{ LOAD.kick=()=>{ LOAD.kick=null; r(); }; setTimeout(()=>{ LOAD.kick=null; r(); }, wait); });
-        setLoad('loading');
+        if(cached) syncUI('최신 데이터 확인 중…'); else setLoad('loading');
       }
     }
     clearSaveError();
-    LOAD.state='ready'; LOAD.err=''; render();
+    LOAD.state='ready'; LOAD.err=''; syncUI('');
+    render();
+    saveSnap();
     startLive().catch(()=>startPollLoop());
   })().finally(()=>{ __booting=null; });
   return __booting;
@@ -5791,21 +5845,22 @@ async function pushBrands(){
 }
 /* 앱 설정 DB 한 번만 읽어서 브랜드 목록과 유입 수동값을 함께 채움. 읽기에 실패하면 strict에서는 예외를 던져 기본값을 쓰지 않음.
    서버에 brands 행이 없어도 기본값을 서버에 쓰지 않음 (브랜드를 직접 편집할 때만 저장) */
+function applyConfig(res){
+  const rows=(res&&res.results)||[];
+  const find=n=>rows.find(p=>(p.properties['항목']?.title?.[0]?.plain_text||'')===n);
+  const raw=find('brands')?.properties['값']?.rich_text?.[0]?.plain_text;
+  if(raw){
+    const list=JSON.parse(raw);
+    if(Array.isArray(list)&&list.length){ DB.brands=list.filter(b=>!isRemovedBrand(b)); serverBrands=true; }
+  }
+  const iraw=find('inquiries')?.properties['값']?.rich_text?.[0]?.plain_text;
+  if(iraw){ try{ DB.settings.inq=JSON.parse(iraw); }catch(e){} }
+}
 async function pullBrands(strict){
   const s=DB.settings; const dbId=s.db&&s.db.config;
   if(!s.workerUrl||!dbId) return;
-  try{
-    const res=await api({action:'query', database_id:dbId});
-    const rows=res.results||[];
-    const find=n=>rows.find(p=>(p.properties['항목']?.title?.[0]?.plain_text||'')===n);
-    const raw=find('brands')?.properties['값']?.rich_text?.[0]?.plain_text;
-    if(raw){
-      const list=JSON.parse(raw);
-      if(Array.isArray(list)&&list.length) DB.brands=list.filter(b=>!isRemovedBrand(b));
-    }
-    const iraw=find('inquiries')?.properties['값']?.rich_text?.[0]?.plain_text;
-    if(iraw){ try{ DB.settings.inq=JSON.parse(iraw); }catch(e){} }
-  }catch(e){ if(strict) throw e; }
+  try{ applyConfig(await api({action:'query', database_id:dbId})); }
+  catch(e){ if(strict) throw e; }
 }
 const KIND_LABEL={contents:'콘텐츠',tasks:'업무',sales:'매출',daily:'일별 매출',plans:'기획',actions:'액션플랜',stats:'성과',refs:'레퍼런스',costs:'비용',products:'제품'};
 /* 노션 읽기는 한 번에 하나만 — 이미 읽는 중이면 그 결과를 같이 기다림 */
@@ -5851,13 +5906,39 @@ const brandByName=nm=>{
   const __res = pre || {};
   const __err={}; let __first=null;
   const __fail=(k,e)=>{ if(e&&e.status===403&&(SHARE_KEY||EMBED)) return; /* 보기 전용 링크는 일부 표를 못 읽는 게 정상 */ __err[k]=String((e&&e.message)||e); if(!__first) __first=e; };
+  let __newSince=null;
   if(!pre){
-    /* 브랜드·유입·방문·모든 표를 한꺼번에 읽음 (순서대로 읽으면 첫 화면이 오래 비어 보임) */
-    await Promise.all([
-      pullBrands(true).catch(e=>__fail('brands',e)),
-      pullTraffic(), pullInquiries(),
-      ...__kinds.map(async k=>{ try{ __res[k] = await api({action:'query', database_id:s.db[KIND[k].db]}); }catch(e){ __fail(k,e); } }),
-    ]);
+    /* 표 전부를 요청 한 번으로(서버 안에서 동시에) 읽음. 서버가 옛 버전이면 표마다 따로 읽는 방식으로 */
+    const scoped=!!(SHARE_KEY||EMBED);
+    let boot=null;
+    try{
+      const ids=[...__kinds.map(k=>s.db[KIND[k].db]), s.db.config, INQ_DB, TRAFFIC_DB].filter(Boolean);
+      boot=await api({action:'bootstrap', database_ids:ids});
+      if(!boot || typeof boot.results!=='object') throw Object.assign(new Error('bootstrap 응답이 올바르지 않습니다'),{status:0});
+    }catch(e){
+      if(e && (e.status===400||e.status===404||e.status===413)) boot=null; else throw e; /* 옛 서버/너무 큰 응답이면 표마다 따로 읽기 */
+    }
+    if(boot){
+      const R=boot.results||{}, E=boot.errors||{};
+      for(const k of __kinds){
+        if(R[k]) __res[k]={ results:R[k] };
+        else if(E[k]) __fail(k,new Error(E[k]));
+        else if(!scoped) __fail(k,new Error('응답에 없음'));
+      }
+      if(R.config) { try{ applyConfig({results:R.config}); }catch(e){ __fail('brands',e); } }
+      else if(E.config) __fail('brands',new Error(E.config));
+      else if(!scoped) __fail('brands',new Error('응답에 없음'));
+      if(R.inquiries){ try{ applyInquiries({results:R.inquiries}); }catch(e){} }
+      if(R.traffic){ try{ applyTraffic({results:R.traffic}); }catch(e){} }
+      __newSince=boot.now||null;
+    }else{
+      if(opt&&opt.initial){ __newSince=(await api({action:'clock'})).now; }
+      await Promise.all([
+        pullBrands(true).catch(e=>__fail('brands',e)),
+        pullTraffic(), pullInquiries(),
+        ...__kinds.map(async k=>{ try{ __res[k] = await api({action:'query', database_id:s.db[KIND[k].db]}); }catch(e){ __fail(k,e); } }),
+      ]);
+    }
   }
   const __bad=Object.keys(__err);
   if(strict && __bad.length){
@@ -5865,6 +5946,7 @@ const brandByName=nm=>{
     e.status=__first&&__first.status; throw e;
   }
   if(!strict && gen!==dataGen) return;
+  if(opt&&opt.initial&&__newSince) liveSince=__newSince;
   if(__bad.length) showSaveError('일부 데이터를 불러오지 못했습니다');
   const full=!pre;
   for(const kind of __kinds){
@@ -6144,7 +6226,7 @@ function act(a){
     inp.click(); return;
   }
   if(a==='reset'){
-    if(confirm('화면을 서버에 저장된 내용으로 다시 불러옵니다. 서버의 데이터는 지우지 않습니다. 계속할까요?')){ dataGen++; DB=blank(); LOAD.state='loading'; try{ const me=JSON.parse(store.get(KEY+':me')||'null'); if(typeof me==='string') DB.settings.me=me; }catch(e){} render(); bootSync(); }
+    if(confirm('화면을 서버에 저장된 내용으로 다시 불러옵니다. 서버의 데이터는 지우지 않습니다. 계속할까요?')){ dataGen++; DB=blank(); clearSnap(); serverBrands=false; LOAD.state='loading'; try{ const me=JSON.parse(store.get(KEY+':me')||'null'); if(typeof me==='string') DB.settings.me=me; }catch(e){} render(); bootSync(); }
   }
 }
 
@@ -6152,6 +6234,7 @@ function act(a){
 if(SHARE_KEY){ document.body.classList.add('share'); UI.tab='calendar'; UI.mTab='brands'; UI.ym=ymOf(today); }
 else if(!EMBED){ UI.brand='__home'; UI.ym=ymOf(today); UI.thrPast=false; UI.linkDone=false; saveUI(); }
 /* 공유 링크: 브랜드 목록만 먼저 받아서 바로 화면을 띄우고, 나머지 데이터는 이어서 채움 */
+bootFromCache(); /* 저장해 둔 서버 데이터가 있으면 브랜드 목록도 거기서 — 아래 확인에 따로 서버를 부르지 않음 */
 if(SHARE_KEY){
   if(shareBrand()) window.__shareChecked=true;
   else pullBrands().catch(()=>{}).finally(()=>{ window.__shareChecked=true; render(); });
@@ -6176,7 +6259,8 @@ async function pollChanges(){
     const res=await api({action:'changes', since:liveSince});
     if(gen!==dataGen){ schedulePoll(1200); return; } /* 읽는 동안 내가 고쳤으면 버리지 않고 곧 다시 읽음 */
     await applyDelta(res);
-    liveSince=res.now||liveSince; /* 반영에 성공한 뒤에만 기준 시각을 앞으로 */
+    liveSince=res.now||liveSince;
+    if(Object.values(res.upserts||{}).some(a=>a.length) || Object.values(res.deleted||{}).some(a=>a.length)) scheduleSnap(); /* 반영에 성공한 뒤에만 기준 시각을 앞으로 */
   } finally { pollBusy=false; }
 }
 function schedulePoll(ms){
@@ -6224,7 +6308,8 @@ async function startLive(){
     }, 4*60*1000);
   }
 }
-document.addEventListener('visibilitychange',()=>{ if(!document.hidden) schedulePoll(0); });
+document.addEventListener('visibilitychange',()=>{ if(document.hidden) saveSnap(); else schedulePoll(0); });
+window.addEventListener('pagehide',()=>saveSnap());
 /* 임베드 높이를 부모 페이지에 알림 */
 if(EMBED){
   const postH=()=>{ try{ const el=document.getElementById('view'); const h=el? el.getBoundingClientRect().height+28 : document.documentElement.scrollHeight; parent.postMessage({ddlHeight: Math.ceil(h)}, '*'); }catch(e){} };

@@ -343,3 +343,84 @@ function jsonResponse(body, status = 200) {
     async json() { return body; },
   };
 }
+
+test('bootstrap reads every requested table in one call and keeps the safe `now`', async () => {
+  process.env.SUPABASE_URL = 'https://example.supabase.co';
+  process.env.SUPABASE_SERVICE_ROLE_KEY = 'sb_secret_test';
+  process.env.ADMIN_KEY = 'admin-secret';
+  resetAuthCache();
+  const seen = [];
+  global.fetch = async (url) => {
+    const u = String(url);
+    seen.push(u);
+    if (u.includes('/rest/v1/weekly_plan')) return jsonResponse([row('VIVICATE', 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa')]);
+    if (u.includes('/rest/v1/content_calendar')) return jsonResponse([row('AUBE SEOUL', 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb')]);
+    return jsonResponse([]);
+  };
+  const res = resMock();
+  await handler(req({ action: 'bootstrap', database_ids: [TABLES.tasks.id, TABLES.contents.id, TABLES.config.id, 'not-a-table'] }, { 'x-admin-key': 'admin-secret' }), res);
+  assert.equal(res.statusCode, 200);
+  assert.deepEqual(Object.keys(res.body.results).sort(), ['config', 'contents', 'tasks']);
+  assert.equal(res.body.results.tasks.length, 1);
+  assert.deepEqual(res.body.errors, {});
+  assert.ok(Date.parse(res.body.now) <= Date.now() - 3000, 'now must be earlier than the reads');
+  assert.ok(seen.length >= 3);
+  assert.ok(res.headers['Server-Timing']);
+});
+
+test('bootstrap: one failing table is reported, not hidden, and scoped links cannot read other tables', async () => {
+  process.env.SUPABASE_URL = 'https://example.supabase.co';
+  process.env.SUPABASE_SERVICE_ROLE_KEY = 'sb_secret_test';
+  process.env.ADMIN_KEY = 'admin-secret';
+  resetAuthCache();
+  global.fetch = async (url) => {
+    const u = String(url);
+    if (u.includes('/rest/v1/weekly_plan')) return jsonResponse({ message: 'boom' }, 500);
+    return jsonResponse([]);
+  };
+  const res = resMock();
+  await handler(req({ action: 'bootstrap', database_ids: [TABLES.tasks.id, TABLES.contents.id] }, { 'x-admin-key': 'admin-secret' }), res);
+  assert.equal(res.statusCode, 200);
+  assert.ok(res.body.errors.tasks);
+  assert.equal(res.body.results.tasks, undefined);
+  assert.ok(res.body.results.contents);
+
+  resetAuthCache();
+  const brands = [{ id: 'vivicate', name: 'VIVICATE', ko: '비비케이트', channels: [] }];
+  global.fetch = async (url) => {
+    const u = String(url);
+    if (u.includes('/rest/v1/app_settings')) {
+      return jsonResponse([{ notion_page_id: 'cccccccc-cccc-4ccc-8ccc-cccccccccccc', '항목': 'brands', '값': JSON.stringify(brands), properties: {} }]);
+    }
+    return jsonResponse([]);
+  };
+  const embed = resMock();
+  await handler(req({ action: 'bootstrap', database_ids: [TABLES.tasks.id, TABLES.products.id, TABLES.costs.id] }, { 'x-embed-brand': 'vivicate' }), embed);
+  assert.equal(embed.statusCode, 200);
+  assert.deepEqual(Object.keys(embed.body.results), ['tasks']); /* embed may read tasks only of these */
+});
+
+test('large responses are gzipped when the browser accepts it', async () => {
+  process.env.SUPABASE_URL = 'https://example.supabase.co';
+  process.env.SUPABASE_SERVICE_ROLE_KEY = 'sb_secret_test';
+  process.env.ADMIN_KEY = 'admin-secret';
+  resetAuthCache();
+  const many = Array.from({ length: 80 }, (_, i) => row('VIVICATE', `aaaaaaaa-aaaa-4aaa-8aaa-${String(i).padStart(12, '0')}`));
+  global.fetch = async () => jsonResponse(many);
+  const res = resMock();
+  let sent = null;
+  res.end = (buf) => { sent = buf; return res; };
+  await handler(req({ action: 'bootstrap', database_ids: [TABLES.tasks.id] }, { 'x-admin-key': 'admin-secret', 'accept-encoding': 'gzip, br' }), res);
+  assert.equal(res.headers['Content-Encoding'], 'gzip');
+  const { gunzipSync } = await import('node:zlib');
+  const parsed = JSON.parse(gunzipSync(sent).toString('utf8'));
+  assert.equal(parsed.results.tasks.length, 80);
+  assert.ok(sent.length < JSON.stringify(parsed).length / 3);
+});
+
+test('function region is Seoul (next to the Supabase project) and config stays light', () => {
+  const vercel = JSON.parse(fs.readFileSync(new URL('../vercel.json', import.meta.url), 'utf8'));
+  assert.deepEqual(vercel.regions, ['icn1']);
+  const pkg = JSON.parse(fs.readFileSync(new URL('../package.json', import.meta.url), 'utf8'));
+  assert.equal(Object.keys(pkg.dependencies || {}).length, 0);
+});

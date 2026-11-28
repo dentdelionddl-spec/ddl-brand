@@ -13,6 +13,7 @@
 //   SUPABASE_ANON_KEY     브라우저 Realtime 연결용 공개 키. 서비스 롤이 아님
 
 import { createHash, timingSafeEqual } from 'node:crypto';
+import { gzipSync } from 'node:zlib';
 import { realtimeToken } from '../lib/supabase.js';
 import {
   TABLES, archiveRow, createRow, findRow, listRows, tableKey, updateRow, uploadFile,
@@ -30,6 +31,25 @@ let brandCache = { at: 0, list: [] };
 export function resetAuthCache() { brandCache = { at: 0, list: [] }; }
 
 const CHANGES_OVERLAP_MS = 4000;
+
+/* 큰 응답(수백 KB의 JSON)은 gzip으로 보냄. 헤더가 없거나 작으면 그대로 */
+function reply(req, res, status, obj) {
+  const accept = String(req.headers?.['accept-encoding'] || '');
+  if (typeof res.end === 'function' && typeof res.setHeader === 'function' && /\bgzip\b/.test(accept)) {
+    const raw = Buffer.from(JSON.stringify(obj));
+    if (raw.length > 2048) {
+      const zipped = gzipSync(raw, { level: 5 });
+      res.statusCode = status;
+      res.setHeader('Content-Type', 'application/json; charset=utf-8');
+      res.setHeader('Content-Encoding', 'gzip');
+      res.setHeader('Vary', 'Origin, Accept-Encoding');
+      res.setHeader('Cache-Control', 'private, no-store');
+      res.end(zipped);
+      return res;
+    }
+  }
+  return res.status(status).json(obj);
+}
 
 export default async function handler(req, res) {
   const allowed = (process.env.ALLOW_ORIGIN || DEFAULT_ORIGIN).split(',').map((s) => s.trim()).filter(Boolean);
@@ -64,7 +84,7 @@ export default async function handler(req, res) {
       return res.status(200).json(token);
     }
 
-    if (who.scope && action !== 'query' && action !== 'changes') {
+    if (who.scope && action !== 'query' && action !== 'changes' && action !== 'bootstrap') {
       return res.status(401).json({ message: '보기 전용 링크에서는 조회만 할 수 있습니다' });
     }
 
@@ -73,7 +93,29 @@ export default async function handler(req, res) {
       if (!key || (who.scope && !scopeAllows(who, key))) return res.status(403).json({ message: '이 링크로는 볼 수 없는 DB입니다' });
       const pages = await listRows(key, {});
       const results = who.scope ? scopeRows(who, key, pages) : pages;
-      return res.status(200).json({ results });
+      return reply(req, res, 200, { results });
+    }
+
+    if (action === 'bootstrap') {
+      /* 화면 처음 열 때 필요한 표를 한 번에, 서버 안에서 동시에 읽어서 돌려줌 (요청 한 번 = 함수 시작 한 번) */
+      const startedAt = Date.now();
+      const nextSince = new Date(startedAt - CHANGES_OVERLAP_MS).toISOString();
+      const wanted = Array.isArray(body.database_ids) && body.database_ids.length
+        ? [...new Set(body.database_ids.map((id) => tableKey(id)).filter(Boolean))]
+        : Object.keys(TABLES);
+      const keys = wanted.filter((key) => !who.scope || scopeAllows(who, key));
+      const results = {};
+      const errors = {};
+      await Promise.all(keys.map(async (key) => {
+        try {
+          const pages = await listRows(key, {});
+          results[key] = who.scope ? scopeRows(who, key, pages) : pages;
+        } catch (e) {
+          errors[key] = e.message || String(e);
+        }
+      }));
+      res.setHeader?.('Server-Timing', `db;dur=${Date.now() - startedAt}`);
+      return reply(req, res, 200, { now: nextSince, results, errors });
     }
 
     if (action === 'changes') {
@@ -90,7 +132,7 @@ export default async function handler(req, res) {
         upserts[key] = who.scope ? scopeRows(who, key, live) : live;
         deleted[key] = (who.scope ? scopeRows(who, key, gone) : gone).map((p) => p.id);
       }));
-      return res.status(200).json({ now: nextSince, upserts, deleted });
+      return reply(req, res, 200, { now: nextSince, upserts, deleted });
     }
 
     if (action === 'upload') {
