@@ -2782,7 +2782,7 @@ const NOTION_HUB='https://app.notion.com/p/3bd4f7cd6b86816cbc56ef161bf47379';
 const PROXY_URL=/^(localhost|127\.0\.0\.1)$/.test(location.hostname)
   ? location.origin+'/api/notion'
   : 'https://ddl-brand.vercel.app/api/notion';
-const POLL_MS=(()=>{ const n=Number(new URLSearchParams(location.search).get('poll')); return n>=500 && n<=60000 ? n : 8000; })();
+const POLL_MS=(()=>{ const n=Number(new URLSearchParams(location.search).get('poll')); return n>=500 && n<=60000 ? n : 5000; })();
 
 const blank = () => ({
   v:1,
@@ -2828,6 +2828,25 @@ const save=()=>{
   dataGen++;
   if(typeof queueWrite==='function') queueWrite();
 };
+/* 서버에서 처음 읽기를 끝내기 전에는 기본값을 보여주거나 저장하지 않습니다 */
+const LOAD={ state:'loading', err:'', kick:null };
+const isReady=()=>LOAD.state==='ready';
+function setLoad(state, err){
+  LOAD.state=state; LOAD.err=err||'';
+  if(state!=='ready') paintLoad();
+}
+function paintLoad(){
+  const app=document.getElementById('app'); if(!app) return;
+  const st=LOAD.state, sig=st+'|'+LOAD.err;
+  if(app.dataset.gate===sig && document.getElementById('loadgate')) return;
+  const inner = st==='error'
+    ? `<b>데이터를 불러오지 못했습니다</b><span>${esc(LOAD.err||'잠시 후 다시 시도합니다')}<br>서버의 데이터는 그대로 있습니다. 자동으로 다시 시도합니다.</span><button class="btn btn--primary" id="loadretry" type="button">지금 다시 시도</button>`
+    : st==='auth' ? `<b>관리자 비밀번호가 필요합니다</b><span>화면 위쪽 칸에 입력해 주세요.</span>`
+    : `<i class="spin" aria-label="불러오는 중"></i><span>불러오는 중…</span>`;
+  app.innerHTML=`<div class="sharewait" id="loadgate"><img src="${LOGO_SRC}" alt="DDL">${inner}</div>`;
+  app.dataset.gate=sig;
+  const b=document.getElementById('loadretry'); if(b) b.onclick=()=>{ if(LOAD.kick) LOAD.kick(); };
+}
 function showSaveError(msg){
   let el=document.getElementById('saveerr');
   if(!el){ el=document.createElement('div'); el.id='saveerr'; document.body.appendChild(el); }
@@ -3005,6 +3024,7 @@ function mobileLayout(){
   scrollToToday();
 }
 function render(){
+  if(!isReady()){ paintLoad(); return; }
   if(SHARE_KEY){
     const sb=shareBrand();
     if(!sb){
@@ -5638,7 +5658,7 @@ function askAdminKey(){
 /* 노션 요청은 한 번에 최대 2개씩 — 한꺼번에 몰려 요청 제한에 걸리지 않게 */
 let __apiActive=0; const __apiQ=[];
 async function api(payload, retried){
-  if(__apiActive>=2) await new Promise(r=>__apiQ.push(r));
+  if(__apiActive>=4) await new Promise(r=>__apiQ.push(r));
   __apiActive++;
   try{ return await __api(payload, retried); }
   finally{ __apiActive--; const n=__apiQ.shift(); if(n) n(); }
@@ -5651,7 +5671,11 @@ async function __api(payload, retried, tries=0){
   if(key) headers['X-Admin-Key']=encodeURIComponent(key);
   else if(SHARE_KEY) headers['X-Share-Key']=encodeURIComponent(SHARE_KEY);
   else if(EMBED&&EMBED.brand) headers['X-Embed-Brand']=encodeURIComponent(EMBED.brand);
-  const res=await fetch(url,{method:'POST',headers,body:JSON.stringify(payload)});
+  const ctl=new AbortController(); const to=setTimeout(()=>ctl.abort(),30000);
+  let res;
+  try{ res=await fetch(url,{method:'POST',headers,body:JSON.stringify(payload),signal:ctl.signal}); }
+  catch(e){ clearTimeout(to); const err=new Error(e&&e.name==='AbortError'?'서버 응답이 늦습니다':'서버에 연결하지 못했습니다'); err.status=0; throw err; }
+  clearTimeout(to);
   const json=await res.json().catch(()=>({}));
   if(res.status===401 && !retried){
     /* 그 사이 다른 요청에서 비밀번호를 새로 받았으면 그대로 다시 시도 */
@@ -5663,7 +5687,7 @@ async function __api(payload, retried, tries=0){
     await new Promise(r=>setTimeout(r,1000*2**tries+Math.random()*400));
     return __api(payload, retried, tries+1);
   }
-  if(!res.ok) throw new Error(json.message||`요청 실패 (${res.status})`);
+  if(!res.ok){ const err=new Error(json.message||`요청 실패 (${res.status})`); err.status=res.status; throw err; }
   return json;
 }
 async function testConn(){
@@ -5672,7 +5696,7 @@ async function testConn(){
 }
 let writeTimer=null, writing=false, writeAgain=false;
 function queueWrite(){
-  if(viewOnly()) return;
+  if(viewOnly() || !isReady()) return;
   if(!adminKey()){ showSaveError('관리자 비밀번호가 필요합니다'); keyBar(); return; }
   clearTimeout(writeTimer);
   writeTimer=setTimeout(flushWrites, 200);
@@ -5699,14 +5723,37 @@ async function flushWrites(){
   else clearSaveError();
   if(writeAgain){ writeAgain=false; queueWrite(); }
 }
-async function bootSync(){
-  if(!adminKey() && !SHARE_KEY && !EMBED){ keyBar(); return; }
-  try{
-    const clock=await api({action:'clock'});
-    liveSince=clock.now;
-    await pullAll(true);
-    startLive();
-  }catch(e){ showSaveError(e.message||'데이터를 불러오지 못했습니다'); }
+/* 처음 읽기: 모든 표를 성공적으로 읽기 전까지는 로딩 화면. 실패하면 기본값 대신 오류 + 자동 재시도 */
+let __booting=null;
+function bootSync(){
+  if(!adminKey() && !SHARE_KEY && !EMBED){ if(!isReady()) setLoad('auth'); keyBar(); return Promise.resolve(); }
+  if(__booting) return __booting;
+  __booting=(async()=>{
+    const first=!isReady();
+    if(first) setLoad('loading');
+    for(let attempt=0; ; attempt++){
+      try{
+        const clock=await api({action:'clock'});
+        liveSince=clock.now;
+        await __pullAll(true, undefined, {strict:true});
+        break;
+      }catch(e){
+        if(e && e.status===401 && !SHARE_KEY && !EMBED){
+          if(first){ setAdminKey(''); setLoad('auth'); keyBar(); } else showSaveError('관리자 비밀번호가 맞지 않습니다');
+          return;
+        }
+        if(!first){ showSaveError(e.message||'데이터를 불러오지 못했습니다'); return; }
+        setLoad('error', e.message||'');
+        const wait=Math.min(2000*Math.pow(2,attempt), 15000);
+        await new Promise(r=>{ LOAD.kick=()=>{ LOAD.kick=null; r(); }; setTimeout(()=>{ LOAD.kick=null; r(); }, wait); });
+        setLoad('loading');
+      }
+    }
+    clearSaveError();
+    LOAD.state='ready'; LOAD.err=''; render();
+    startLive().catch(()=>startPollLoop());
+  })().finally(()=>{ __booting=null; });
+  return __booting;
 }
 /* 이 브라우저에 관리자 비밀번호가 없으면 화면 맨 위에 입력 칸 — 한 번 넣으면 이 브라우저에 저장 */
 function keyBar(){
@@ -5731,7 +5778,7 @@ function keyBar(){
 }
 async function pushBrands(){
   const s=DB.settings; const dbId=s.db&&s.db.config;
-  if(!s.workerUrl||!dbId) return;
+  if(!s.workerUrl||!dbId||!isReady()) return;
   try{
     const res=await api({action:'query', database_id:dbId});
     const row=(res.results||[]).find(p=>(p.properties['항목']?.title?.[0]?.plain_text||'')==='brands');
@@ -5742,27 +5789,30 @@ async function pushBrands(){
     else await api({action:'create', database_id:dbId, properties:props});
   }catch(e){}
 }
-async function pullBrands(){
+/* 앱 설정 DB 한 번만 읽어서 브랜드 목록과 유입 수동값을 함께 채움. 읽기에 실패하면 strict에서는 예외를 던져 기본값을 쓰지 않음.
+   서버에 brands 행이 없어도 기본값을 서버에 쓰지 않음 (브랜드를 직접 편집할 때만 저장) */
+async function pullBrands(strict){
   const s=DB.settings; const dbId=s.db&&s.db.config;
   if(!s.workerUrl||!dbId) return;
   try{
     const res=await api({action:'query', database_id:dbId});
-    const row=(res.results||[]).find(p=>(p.properties['항목']?.title?.[0]?.plain_text||'')==='brands');
-    const raw=row&&row.properties['값']?.rich_text?.[0]?.plain_text;
-    if(!raw){ await pushBrands(); return; }
-    const list=JSON.parse(raw);
-    if(Array.isArray(list)&&list.length){
-      DB.brands=list.filter(b=>!isRemovedBrand(b));
-      if(DB.brands.length!==list.length) await pushBrands();
+    const rows=res.results||[];
+    const find=n=>rows.find(p=>(p.properties['항목']?.title?.[0]?.plain_text||'')===n);
+    const raw=find('brands')?.properties['값']?.rich_text?.[0]?.plain_text;
+    if(raw){
+      const list=JSON.parse(raw);
+      if(Array.isArray(list)&&list.length) DB.brands=list.filter(b=>!isRemovedBrand(b));
     }
-  }catch(e){}
+    const iraw=find('inquiries')?.properties['값']?.rich_text?.[0]?.plain_text;
+    if(iraw){ try{ DB.settings.inq=JSON.parse(iraw); }catch(e){} }
+  }catch(e){ if(strict) throw e; }
 }
 const KIND_LABEL={contents:'콘텐츠',tasks:'업무',sales:'매출',daily:'일별 매출',plans:'기획',actions:'액션플랜',stats:'성과',refs:'레퍼런스',costs:'비용',products:'제품'};
 /* 노션 읽기는 한 번에 하나만 — 이미 읽는 중이면 그 결과를 같이 기다림 */
 let __pulling=null, __lastPull=0;
 function pullAll(quiet){
   if(__pulling) return __pulling;
-  __pulling=__pullAll(quiet).finally(()=>{ __pulling=null; __lastPull=Date.now(); });
+  __pulling=__pullAll(quiet, undefined, {}).finally(()=>{ __pulling=null; __lastPull=Date.now(); });
   return __pulling;
 }
 async function applyDelta(payload){
@@ -5777,12 +5827,11 @@ async function applyDelta(payload){
   if((payload.upserts?.inquiries||[]).length) await pullInquiries();
   if((payload.upserts?.traffic||[]).length) await pullTraffic();
 }
-async function __pullAll(quiet, pre){
+async function __pullAll(quiet, pre, opt){
+  const strict=!!(opt&&opt.strict);
   const gen=dataGen;
-  if(!pre){
-    await pullBrands(); await pullConfig(); await pullTraffic(); await pullInquiries();
-  }
-  const s=DB.settings; let n=0;
+  const s=DB.settings;
+  let n=0;
   const snap=()=>JSON.stringify(['contents','tasks','sales','products','plans','costs','actions','refs','daily'].map(k=>DB[k]));
   const before=snap();
   const txt=p=>p?.rich_text?.[0]?.plain_text||'';
@@ -5800,12 +5849,22 @@ const brandByName=nm=>{
 };
   const __kinds = pre ? Object.keys(pre) : Object.keys(KIND).filter(k=>s.db[KIND[k].db]);
   const __res = pre || {};
-  const __err={};
+  const __err={}; let __first=null;
+  const __fail=(k,e)=>{ if(e&&e.status===403&&(SHARE_KEY||EMBED)) return; /* 보기 전용 링크는 일부 표를 못 읽는 게 정상 */ __err[k]=String((e&&e.message)||e); if(!__first) __first=e; };
   if(!pre){
-    await Promise.all(__kinds.map(async k=>{ try{ __res[k] = await api({action:'query', database_id:s.db[KIND[k].db]}); }catch(e){ __err[k]=String(e.message||e); } }));
+    /* 브랜드·유입·방문·모든 표를 한꺼번에 읽음 (순서대로 읽으면 첫 화면이 오래 비어 보임) */
+    await Promise.all([
+      pullBrands(true).catch(e=>__fail('brands',e)),
+      pullTraffic(), pullInquiries(),
+      ...__kinds.map(async k=>{ try{ __res[k] = await api({action:'query', database_id:s.db[KIND[k].db]}); }catch(e){ __fail(k,e); } }),
+    ]);
   }
-  if(gen!==dataGen) return;
   const __bad=Object.keys(__err);
+  if(strict && __bad.length){
+    const e=new Error('불러오지 못한 항목: '+__bad.join(', ')+(__first&&__first.message?' ('+__first.message+')':''));
+    e.status=__first&&__first.status; throw e;
+  }
+  if(!strict && gen!==dataGen) return;
   if(__bad.length) showSaveError('일부 데이터를 불러오지 못했습니다');
   const full=!pre;
   for(const kind of __kinds){
@@ -6085,7 +6144,7 @@ function act(a){
     inp.click(); return;
   }
   if(a==='reset'){
-    if(confirm('화면을 서버에 저장된 내용으로 다시 불러옵니다. 서버의 데이터는 지우지 않습니다. 계속할까요?')){ dataGen++; DB=blank(); try{ const me=JSON.parse(store.get(KEY+':me')||'null'); if(typeof me==='string') DB.settings.me=me; }catch(e){} render(); bootSync(); }
+    if(confirm('화면을 서버에 저장된 내용으로 다시 불러옵니다. 서버의 데이터는 지우지 않습니다. 계속할까요?')){ dataGen++; DB=blank(); LOAD.state='loading'; try{ const me=JSON.parse(store.get(KEY+':me')||'null'); if(typeof me==='string') DB.settings.me=me; }catch(e){} render(); bootSync(); }
   }
 }
 
@@ -6099,7 +6158,7 @@ if(SHARE_KEY){
 }
 render();
 bootSync();
-/* 다른 탭의 변경: Realtime이 연결되면 그 신호를 받고, 아니면 8초마다 변경분만 읽음 */
+/* 다른 탭의 변경: Realtime이 연결되면 그 신호를 받고, 아니면 5초마다 변경분만 읽음 */
 let liveSince=null, pollTimer=null, rtClient=null;
 const RT_TABLES=['content_calendar','weekly_plan','sales','products','content_plans','costs','action_plan','app_settings','references','threads_performance','daily_sales','oem_inquiries_yj','visit_stats_yj'];
 function startPollLoop(){
@@ -6107,18 +6166,22 @@ function startPollLoop(){
   pollTimer=setInterval(()=>{ pollChanges().catch(()=>{}); }, POLL_MS);
 }
 function stopPollLoop(){ if(pollTimer){ clearInterval(pollTimer); pollTimer=null; } }
+let pollBusy=false;
 async function pollChanges(){
-  if(!liveSince || document.hidden) return;
+  if(!liveSince || !isReady() || pollBusy) return;
   if(document.querySelector('#layer')?.innerHTML.trim()) return;
-  const gen=dataGen;
-  const res=await api({action:'changes', since:liveSince});
-  if(gen!==dataGen) return;
-  liveSince=res.now||liveSince;
-  await applyDelta(res);
+  pollBusy=true;
+  try{
+    const gen=dataGen;
+    const res=await api({action:'changes', since:liveSince});
+    if(gen!==dataGen){ schedulePoll(1200); return; } /* 읽는 동안 내가 고쳤으면 버리지 않고 곧 다시 읽음 */
+    await applyDelta(res);
+    liveSince=res.now||liveSince; /* 반영에 성공한 뒤에만 기준 시각을 앞으로 */
+  } finally { pollBusy=false; }
 }
-function schedulePoll(){
+function schedulePoll(ms){
   clearTimeout(schedulePoll._t);
-  schedulePoll._t=setTimeout(()=>{ pollChanges().catch(()=>{}); }, 250);
+  schedulePoll._t=setTimeout(()=>{ pollChanges().catch(()=>{}); }, ms==null?250:ms);
 }
 function loadSupabaseJs(){
   if(window.supabase) return Promise.resolve();
@@ -6161,7 +6224,7 @@ async function startLive(){
     }, 4*60*1000);
   }
 }
-document.addEventListener('visibilitychange',()=>{ if(!document.hidden) pollChanges().catch(()=>{}); });
+document.addEventListener('visibilitychange',()=>{ if(!document.hidden) schedulePoll(0); });
 /* 임베드 높이를 부모 페이지에 알림 */
 if(EMBED){
   const postH=()=>{ try{ const el=document.getElementById('view'); const h=el? el.getBoundingClientRect().height+28 : document.documentElement.scrollHeight; parent.postMessage({ddlHeight: Math.ceil(h)}, '*'); }catch(e){} };
@@ -6169,14 +6232,15 @@ if(EMBED){
   window.addEventListener('load', postH);
   setTimeout(postH, 400); setInterval(postH, 1500);
 }
-document.addEventListener('visibilitychange',()=>{ if(!document.hidden) liveRefresh(); });
-window.addEventListener('focus', liveRefresh);
+window.addEventListener('focus',()=>schedulePoll(0));
+window.addEventListener('online',()=>schedulePoll(0));
 </script>
 <script>
 window.addEventListener("error", function(e){ window.__bootErr = (e && e.message) || "오류"; });
 setTimeout(function(){
   var v = document.getElementById("view");
   if (v && v.innerHTML.trim()) return;
+  if (document.getElementById("loadgate")) return;
   var app = document.getElementById("app"); if(!app) return;
   app.innerHTML = '<div style="max-width:520px;margin:80px auto;padding:24px;border:1px solid #E2E2DA;border-radius:14px;font:14px/1.7 -apple-system,BlinkMacSystemFont,system-ui,sans-serif;background:#fff">'+
     '<b style="font-size:15px">화면을 불러오지 못했습니다</b><br>'+

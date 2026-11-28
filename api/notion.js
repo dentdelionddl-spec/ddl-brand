@@ -29,6 +29,8 @@ export const config = { api: { bodyParser: { sizeLimit: '10mb' } } };
 let brandCache = { at: 0, list: [] };
 export function resetAuthCache() { brandCache = { at: 0, list: [] }; }
 
+const CHANGES_OVERLAP_MS = 4000;
+
 export default async function handler(req, res) {
   const allowed = (process.env.ALLOW_ORIGIN || DEFAULT_ORIGIN).split(',').map((s) => s.trim()).filter(Boolean);
   const origin = req.headers.origin;
@@ -50,7 +52,7 @@ export default async function handler(req, res) {
     if (who.error) return res.status(who.status).json({ message: who.error });
 
     if (action === 'ping' || action === 'clock') {
-      return res.status(200).json({ ok: true, now: new Date().toISOString() });
+      return res.status(200).json({ ok: true, now: new Date(Date.now() - CHANGES_OVERLAP_MS).toISOString() });
     }
 
     if (action === 'realtime') {
@@ -75,6 +77,8 @@ export default async function handler(req, res) {
     }
 
     if (action === 'changes') {
+      /* 기준 시각은 읽기 시작 전에 정하고 몇 초 겹치게 둠: 읽는 도중 들어온 수정이 영영 빠지지 않도록 */
+      const nextSince = new Date(Date.now() - CHANGES_OVERLAP_MS).toISOString();
       const since = body.since ? String(body.since) : '';
       const keys = Object.keys(TABLES).filter((key) => !who.scope || scopeAllows(who, key));
       const upserts = {};
@@ -86,7 +90,7 @@ export default async function handler(req, res) {
         upserts[key] = who.scope ? scopeRows(who, key, live) : live;
         deleted[key] = (who.scope ? scopeRows(who, key, gone) : gone).map((p) => p.id);
       }));
-      return res.status(200).json({ now: new Date().toISOString(), upserts, deleted });
+      return res.status(200).json({ now: nextSince, upserts, deleted });
     }
 
     if (action === 'upload') {

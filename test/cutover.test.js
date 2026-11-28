@@ -94,7 +94,10 @@ test('the page is a live app, not a Notion sync client', () => {
   assert.match(HTML, /postgres_changes/);
   assert.match(HTML, /schema:'notion'/);
   assert.match(HTML, /POLL_MS/);
-  assert.match(HTML, /: 8000/);
+  assert.match(HTML, /: 5000/);
+  assert.equal(HTML.includes('liveRefresh'), false);
+  assert.equal(HTML.includes('if(document.hidden) return'), false);
+  assert.match(HTML, /id="loadgate"/);
   assert.equal(HTML.includes('store.set(KEY,JSON.stringify(DB))'), false);
   assert.equal(HTML.includes("store.set(KEY, JSON.stringify(DB))"), false);
 });
@@ -218,6 +221,8 @@ test('changes since returns only newer and deleted rows', async () => {
   assert.equal(res.body.deleted.contents.length, 1);
   assert.equal(res.body.upserts.contents.length, 0);
   assert.ok(res.body.now);
+  /* 다음 기준 시각은 읽기 시작보다 앞(몇 초 겹침)이어야 읽는 도중의 수정이 빠지지 않음 */
+  assert.ok(Date.parse(res.body.now) <= Date.now() - 3000);
 });
 
 test('adding and removing attachments keeps migrated file paths', async () => {

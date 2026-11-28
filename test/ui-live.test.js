@@ -4,6 +4,8 @@ import http from 'node:http';
 import fs from 'node:fs';
 import puppeteer from 'puppeteer-core';
 
+import { existsSync } from 'node:fs';
+const CHROME = process.env.CHROME_PATH || ['/usr/local/bin/google-chrome', '/usr/bin/google-chrome', '/usr/bin/chromium'].find((p) => existsSync(p));
 const ADMIN = 'secret-admin';
 const ym = new Date().toISOString().slice(0, 7);
 const salesId = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa';
@@ -103,10 +105,10 @@ async function openSales(browser, port) {
   return page;
 }
 
-test('an edit shows immediately and reaches another tab without reload', { timeout: 60000 }, async () => {
+test('an edit shows immediately and reaches another tab without reload', { timeout: 60000, skip: !CHROME && 'chrome not found' }, async () => {
   const { server, port, state } = await startServer();
   const browser = await puppeteer.launch({
-    executablePath: '/usr/local/bin/google-chrome',
+    executablePath: CHROME,
     headless: true,
     args: ['--no-sandbox', '--disable-dev-shm-usage'],
   });
