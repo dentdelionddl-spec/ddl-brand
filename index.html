@@ -1315,10 +1315,6 @@ body.ro .ev:hover{transform:none;box-shadow:0 1px 2px rgba(16,20,32,.04)}
   .snav__l{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
   .snav__m{font-size:11px;color:var(--mut);font-variant-numeric:tabular-nums}
   .snav__ft{margin-top:auto;padding-top:10px;border-top:1px solid var(--line2);display:flex;flex-direction:column;gap:1px}
-  .snav__sync{font-size:11px;color:var(--mut);padding:8px 10px 2px;line-height:1.5}
-  .snav__sync span{color:#A3A8B5}
-  .snav__sd{display:inline-block;width:6px;height:6px;border-radius:50%;background:#C4C8D2;margin-right:6px;vertical-align:1px}
-  .snav__sd.on{background:var(--ok)}
   .app--side .topbar{top:0 !important;padding-left:28px !important;padding-right:28px !important;background:rgba(244,245,249,.9)}
   .app--side .view{max-width:1480px;padding:24px 28px 80px;margin-left:0 !important;margin-right:auto !important}
   .app--side .tabrow{max-width:none !important}
@@ -2367,6 +2363,8 @@ html body .calx .cell .ev.ev--mid,html body .calx .cell .ev.ev--end,html body .c
 #view .synclog__r b{font-weight:600;font-variant-numeric:tabular-nums}
 #view .synclog__r.is-bad b{color:var(--alert)}
 #keybar em{flex:1 0 100%;font-style:normal;color:#D4FF00;font-size:12.5px}
+#saveerr{position:fixed;left:16px;bottom:16px;z-index:80;max-width:340px;background:#fff;color:#9A3B3B;border:1px solid #E4C9CE;border-radius:10px;padding:8px 12px;font-size:12.5px;line-height:1.45;box-shadow:0 8px 24px rgba(20,22,28,.12)}
+#saveerr[hidden]{display:none}
 #keybar em:empty{display:none}
 #layer .chrow{display:flex;gap:6px;margin-bottom:6px;align-items:stretch;transition:transform .12s}
 #layer .chrow__h{flex:0 0 26px;display:grid;place-items:center;border-radius:8px;color:#A3A7AF;cursor:grab;touch-action:none;user-select:none;-webkit-user-select:none}
@@ -2505,9 +2503,7 @@ html:root body #view .pv-field:focus-within,html:root body #view .pv select:focu
 html:root body #view .pv-slider input[type=range]{-webkit-appearance:none;appearance:none;height:4px;border-radius:99px;background:#14161C;accent-color:#D4FF00}
 html:root body #view .pv-slider input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;appearance:none;width:16px;height:16px;border-radius:50%;background:#D4FF00;border:1px solid #14161C;cursor:pointer}
 html:root body #view .pv-slider input[type=range]::-moz-range-thumb{width:16px;height:16px;border-radius:50%;background:#D4FF00;border:1px solid #14161C;cursor:pointer}
-/* 사이드바 '노션 자동 동기화' 점: 형광 + 얇은 검정 테두리 */
-html:root body .snav__sd.on,html:root body .syncdot--on{background:#D4FF00 !important;box-shadow:inset 0 0 0 1px #14161C !important}
-html:root body .snav__sd.on{width:8px !important;height:8px !important}
+/* 사이드바 강조 점: 형광 + 얇은 검정 테두리 */
 /* 테두리가 있는 형광 버튼은 원래 테두리 자리를 검정으로 — 선이 버튼 바깥 끝에 오게 */
 html:root body .btn--primary,html:root body .btn--primary:focus,html:root body .btn--primary:hover,
 html:root body #view .pv-btn--pri,html:root body #view .ux .btn--primary{border:1px solid #14161C !important;box-shadow:none !important}
@@ -2694,7 +2690,7 @@ html:root body .mc:not(.mc--task) .mc__tag{background:color-mix(in srgb,var(--c)
 <script>
 /* =========================================================
    DDL 브랜드 관리 — 단일 파일 앱
-   저장: 로컬(localStorage) → 노션(Cloudflare Worker 경유) 선택 동기화
+   저장: 입력 즉시 서버(Supabase)에 반영. 화면은 서버 내용을 보여 준다.
    ========================================================= */
 
 const CONTENT_TYPES = ['EGC','UGC'];
@@ -2783,7 +2779,10 @@ const NOTION_DB={
   daily:'c0a051c168524e599f630c949a78f985' /* 일별 매출 (유통사별) */
 };
 const NOTION_HUB='https://app.notion.com/p/3bd4f7cd6b86816cbc56ef161bf47379';
-const PROXY_URL='https://ddl-brand.vercel.app/api/notion';
+const PROXY_URL=/^(localhost|127\.0\.0\.1)$/.test(location.hostname)
+  ? location.origin+'/api/notion'
+  : 'https://ddl-brand.vercel.app/api/notion';
+const POLL_MS=(()=>{ const n=Number(new URLSearchParams(location.search).get('poll')); return n>=500 && n<=60000 ? n : 8000; })();
 
 const blank = () => ({
   v:1,
@@ -2792,8 +2791,9 @@ const blank = () => ({
   contents:[], tasks:[], sales:[], products:[], plans:[], costs:[], actions:[], refs:[], stats:[], daily:[]
 });
 
-let DB;
-try{ DB = JSON.parse(store.get(KEY)) || blank(); }catch(e){ DB = blank(); }
+let DB = blank();
+try{ const me=JSON.parse(store.get(KEY+':me')||'null'); if(typeof me==='string') DB.settings.me=me; }catch(e){}
+let dataGen=0;
 for(const k of ['contents','tasks','sales','products','plans','costs','actions','refs','stats','daily']) if(!Array.isArray(DB[k])) DB[k]=[];
 if(!DB.settings) DB.settings=blank().settings;
 if(!DB.settings.db) DB.settings.db={...NOTION_DB};
@@ -2823,7 +2823,17 @@ for(const k of ['contents','tasks','sales','products','plans','costs','actions',
 for(const t of DB.tasks){ if(/\d+\s*월\s*\d+\s*주/.test(t.area||'')){ t.week=t.area; t.area=''; } }
 for(const t of DB.tasks){ if(!AREAS.includes(t.area)){ t.area=guessArea(t); t.dirty=true; } if(t.sub && !(AREA_SUBS[t.area]||[]).includes(t.sub)) t.sub=''; }
 
-const save=()=>{ store.set(KEY,JSON.stringify(DB)); if(typeof autoSync==='function') autoSync(); };
+const save=()=>{
+  try{ store.set(KEY+':me', JSON.stringify(DB.settings.me||'')); }catch(e){}
+  dataGen++;
+  if(typeof queueWrite==='function') queueWrite();
+};
+function showSaveError(msg){
+  let el=document.getElementById('saveerr');
+  if(!el){ el=document.createElement('div'); el.id='saveerr'; document.body.appendChild(el); }
+  el.hidden=false; el.textContent=msg||'저장하지 못했습니다';
+}
+function clearSaveError(){ const el=document.getElementById('saveerr'); if(el) el.hidden=true; }
 
 /* ---------- utils ---------- */
 const uid=()=>Math.random().toString(36).slice(2,9)+Date.now().toString(36).slice(-3);
@@ -3061,8 +3071,6 @@ const ICON={
 };
 function sideNav(){
   const item=(attr,label,icon,on,meta='',neon=false)=>`<button class="snav__i" ${attr} aria-current="${on}">${icon||''}<span class="snav__l">${esc(label)}</span>${meta?`<span class="snav__m ${neon?'snav__m--n':''}">${esc(meta)}</span>`:''}</button>`;
-  const s=DB.settings;
-  const sync = !s.workerUrl ? '로컬 저장' : (s.auto===false ? '수동 동기화' : '노션 자동 동기화');
   return `<aside class="snav" aria-label="메뉴">
     <button class="snav__logo" data-act="home" title="홈으로"><img src="${LOGO_SRC}" alt="DDL" /></button>
     ${brandOf('ddl')&&!brandOf('ddl').hidden ? item('data-brand="ddl"','DDL',ICON.home,UI.brand==='ddl') : ''}
@@ -3081,9 +3089,8 @@ function sideNav(){
       </div>`;
     })()}
     <div class="snav__ft">
-      ${item('data-act="me"', s.me?('나 · '+s.me):'담당자 선택', ICON.user, false)}
+      ${item('data-act="me"', DB.settings.me?('나 · '+DB.settings.me):'담당자 선택', ICON.user, false)}
       ${item('data-brand="__set"','설정',ICON.gear,UI.brand==='__set')}
-      <div class="snav__sync"><span class="snav__sd ${s.workerUrl&&s.auto!==false?'on':''}"></span>${esc(sync)}${s.lastSync?`<br><span>${esc(s.lastSync)}</span>`:''}</div>
     </div>
   </aside>`;
 }
@@ -3107,7 +3114,7 @@ function brandBar(){
       return tab(br.id, br.name, meta, hueBg(br.hue,58), UI.brand===br.id);
     }).join('')}
     <button class="btab btab--me" data-act="me" title="내 이름 설정"><span class="btab__n">${DB.settings.me?esc(DB.settings.me):'담당자 선택'}</span></button>
-    ${tab('__set','설정',DB.settings.workerUrl?(DB.settings.auto===false?'수동':'자동'):'로컬','#9AA0A9',UI.brand==='__set')}
+    ${tab('__set','설정','','#9AA0A9',UI.brand==='__set')}
   </nav>`;
 }
 
@@ -3117,7 +3124,7 @@ function mineBtn(){
 }
 function topbar(){
   if(UI.brand==='__set') return `<header class="topbar"><div class="tophead">
-      <h1 class="brandtitle">설정 · 동기화</h1><div class="spacer"></div>
+      <h1 class="brandtitle">설정</h1><div class="spacer"></div>
     </div></header>`;
   if(UI.brand==='__sched') return `<header class="topbar">
       <div class="tophead"><div><h1 class="brandtitle">캘린더<span class="brandko">전체 브랜드</span></h1></div><div class="spacer"></div>${monthNav()}</div>
@@ -3396,7 +3403,7 @@ function tasksView(){
       ${mineBtn()}
       <button class="btn btn--primary btn--sm" data-act="task-new">업무 추가</button>
     </div>
-    ${!list.length? `<div class="card"><div class="empty"><b>${showDone?'완료한 업무가 없습니다':'할 일이 없습니다'}</b>${who?`담당 ${esc(who)} 기준입니다.`:'업무를 추가하거나 노션 주간 플랜에서 내려받으세요.'}</div></div>`
+    ${!list.length? `<div class="card"><div class="empty"><b>${showDone?'완료한 업무가 없습니다':'할 일이 없습니다'}</b>${who?`담당 ${esc(who)} 기준입니다.`:'업무를 추가해 주세요.'}</div></div>`
     : `<section class="card tlist">${areas.map(a=>{
       const rows=list.filter(t=>areaOf(t)===a).sort((x,y)=>(x.due||'9999-99-99').localeCompare(y.due||'9999-99-99')||PRIOS.indexOf(x.priority)-PRIOS.indexOf(y.priority));
       return `<div class="tlist__g"><b>${esc(a)}</b><span>${rows.length}</span></div>
@@ -4157,7 +4164,6 @@ async function pullInquiries(){
         src:P['\uC720\uC785 \uACBD\uB85C']?.select?.name||'',
         status:P['\uC9C4\uD589 \uC0C1\uD0DC']?.select?.name||'' };
     });
-    store.set(KEY,JSON.stringify(DB));
   }catch(e){}
 }
 function inqCount(bid, ym, onlyThreads){
@@ -4177,7 +4183,6 @@ async function pullTraffic(){
         threads:P['스레드']?.number||0, insta:P['인스타']?.number||0,
         direct:P['직접']?.number||0, etc:P['기타']?.number||0 };
     });
-    store.set(KEY,JSON.stringify(DB));
   }catch(e){}
 }
 function trafficOf(bid, ym, key){
@@ -4195,7 +4200,7 @@ async function pushConfig(){
     const res=await api({action:'query', database_id:dbId});
     const row=(res.results||[]).find(p=>(p.properties['항목']?.title?.[0]?.plain_text||'')==='inquiries');
     const props={ '항목':{title:[{text:{content:'inquiries'}}]},
-      '값':{rich_text:[{text:{content:JSON.stringify(s.inq||{}).slice(0,1900)}}]},
+      '값':{rich_text:[{text:{content:JSON.stringify(s.inq||{})}}]},
       '수정시각':{rich_text:[{text:{content:new Date().toISOString()}}]} };
     if(row) await api({action:'update', page_id:row.id, properties:props});
     else await api({action:'create', database_id:dbId, properties:props});
@@ -4207,7 +4212,7 @@ async function pullConfig(){
     const res=await api({action:'query', database_id:dbId});
     const row=(res.results||[]).find(p=>(p.properties['항목']?.title?.[0]?.plain_text||'')==='inquiries');
     const raw=row&&row.properties['값']?.rich_text?.[0]?.plain_text;
-    if(raw){ DB.settings.inq=JSON.parse(raw); store.set(KEY,JSON.stringify(DB)); }
+    if(raw){ DB.settings.inq=JSON.parse(raw); }
   }catch(e){}
 }
 function funnelCard(bid, ym, rows){
@@ -5095,7 +5100,6 @@ function allView(){
 
 /* ---------- 설정 ---------- */
 function settingsView(){
-  const s=DB.settings;
   return `<div class="grid g2">
     <section class="card">
       <div class="card__hd"><h3>브랜드</h3>
@@ -5120,47 +5124,19 @@ function settingsView(){
           <button class="btn" data-act="import">JSON 불러오기</button>
           <button class="btn" data-act="reset" style="color:var(--alert)">전체 초기화</button>
         </div>
-        <p class="eyebrow" style="margin:12px 0 0">브라우저에 자동 저장됩니다. 기기를 옮길 땐 내보내기 파일을 쓰거나 아래 노션 동기화를 켜세요.</p>
+        <p class="eyebrow" style="margin:12px 0 0">입력은 바로 서버에 저장됩니다. 다른 기기에서는 같은 주소로 열면 됩니다.</p>
       </div>
     </section>
-  </div>
 
-  <section class="card" style="margin-top:14px">
-    <div class="card__hd"><h3>노션 동기화</h3>
-      <span class="eyebrow" style="margin-left:auto">${s.lastSync?'마지막 동기화 '+s.lastSync:'아직 동기화한 적 없음'}</span></div>
-    <div class="card__bd">
-      <label class="f"><span>노션 프록시 주소 (Vercel)</span>
-        <input type="text" id="setWorker" value="${esc(s.workerUrl)}" placeholder="https://ddl-brand.vercel.app/api/notion" /></label>
-      <label class="f"><span>관리자 비밀번호 (Vercel 환경변수 ADMIN_KEY와 같은 값)</span>
-        <input type="password" id="setAdminKey" value="${esc(adminKey())}" autocomplete="off" placeholder="이 브라우저에만 저장됩니다" /></label>
-      <div class="row2">
-        <label class="f"><span>콘텐츠 캘린더 DB ID</span><input type="text" id="db_contents" value="${esc(s.db.contents)}" /></label>
-        <label class="f"><span>업무 DB ID (주간 플랜)</span><input type="text" id="db_tasks" value="${esc(s.db.tasks)}" /></label>
-        <label class="f"><span>매출 DB ID</span><input type="text" id="db_sales" value="${esc(s.db.sales)}" /></label>
-        <label class="f"><span>제품 DB ID</span><input type="text" id="db_products" value="${esc(s.db.products)}" /></label>
-        <label class="f"><span>콘텐츠 기획안 DB ID</span><input type="text" id="db_plans" value="${esc(s.db.plans||'')}" /></label>
-        <label class="f"><span>비용 DB ID</span><input type="text" id="db_costs" value="${esc(s.db.costs||'')}" /></label>
-        <label class="f"><span>액션플랜 DB ID</span><input type="text" id="db_actions" value="${esc(s.db.actions||'')}" /></label>
+    <section class="card">
+      <div class="card__hd"><h3>관리자 비밀번호</h3></div>
+      <div class="card__bd">
+        <label class="f"><span>이 브라우저에만 저장됩니다</span>
+          <input type="password" id="setAdminKey" value="${esc(adminKey())}" autocomplete="off" placeholder="ADMIN_KEY" /></label>
+        <button class="btn btn--primary" data-act="save-admin">비밀번호 저장</button>
       </div>
-      <p class="eyebrow" style="margin:0 0 12px">DB는 노션에 이미 만들어 뒀습니다 · <a href="${NOTION_HUB}" target="_blank" rel="noopener" style="color:var(--accent)">노션에서 열기 →</a></p>
-      <label style="display:flex;gap:8px;align-items:center;margin:2px 0 12px">
-        <input type="checkbox" id="autoSync" ${s.auto===false?'':'checked'} style="width:16px;height:16px;accent-color:var(--ink)" />
-        자동 동기화 — 입력하면 노션에 바로 올리고, 화면을 열 때 자동으로 내려받습니다
-      </label>
-      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:4px">
-        <button class="btn btn--primary" data-act="save-sync">설정 저장</button>
-        <button class="btn" data-act="test">연결 테스트</button>
-        <button class="btn" data-act="push">노션으로 올리기</button>
-        <button class="btn" data-act="pull">노션에서 내려받기</button>
-      </div>
-      ${s.pullLog?`<div class="synclog"><div class="eyebrow">DB별 내려받기 결과 · ${esc(s.pullLog.at)}</div>
-        ${Object.entries(s.pullLog.kinds).map(([k,v])=>`<div class="synclog__r ${v.err?'is-bad':''}"><span>${esc(KIND_LABEL[k]||k)}</span><b>${v.err?esc(v.err):v.n+'건'}</b></div>`).join('')}</div>`:''}
-      <p class="eyebrow" style="margin:12px 0 0;line-height:1.7">
-        토큰은 Vercel 환경변수(NOTION_TOKEN)에만 두고 이 화면에는 넣지 않습니다. 관리자 비밀번호는 이 브라우저에만 남고 내보내기 파일에도 들어가지 않습니다.<br>
-        각 노션 DB에 필요한 속성은 저장소의 README.md에 정리돼 있습니다.
-      </p>
-    </div>
-  </section>`;
+    </section>
+  </div>`;
 }
 
 /* =========================================================
@@ -5503,7 +5479,7 @@ function renameChannels(bid, renames){
     const c=UI.ls&&UI.ls.cond&&UI.ls.cond[bid];
     if(c){ if(c.fees && c.fees[orig]!=null && c.fees[name]==null) c.fees[name]=c.fees[orig]; if(c.ch===orig) c.ch=name; }
   });
-  save(); saveUI(); if(n) autoSync();
+  save(); saveUI();
   return n;
 }
 function brandModal(id){
@@ -5521,7 +5497,7 @@ function brandModal(id){
       <div class="f"><span>판매 채널</span>
         <div id="b_chs">${b.channels.map(ch=>chRowHtml(ch)).join('')}</div>
         <button type="button" class="btn btn--sm" onclick="chRowAdd()" style="margin-top:6px">채널 추가</button>
-        <p class="eyebrow" style="margin:8px 0 0;line-height:1.6">왼쪽 손잡이를 끌어 순서를 바꿔요. 이 순서대로 매출·손익과 제품 탭에 나와요. 이름을 고치면 지난 매출·목표 기록과 노션의 채널 이름도 함께 바뀌어요. 지워도 지난 달 기록은 그대로 남아요.</p></div>`,
+        <p class="eyebrow" style="margin:8px 0 0;line-height:1.6">왼쪽 손잡이를 끌어 순서를 바꿔요. 이 순서대로 매출·손익과 제품 탭에 나와요. 이름을 고치면 지난 매출·목표 기록의 채널 이름도 함께 바뀌어요. 지워도 지난 달 기록은 그대로 남아요.</p></div>`,
     onSave:()=>{
       const v=$('#b_name').value.trim(); if(!v){ toast('브랜드명을 입력하세요'); return false; }
       b.name=v; b.ko=$('#b_ko').value.trim(); b.client=$('#b_client').value.trim();
@@ -5553,7 +5529,7 @@ const KIND={
     props:c=>({ '제목':{title:[{text:{content:c.title||c.type}}]}, '브랜드':{select:{name:brandOf(c.brandId)?.name||''}},
       '유형':{select:{name:c.type}}, '날짜':{date:{start:c.date, ...(c.end&&c.end!==c.date?{end:c.end}:{})}}, '완료':{checkbox:!!c.done},
       '메모':{rich_text:[{text:{content:c.memo||''}}]},
-            ...((c.att||[]).length && c.att.every(a=>a.id)?{'첨부':{files:c.att.map(a=>({type:'file_upload', file_upload:{id:a.id}, name:a.name}))}}:{}),
+            ...(Array.isArray(c.att) && c.att.every(a=>a.id)?{'첨부':{files:c.att.map(a=>({type:'file_upload', file_upload:{id:a.id}, name:a.name}))}}:{}),
       '로컬ID':{rich_text:[{text:{content:c.id}}]} }) },
   tasks:{ db:'tasks',
     props:t=>({ 'Task':{title:[{text:{content:t.title}}]}, 'Brand':{select:{name:brandOf(t.brandId)?.name||''}},
@@ -5563,7 +5539,7 @@ const KIND={
       ...(t.due?{'Due':{date:{start:t.start||t.due, ...(t.start&&t.start!==t.due?{end:t.due}:{})}}}:{}),
       'Status':{status:{name:t.done?'Done':'To do'}},
       ...(ownersOf(t).length?{'담당자':{multi_select:ownersOf(t).map(n=>({name:n}))}}:{}),
-      ...(t.memo?{'상세':{rich_text:[{text:{content:t.memo.slice(0,1900)}}]}}:{}),
+      ...(t.memo?{'상세':{rich_text:[{text:{content:t.memo}}]}}:{}),
       ...(t.rank!=null&&t.rank!==''?{'순서':{number:Number(t.rank)}}:{}) }) },
   sales:{ db:'sales',
     props:s=>({ '항목':{title:[{text:{content:`${brandOf(s.brandId)?.name||''} ${s.ym} ${s.channel}`}}]},
@@ -5580,14 +5556,14 @@ const KIND={
     props:p=>({ '주제':{title:[{text:{content:p.title||''}}]}, '브랜드':{select:{name:brandOf(p.brandId)?.name||''}},
       '월':{rich_text:[{text:{content:p.ym||''}}]}, '주차':{select:{name:p.week||'1주차'}},
       ...(p.axis?{'축':{rich_text:[{text:{content:p.axis}}]}}:{}),
-      ...(p.refs?{'레퍼런스':{rich_text:[{text:{content:p.refs.slice(0,1900)}}]}}:{}),
-      ...(p.body?{'내용':{rich_text:[{text:{content:p.body.slice(0,1900)}}]}}:{}),
+      ...(p.refs?{'레퍼런스':{rich_text:[{text:{content:p.refs}}]}}:{}),
+      ...(p.body?{'내용':{rich_text:[{text:{content:p.body}}]}}:{}),
       '형식':{select:{name:p.kind||'영상'}},
       ...(p.asset?{'소재':{select:{name:p.asset}}}:{}),
       ...(p.purpose?{'목적':{select:{name:p.purpose}}}:{}),
       ...(p.hook?{'훅유형':{select:{name:p.hook}}}:{}),
-      ...(p.assetNote?{'소재 메모':{rich_text:[{text:{content:p.assetNote.slice(0,1900)}}]}}:{}),
-      ...((p.att||[]).length && p.att.every(a=>a.id)?{'첨부':{files:p.att.map(a=>({type:'file_upload', file_upload:{id:a.id}, name:a.name}))}}:{}),
+      ...(p.assetNote?{'소재 메모':{rich_text:[{text:{content:p.assetNote}}]}}:{}),
+      ...(Array.isArray(p.att) && p.att.every(a=>a.id)?{'첨부':{files:p.att.map(a=>({type:'file_upload', file_upload:{id:a.id}, name:a.name}))}}:{}),
       ...(p.date?{'발행일':{date:{start:p.date}}}:{}),
       '완료':{checkbox:!!p.done}, '로컬ID':{rich_text:[{text:{content:p.id}}]} }) },
   actions:{ db:'actions',
@@ -5596,8 +5572,8 @@ const KIND={
       ...(a.goal!==''&&a.goal!=null?{'목표치':{number:Number(a.goal)}}:{}),
       ...(a.cur!==''&&a.cur!=null?{'현재치':{number:Number(a.cur)}}:{}),
       ...(a.unit?{'단위':{rich_text:[{text:{content:a.unit}}]}}:{}),
-      ...(a.memo?{'메모':{rich_text:[{text:{content:a.memo.slice(0,1900)}}]}}:{}),
-      '연결업무':{rich_text:[{text:{content:(a.taskIds||[]).join(',').slice(0,1900)}}]},
+      ...(a.memo?{'메모':{rich_text:[{text:{content:a.memo}}]}}:{}),
+      '연결업무':{rich_text:[{text:{content:(a.taskIds||[]).join(',')}}]},
       '로컬ID':{rich_text:[{text:{content:a.id}}]} }) },
   stats:{ db:'stats',
     props:s=>({ '제목':{title:[{text:{content:s.title||''}}]},
@@ -5614,13 +5590,13 @@ const KIND={
       '글자수':{number:Number(s.chars|| (s.body||'').length)},
       '이미지 유무':{checkbox:!!s.hasImg},
       ...(s.slot?{'발행시간대':{select:{name:s.slot}}}:{}),
-      ...(s.body?{'본문':{rich_text:[{text:{content:s.body.slice(0,1900)}}]}}:{}),
+      ...(s.body?{'본문':{rich_text:[{text:{content:s.body}}]}}:{}),
       '로컬ID':{rich_text:[{text:{content:s.id}}]} }) },
   refs:{ db:'refs',
     props:r=>({ '제목':{title:[{text:{content:r.title||''}}]}, '브랜드':{select:{name:brandOf(r.brandId)?.name||''}},
       '분류':{select:{name:r.cat||'릴스'}},
       ...(r.url?{'링크':{url:r.url}}:{}),
-      ...(r.memo?{'메모':{rich_text:[{text:{content:r.memo.slice(0,1900)}}]}}:{}),
+      ...(r.memo?{'메모':{rich_text:[{text:{content:r.memo}}]}}:{}),
       '로컬ID':{rich_text:[{text:{content:r.id}}]} }) },
   costs:{ db:'costs',
     props:c=>({ '항목':{title:[{text:{content:c.name||''}}]}, '브랜드':{select:{name:brandOf(c.brandId)?.name||''}},
@@ -5639,11 +5615,10 @@ const KIND={
 
 async function notionDrop(...recs){
   const ids=recs.filter(Boolean).map(r=>r.notionId).filter(Boolean);
-  if(!ids.length || !DB.settings.workerUrl) return;
-  let fail=0;
-  for(const id of ids){ try{ await api({action:'delete', page_id:id}); }catch(e){ fail++; } }
-  if(fail) toast(`노션에서 ${fail}건을 지우지 못했습니다`,3000);
-  else toast(`노션에서도 삭제했습니다`,2000);
+  if(!ids.length) return;
+  let fail=0, msg='';
+  for(const id of ids){ try{ await api({action:'delete', page_id:id}); }catch(e){ fail++; msg=e.message||msg; } }
+  if(fail) showSaveError(msg||'삭제하지 못했습니다');
 }
 /* 관리자 비밀번호: 이 브라우저에만 저장 (내보내기 파일·노션에는 들어가지 않음) */
 const ADMIN_STORE=KEY+':admin';
@@ -5655,7 +5630,7 @@ let __keyAsk=null, __keyDeclined=false;
 function askAdminKey(){
   if(__keyDeclined || SHARE_KEY || (EMBED&&EMBED.ro)) return Promise.resolve(false);
   return __keyAsk ||= new Promise(r=>setTimeout(()=>{
-    const v=(prompt('노션 연동에 필요한 관리자 비밀번호를 입력하세요')||'').trim();
+    const v=(prompt('관리자 비밀번호를 입력하세요')||'').trim();
     if(v) setAdminKey(v); else __keyDeclined=true;
     __keyAsk=null; r(!!v);
   }));
@@ -5669,8 +5644,7 @@ async function api(payload, retried){
   finally{ __apiActive--; const n=__apiQ.shift(); if(n) n(); }
 }
 async function __api(payload, retried, tries=0){
-  const url=DB.settings.workerUrl;
-  if(!url) throw new Error('노션 프록시 주소가 없습니다');
+  const url=PROXY_URL;
   const key=adminKey();
   const headers={'Content-Type':'application/json'};
   /* 헤더에는 한글을 못 실으니 인코딩해서 보냄 (서버에서 되돌림) */
@@ -5696,44 +5670,43 @@ async function testConn(){
   try{ await api({action:'ping'}); toast('연결됐습니다'); }
   catch(e){ toast('연결 실패: '+e.message,3200); }
 }
-async function pushAll(onlyDirty){
-  const s=DB.settings; let n=0,fail=0;
+let writeTimer=null, writing=false, writeAgain=false;
+function queueWrite(){
+  if(viewOnly()) return;
+  if(!adminKey()){ showSaveError('관리자 비밀번호가 필요합니다'); keyBar(); return; }
+  clearTimeout(writeTimer);
+  writeTimer=setTimeout(flushWrites, 200);
+}
+async function flushWrites(){
+  if(writing){ writeAgain=true; return; }
+  writing=true;
+  let fail=0, msg='';
   for(const kind of Object.keys(KIND)){
-    const dbId=s.db[KIND[kind].db]; if(!dbId) continue;
+    const dbId=DB.settings.db[KIND[kind].db]; if(!dbId) continue;
     for(const rec of DB[kind]){
-      if(onlyDirty && !rec.dirty && rec.notionId) continue;
+      if(!rec.dirty) continue;
+      rec._writing=true;
       try{
-        if(rec.notionId){ await api({action:'update', page_id:rec.notionId, properties:KIND[kind].props(rec)}); }
-        else{ const r=await api({action:'create', database_id:dbId, properties:KIND[kind].props(rec)}); rec.notionId=r.id; }
-        rec.dirty=false; n++;
-      }catch(e){ fail++; }
+        if(rec.notionId) await api({action:'update', page_id:rec.notionId, properties:KIND[kind].props(rec)});
+        else { const r=await api({action:'create', database_id:dbId, properties:KIND[kind].props(rec)}); rec.notionId=r.id; }
+        rec.dirty=false;
+      }catch(e){ fail++; msg=e.message||msg; }
+      finally{ rec._writing=false; }
     }
   }
-  DB.settings.lastSync=new Date().toLocaleString('ko-KR'); save();
-  if(fail && !adminKey() && !SHARE_KEY) toast(`관리자 비밀번호가 없어 노션에 ${fail}건이 저장되지 않았어요 · 설정 > 노션 동기화에서 입력하세요`,6000);
-  else if(!onlyDirty || n || fail) toast(`노션에 ${n}건 반영${fail?` · 실패 ${fail}건`:''}`,2200);
-  syncing=false;
-  const modalOpen=()=>!!document.querySelector('#layer')?.innerHTML.trim();
-  const quiet=window.__quietPush && onlyDirty && !fail; window.__quietPush=false;
-  if((!onlyDirty || n || fail) && !modalOpen() && !quiet) render();
-}
-
-/* ---------- 자동 동기화 ---------- */
-let syncTimer=null, syncing=false;
-function autoSync(){
-  if(!DB.settings.workerUrl || DB.settings.auto===false) return;
-  if(viewOnly()){ toast('보기 전용 링크라 노션에는 저장되지 않습니다',2400); return; }
-  clearTimeout(syncTimer);
-  syncTimer=setTimeout(async()=>{
-    if(syncing) { autoSync(); return; }
-    syncing=true;
-    try{ await pushAll(true); }catch(e){ syncing=false; toast('노션 반영 실패 — 설정에서 연결을 확인하세요',3000); }
-  },1500);
+  writing=false;
+  if(fail) showSaveError(msg||'저장하지 못했습니다');
+  else clearSaveError();
+  if(writeAgain){ writeAgain=false; queueWrite(); }
 }
 async function bootSync(){
-  if(!DB.settings.workerUrl || DB.settings.auto===false) return;
-  try{ await pullAll(true); }catch(e){}
-  keyBar();
+  if(!adminKey() && !SHARE_KEY && !EMBED){ keyBar(); return; }
+  try{
+    const clock=await api({action:'clock'});
+    liveSince=clock.now;
+    await pullAll(true);
+    startLive();
+  }catch(e){ showSaveError(e.message||'데이터를 불러오지 못했습니다'); }
 }
 /* 이 브라우저에 관리자 비밀번호가 없으면 화면 맨 위에 입력 칸 — 한 번 넣으면 이 브라우저에 저장 */
 function keyBar(){
@@ -5741,7 +5714,7 @@ function keyBar(){
   if(adminKey() || SHARE_KEY || EMBED || !DB.settings.workerUrl){ if(old) old.remove(); return; }
   if(old) return;
   const bar=document.createElement('div'); bar.id='keybar';
-  bar.innerHTML=`<span>이 브라우저는 노션과 연결되지 않았어요. 관리자 비밀번호를 한 번만 넣어 주세요.</span>
+  bar.innerHTML=`<span>관리자 비밀번호를 한 번만 넣어 주세요. 이 브라우저에 저장됩니다.</span>
     <input type="password" id="keybar_in" placeholder="관리자 비밀번호" autocomplete="current-password">
     <button type="button" id="keybar_ok">연결</button><em id="keybar_msg"></em>`;
   document.body.prepend(bar);
@@ -5750,9 +5723,8 @@ function keyBar(){
     setAdminKey(v); __keyDeclined=false;
     const msg=document.getElementById('keybar_msg'); msg.textContent='확인 중…';
     try{ await api({action:'ping'},true); }catch(e){ setAdminKey(''); msg.textContent='연결 실패: '+e.message; return; }
-    bar.remove(); toast('노션과 연결됐어요. 내려받는 중…',2000);
-    try{ await pullAll(false); }catch(e){}
-    autoSync();
+    bar.remove();
+    try{ await bootSync(); }catch(e){ showSaveError(e.message||'데이터를 불러오지 못했습니다'); }
   };
   document.getElementById('keybar_ok').onclick=go;
   document.getElementById('keybar_in').onkeydown=e=>{ if(e.key==='Enter') go(); };
@@ -5764,7 +5736,7 @@ async function pushBrands(){
     const res=await api({action:'query', database_id:dbId});
     const row=(res.results||[]).find(p=>(p.properties['항목']?.title?.[0]?.plain_text||'')==='brands');
     const props={ '항목':{title:[{text:{content:'brands'}}]},
-      '값':{rich_text:[{text:{content:JSON.stringify(DB.brands).slice(0,1900)}}]},
+      '값':{rich_text:[{text:{content:JSON.stringify(DB.brands)}}]},
       '수정시각':{rich_text:[{text:{content:new Date().toISOString()}}]} };
     if(row) await api({action:'update', page_id:row.id, properties:props});
     else await api({action:'create', database_id:dbId, properties:props});
@@ -5781,7 +5753,6 @@ async function pullBrands(){
     const list=JSON.parse(raw);
     if(Array.isArray(list)&&list.length){
       DB.brands=list.filter(b=>!isRemovedBrand(b));
-      store.set(KEY,JSON.stringify(DB));
       if(DB.brands.length!==list.length) await pushBrands();
     }
   }catch(e){}
@@ -5794,8 +5765,23 @@ function pullAll(quiet){
   __pulling=__pullAll(quiet).finally(()=>{ __pulling=null; __lastPull=Date.now(); });
   return __pulling;
 }
-async function __pullAll(quiet){
-  await pullBrands(); await pullConfig(); await pullTraffic(); await pullInquiries();
+async function applyDelta(payload){
+  const map={};
+  for(const k of Object.keys(KIND)){
+    const up=payload.upserts?.[k]||[], del=payload.deleted?.[k]||[];
+    if(!up.length && !del.length) continue;
+    map[k]={ results: up, deleted: del };
+  }
+  if(Object.keys(map).length) await __pullAll(true, map);
+  if((payload.upserts?.config||[]).length) await pullBrands();
+  if((payload.upserts?.inquiries||[]).length) await pullInquiries();
+  if((payload.upserts?.traffic||[]).length) await pullTraffic();
+}
+async function __pullAll(quiet, pre){
+  const gen=dataGen;
+  if(!pre){
+    await pullBrands(); await pullConfig(); await pullTraffic(); await pullInquiries();
+  }
   const s=DB.settings; let n=0;
   const snap=()=>JSON.stringify(['contents','tasks','sales','products','plans','costs','actions','refs','daily'].map(k=>DB[k]));
   const before=snap();
@@ -5812,22 +5798,27 @@ const brandByName=nm=>{
   b=DB.brands.find(x=>(x.aliases||[]).some(a=>normName(a)===n)); if(b) return b.id;
   return (DB.brands[0]||{}).id;
 };
-  const __kinds = Object.keys(KIND).filter(k=>s.db[KIND[k].db]);
-  const __res = {};
+  const __kinds = pre ? Object.keys(pre) : Object.keys(KIND).filter(k=>s.db[KIND[k].db]);
+  const __res = pre || {};
   const __err={};
-  await Promise.all(__kinds.map(async k=>{ try{ __res[k] = await api({action:'query', database_id:s.db[KIND[k].db]}); }catch(e){ __err[k]=String(e.message||e); } }));
-  /* DB별로 몇 건 읽었는지·왜 실패했는지 남김 (설정 > 노션 동기화에 표시) */
-  DB.settings.pullLog={at:new Date().toLocaleString('ko-KR'), kinds:Object.fromEntries(__kinds.map(k=>[k, __err[k]?{err:__err[k]}:{n:(__res[k]?.results||[]).length}]))};
+  if(!pre){
+    await Promise.all(__kinds.map(async k=>{ try{ __res[k] = await api({action:'query', database_id:s.db[KIND[k].db]}); }catch(e){ __err[k]=String(e.message||e); } }));
+  }
+  if(gen!==dataGen) return;
   const __bad=Object.keys(__err);
-  if(__bad.length) toast(`노션에서 못 읽은 DB: ${__bad.map(k=>(KIND_LABEL[k]||k)+' ('+__err[k]+')').join(', ')}`,8000);
+  if(__bad.length) showSaveError('일부 데이터를 불러오지 못했습니다');
+  const full=!pre;
   for(const kind of __kinds){
-    const dbId=s.db[KIND[kind].db]; if(!dbId) continue;
+    if(!DB[kind]) DB[kind]=[];
     const res = __res[kind]; if(!res) continue;
-    const seen=new Set((res.results||[]).map(pg=>pg.id));
-    DB[kind]=DB[kind].filter(r=>!r.notionId || seen.has(r.notionId));
+    const seen=new Set((res.results||[]).filter(pg=>!pg.archived).map(pg=>pg.id));
+    if(full) DB[kind]=DB[kind].filter(r=>!r.notionId || seen.has(r.notionId) || r.dirty || r._writing);
+    for(const id of (res.deleted||[])) DB[kind]=DB[kind].filter(r=>r.notionId!==id && r.id!==id || r.dirty || r._writing);
     for(const pg of (res.results||[])){
+      if(pg.archived){ DB[kind]=DB[kind].filter(r=>!(r.notionId===pg.id||r.id===pg.id) || r.dirty || r._writing); continue; }
       const P=pg.properties||{}; const lid=txt(P['로컬ID'])||pg.id;
       let rec=DB[kind].find(r=>r.id===lid) || DB[kind].find(r=>r.notionId && r.notionId===pg.id);
+      if(rec && (rec.dirty || rec._writing)) continue;
       if(!rec && kind==='daily'){ /* 브라우저에만 있던 같은 날짜·채널 행은 노션 행과 합침 (중복 생성 방지) */
         const bid=brandByName(sel(P['브랜드'])), dt=P['날짜']?.date?.start||'', ch=sel(P['채널']);
         rec=DB.daily.find(r=>!r.notionId && r.brandId===bid && r.date===dt && r.channel===ch);
@@ -5839,7 +5830,7 @@ const brandByName=nm=>{
         date:P['날짜']?.date?.start||TODAY, end:P['날짜']?.date?.end||'',
         type:(TYPE_ALIAS[sel(P['유형'])]||sel(P['유형'])||'EGC'),
         title:ttl(P['제목']), memo:txt(P['메모']), done:!!P['완료']?.checkbox,
-                att:(P['첨부']?.files||[]).map(f=>({name:f.name, url:f.file?.url||f.external?.url||'', mime:(/\.(mp4|mov|webm)$/i.test(f.name||'')?'video/mp4':'image/jpeg'), id:(rec.att||[]).find(a=>a.name===f.name)?.id })) });
+                att:(P['첨부']?.files||[]).map(f=>({name:f.name, url:f.file?.url||f.external?.url||'', mime:(/\.(mp4|mov|webm)$/i.test(f.name||'')?'video/mp4':'image/jpeg'), id:f.path||f.file_upload?.id||(rec.att||[]).find(a=>a.name===f.name)?.id||''})) });
         const fl=P['첨부']?.files||[];
         if(fl.length && !(rec.att||[]).length) rec.attView=fl.map(f=>({name:f.name, url:f.file?.url||f.external?.url||''}));
       }
@@ -5857,7 +5848,7 @@ const brandByName=nm=>{
       if(kind==='sales'){ Object.assign(rec,{brandId:brandByName(sel(P['브랜드'])), ym:txt(P['월']),
         channel:sel(P['채널']), goal:P['목표']?.number||0, actual:P['실적']?.number||0}); }
       if(kind==='plans'){ Object.assign(rec,{brandId:brandByName(sel(P['브랜드'])), ym:txt(P['월']),
-        att:(P['첨부']?.files||[]).map(f=>({name:f.name, url:f.file?.url||f.external?.url||'', mime:(/\.(mp4|mov|webm)$/i.test(f.name||'')?'video/mp4':'image/jpeg'), id:(rec.att||[]).find(a=>a.name===f.name)?.id })),
+        att:(P['첨부']?.files||[]).map(f=>({name:f.name, url:f.file?.url||f.external?.url||'', mime:(/\.(mp4|mov|webm)$/i.test(f.name||'')?'video/mp4':'image/jpeg'), id:f.path||f.file_upload?.id||(rec.att||[]).find(a=>a.name===f.name)?.id||''})),
         asset:sel(P['소재'])||'', assetNote:txt(P['소재 메모']),
         purpose:sel(P['목적'])||'', hook:sel(P['훅유형'])||'',
         week:sel(P['주차'])||'1주차', kind:sel(P['형식'])||'영상', date:P['발행일']?.date?.start||'', axis:txt(P['축']), title:ttl(P['주제']),
@@ -5889,9 +5880,7 @@ const brandByName=nm=>{
       n++;
     }
   }
-  DB.settings.lastSync=new Date().toLocaleString('ko-KR'); save();
-  if(!quiet) toast(`노션에서 ${n}건 내려받았습니다`,3000);
-  if(!quiet || before!==snap()){ const __ly=document.querySelector('#layer'); if(!__ly || !__ly.innerHTML.trim()){ const __v=document.getElementById('view'); let __h=null; try{ __h=viewHtml(); }catch(e){ __h=null; } if(!__v || __h===null || __h!==__v.innerHTML) render(); } }
+  if(before!==snap() && !document.querySelector('#layer')?.innerHTML.trim()) render();
 }
 
 /* =========================================================
@@ -6073,19 +6062,11 @@ function act(a){
   if(a==='cost-new') return costModal(null);
   if(a==='action-new') return actionModal(null);
   if(a==='brand-new') return brandModal(null);
-  if(a==='save-sync'){
-    DB.settings.workerUrl=$('#setWorker').value.trim().replace(/\/$/,'');
-    setAdminKey($('#setAdminKey').value.trim()); __keyDeclined=false;
-    DB.settings.db={...NOTION_DB, ...DB.settings.db, contents:$('#db_contents').value.trim(),tasks:$('#db_tasks').value.trim(),
-                    sales:$('#db_sales').value.trim(),products:$('#db_products').value.trim(),
-                    plans:$('#db_plans').value.trim(),costs:$('#db_costs').value.trim(),
-                    actions:$('#db_actions').value.trim()};
-    DB.settings.auto=$('#autoSync').checked;
-    save(); toast('설정을 저장했습니다'); render(); return;
+  if(a==='save-admin'){
+    setAdminKey(($('#setAdminKey')&&$('#setAdminKey').value||'').trim()); __keyDeclined=false;
+    const bar=document.getElementById('keybar'); if(bar) bar.remove();
+    bootSync(); return;
   }
-  if(a==='test') return testConn();
-  if(a==='push') return pushAll();
-  if(a==='pull') return pullAll();
   if(a==='export'){
     const blob=new Blob([JSON.stringify(DB,null,2)],{type:'application/json'});
     const url=URL.createObjectURL(blob); const link=document.createElement('a');
@@ -6096,12 +6077,15 @@ function act(a){
     const inp=document.createElement('input'); inp.type='file'; inp.accept='application/json';
     inp.onchange=()=>{ const f=inp.files[0]; if(!f)return;
       const rd=new FileReader(); rd.onload=()=>{ try{ const d=JSON.parse(rd.result);
-          if(!d.brands) throw new Error('형식이 다릅니다'); DB=d; save(); toast('불러왔습니다'); render();
+          if(!d.brands) throw new Error('형식이 다릅니다');
+          DB=d;
+          for(const k of Object.keys(KIND)) (DB[k]||[]).forEach(r=>{ r.dirty=true; });
+          save(); pushBrands(); toast('불러왔습니다'); render();
         }catch(e){ toast('불러오기 실패: '+e.message,3000); } }; rd.readAsText(f); };
     inp.click(); return;
   }
   if(a==='reset'){
-    if(confirm('모든 데이터를 지웁니다. 먼저 내보내기를 권합니다. 계속할까요?')){ DB=blank(); save(); toast('초기화했습니다'); render(); }
+    if(confirm('화면을 서버에 저장된 내용으로 다시 불러옵니다. 서버의 데이터는 지우지 않습니다. 계속할까요?')){ dataGen++; DB=blank(); try{ const me=JSON.parse(store.get(KEY+':me')||'null'); if(typeof me==='string') DB.settings.me=me; }catch(e){} render(); bootSync(); }
   }
 }
 
@@ -6115,15 +6099,69 @@ if(SHARE_KEY){
 }
 render();
 bootSync();
-/* 자동 갱신 */
-function liveRefresh(){
-  if(!DB.settings.workerUrl || DB.settings.auto===false) return;
-  if(document.querySelector('#layer')?.innerHTML) return;
-  /* 창을 오갈 때마다 전체를 다시 읽으면 노션 요청 제한에 걸림 — 마지막으로 읽고 2분 지났을 때만 */
-  if(__pulling || Date.now()-__lastPull<120000) return;
-  pullAll(true).catch(()=>{});
+/* 다른 탭의 변경: Realtime이 연결되면 그 신호를 받고, 아니면 8초마다 변경분만 읽음 */
+let liveSince=null, pollTimer=null, rtClient=null;
+const RT_TABLES=['content_calendar','weekly_plan','sales','products','content_plans','costs','action_plan','app_settings','references','threads_performance','daily_sales','oem_inquiries_yj','visit_stats_yj'];
+function startPollLoop(){
+  if(pollTimer) return;
+  pollTimer=setInterval(()=>{ pollChanges().catch(()=>{}); }, POLL_MS);
 }
-if(EMBED) setInterval(liveRefresh, 120000);
+function stopPollLoop(){ if(pollTimer){ clearInterval(pollTimer); pollTimer=null; } }
+async function pollChanges(){
+  if(!liveSince || document.hidden) return;
+  if(document.querySelector('#layer')?.innerHTML.trim()) return;
+  const gen=dataGen;
+  const res=await api({action:'changes', since:liveSince});
+  if(gen!==dataGen) return;
+  liveSince=res.now||liveSince;
+  await applyDelta(res);
+}
+function schedulePoll(){
+  clearTimeout(schedulePoll._t);
+  schedulePoll._t=setTimeout(()=>{ pollChanges().catch(()=>{}); }, 250);
+}
+function loadSupabaseJs(){
+  if(window.supabase) return Promise.resolve();
+  return new Promise((resolve,reject)=>{
+    const s=document.createElement('script');
+    s.src='https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.47.10/dist/umd/supabase.js';
+    s.onload=()=>resolve();
+    s.onerror=()=>reject(new Error('realtime'));
+    document.head.appendChild(s);
+  });
+}
+async function startLive(){
+  stopPollLoop();
+  let rt=null;
+  try{ rt=await api({action:'realtime'}); }catch(e){ rt=null; }
+  if(!rt || !rt.realtime || !rt.token || !rt.url){ startPollLoop(); return; }
+  try{ await loadSupabaseJs(); }catch(e){ startPollLoop(); return; }
+  if(rtClient){ try{ rtClient.removeAllChannels(); }catch(e){} }
+  const sb=window.supabase.createClient(rt.url, rt.anonKey||rt.token, {
+    auth:{ persistSession:false, autoRefreshToken:false, detectSessionInUrl:false },
+  });
+  rtClient=sb;
+  sb.realtime.setAuth(rt.token);
+  const ch=sb.channel('ddl-brand');
+  for(const table of RT_TABLES){
+    ch.on('postgres_changes', { event:'*', schema:'notion', table }, ()=>schedulePoll());
+  }
+  let joined=false;
+  const timer=setTimeout(()=>{ if(!joined) startPollLoop(); }, 4000);
+  ch.subscribe((status)=>{
+    if(status==='SUBSCRIBED'){ joined=true; clearTimeout(timer); stopPollLoop(); }
+    if(status==='CHANNEL_ERROR' || status==='TIMED_OUT' || status==='CLOSED'){ joined=false; startPollLoop(); }
+  });
+  if(!startLive._refresh){
+    startLive._refresh=setInterval(async()=>{
+      try{
+        const next=await api({action:'realtime'});
+        if(next && next.token && rtClient) rtClient.realtime.setAuth(next.token);
+      }catch(e){}
+    }, 4*60*1000);
+  }
+}
+document.addEventListener('visibilitychange',()=>{ if(!document.hidden) pollChanges().catch(()=>{}); });
 /* 임베드 높이를 부모 페이지에 알림 */
 if(EMBED){
   const postH=()=>{ try{ const el=document.getElementById('view'); const h=el? el.getBoundingClientRect().height+28 : document.documentElement.scrollHeight; parent.postMessage({ddlHeight: Math.ceil(h)}, '*'); }catch(e){} };
@@ -6142,7 +6180,7 @@ setTimeout(function(){
   var app = document.getElementById("app"); if(!app) return;
   app.innerHTML = '<div style="max-width:520px;margin:80px auto;padding:24px;border:1px solid #E2E2DA;border-radius:14px;font:14px/1.7 -apple-system,BlinkMacSystemFont,system-ui,sans-serif;background:#fff">'+
     '<b style="font-size:15px">화면을 불러오지 못했습니다</b><br>'+
-    '<span style="color:#6B6B64">잠시 후 다시 시도하거나, 아래 버튼으로 이 브라우저의 임시 저장본을 지우고 노션에서 다시 받아올 수 있습니다. 노션 데이터는 지워지지 않습니다.</span>'+
+    '<span style="color:#6B6B64">잠시 후 다시 시도해 주세요. 서버의 데이터는 이 화면을 지워도 남아 있습니다.</span>'+
     '<div style="margin-top:8px;color:#9A9A93;font-size:12px">'+ (window.__bootErr||"") +'</div>'+
     '<div style="display:flex;gap:8px;margin-top:16px">'+
       '<button id="__rl" style="padding:9px 14px;border-radius:9px;border:1px solid #E2E2DA;background:#fff;cursor:pointer">새로고침</button>'+

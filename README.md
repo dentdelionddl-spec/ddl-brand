@@ -1,19 +1,26 @@
 # DDL 브랜드커머스 관리
 
 브랜드를 고르면 그 브랜드의 **채널별 매출 목표·실적 / 운영 캘린더 / 업무 / 제품**이 한 화면에 뜹니다.
-정적 페이지 + Vercel 함수(노션 프록시) + 노션(데이터 보관) 구조입니다.
+정적 페이지 + Vercel 함수 + Supabase입니다. 브라우저는 Supabase를 직접 열지 않고, 입력은 그 요청으로 바로 저장됩니다.
 
 ```
-브라우저(ddl-brand.vercel.app)  ──POST──►  /api/notion (Vercel 함수)  ──►  Notion API
-        ▲                                 (토큰·관리자 비밀번호 확인)
-        └── 평소엔 브라우저 로컬 저장으로 즉시 동작
+브라우저(ddl-brand.vercel.app)  ──POST──►  /api/notion (Vercel 함수)  ──►  Supabase
+                                         (관리자 비밀번호 확인, 서비스 롤)
 ```
+
+공개 일정은 `/api/schedule` 이 같은 테이블을 읽습니다.
 
 ---
 
-## 1. 배포
+## 1. 배포 전에 할 일
+
+1. Supabase SQL Editor에서 `supabase/migrations/20261128143000_ddl_brand_supabase_cutover.sql` 을 한 번 실행합니다. 이미 옮겨 둔 `notion` 스키마 행은 지우지 않습니다.
+2. 아래 환경변수를 넣습니다.
+3. 그 다음 이 코드를 배포합니다.
 
 `index.html`과 `api/`를 Vercel 프로젝트 하나로 함께 배포합니다. 주소는 `https://ddl-brand.vercel.app`입니다.
+
+SQL을 적용하기 전에는 조회가 실패합니다. 실시간 구독용 SQL(역할·RLS·publication)까지 들어 있습니다. `SUPABASE_JWT_SECRET` 이 없으면 화면은 8초마다 변경분 조회로 따라갑니다.
 
 ## 2. Vercel 환경변수
 
@@ -21,12 +28,14 @@ Vercel → 프로젝트 → Settings → Environment Variables
 
 | 이름 | 필수 | 값 |
 |---|---|---|
-| `NOTION_TOKEN` | 필수 | 노션 인테그레이션 토큰 |
+| `SUPABASE_URL` | 필수 | Supabase 프로젝트 URL |
+| `SUPABASE_SERVICE_ROLE_KEY` | 필수 | 서비스 롤 키. 서버 전용. 브라우저·`index.html`에 넣지 않습니다 |
 | `ADMIN_KEY` | 필수 | 관리자 비밀번호. 길고 무작위로 (예: `openssl rand -base64 24`) |
+| `SUPABASE_JWT_SECRET` | 실시간 | 대시보드 JWT secret. 5분짜리 읽기 전용 토큰을 서명합니다. 없으면 8초 폴링 |
+| `SUPABASE_ANON_KEY` | 실시간 | 브라우저 Realtime 연결에 쓰는 공개 키. 테이블 권한은 없습니다 |
 | `ALLOW_ORIGIN` | 선택 | CORS 허용 주소, 쉼표로 여러 개. 기본값 `https://ddl-brand.vercel.app` |
-| `EXTRA_DB_IDS` | 선택 | 아래 목록 밖의 노션 DB를 더 쓸 때 ID를 쉼표로 |
 
-값을 바꾼 뒤에는 **Redeploy**해야 반영됩니다.
+`NOTION_TOKEN` 과 `EXTRA_DB_IDS` 는 더 이상 읽지 않습니다. 값을 바꾼 뒤에는 **Redeploy**해야 반영됩니다.
 
 ### 관리자 비밀번호 넣기
 
@@ -37,6 +46,8 @@ Vercel → 프로젝트 → Settings → Environment Variables
 정적 페이지라 코드에 비밀값을 숨길 수 없어서, 비밀값은 사람이 입력하고 서버가 `ADMIN_KEY`와 비교하는 방식을 씁니다.
 비밀번호가 새면 `ADMIN_KEY`를 바꾸고 Redeploy하면 됩니다(모든 기기에서 다시 입력).
 
+서비스 롤 키는 서버에만 있습니다. 다른 탭의 변경은 Supabase Realtime(`brand_realtime` 역할, SELECT RLS)로 받고, 그 토큰을 못 만들면 8초마다 `/api/notion` 의 `changes` 를 읽습니다.
+
 ### 프록시가 받는 요청
 
 | 누구 | 보내는 헤더 | 할 수 있는 일 |
@@ -46,13 +57,15 @@ Vercel → 프로젝트 → Settings → Environment Variables
 | 임베드 `?embed=1&brand=…` | `X-Embed-Brand` | 그 브랜드의 콘텐츠·업무·기획만 조회 |
 | 그 밖 | 없음 | `401` |
 
-- 허용 DB는 `api/notion.js` 위쪽 `DBS` 목록입니다(`index.html`의 `NOTION_DB`·`INQ_DB`·`TRAFFIC_DB`와 같은 값). 목록 밖 DB는 관리자라도 `403`입니다. 설정 화면에서 DB ID를 바꿨다면 `DBS`나 `EXTRA_DB_IDS`에도 넣으세요.
-- 공유·임베드에서는 쓰기가 막혀 있어, 그 화면에서 고친 내용은 노션에 올라가지 않습니다. 쓰기가 필요한 임베드(업로드 화면)는 처음 저장할 때 관리자 비밀번호를 묻습니다.
+- 허용 DB는 `lib/pages.js` 의 표입니다(`index.html`의 `NOTION_DB`와 같은 ID). 목록 밖 DB는 관리자라도 `403`입니다.
+- 공유·임베드에서는 쓰기가 막혀 있습니다. 쓰기가 필요한 임베드(업로드 화면)는 처음 저장할 때 관리자 비밀번호를 묻습니다.
 - 공유 링크는 공유키가 비밀이라 안전하지만, 임베드 주소에는 비밀이 없어 브랜드 이름만 알면 그 브랜드 일정이 보입니다. 외부에 일정만 보일 땐 `/api/schedule?brand=…`를 쓰세요.
 
-## 3. 노션 DB — 이미 만들어 뒀습니다
+## 3. 저장 테이블
 
-`프로젝트 DDL > 🛍 브랜드커머스 관리` 아래에 DB 4개를 생성했고, ID는 `index.html`에 미리 넣어 뒀습니다.
+행은 Supabase `notion` 스키마에 이미 있습니다. API는 `public` 의 security_invoker 뷰로 읽고 씁니다. 화면의 DB ID는 예전과 같습니다.
+
+`프로젝트 DDL > 🛍 브랜드커머스 관리` 의 ID는 `index.html`에 미리 넣어 뒀습니다.
 브랜드 선택지(VIVICATE·ARIKIV·AUBE SEOUL·RUHEL·USUEL·FLUD K·OOTN)와 유형·영역·담당자 옵션도 채워져 있습니다.
 
 | DB | ID | 뷰 |
@@ -64,8 +77,7 @@ Vercel → 프로젝트 → Settings → Environment Variables
 
 매출 DB에는 VIVICATE 8·9월 온라인 목표(자사몰 800·1,000 / ZVZO 200·200 / 29CM 900·1,200만원)를 넣어 뒀습니다.
 
-**남은 것 하나** — 노션 인테그레이션을 위 DB 4개에 각각 연결(⋯ → 연결)해야 API가 읽고 씁니다.
-`로컬ID` 속성은 관리페이지와 노션을 짝지어 주는 값이라 지우지 마세요.
+`로컬ID` 열은 화면의 행과 서버 행을 짝지어 주는 값이라 비우지 마세요.
 
 ---
 
@@ -77,8 +89,7 @@ Vercel → 프로젝트 → Settings → Environment Variables
 - **매출** — 목표·실적을 칸에 바로 입력하면 저장됩니다. 채널 구성은 브랜드별로 다르게 둘 수 있습니다.
 - **모든 브랜드 비교** — 7개 브랜드를 같은 진도선 기준으로 한 화면에서 봅니다.
 
-데이터는 입력 즉시 브라우저에 저장되고, 노션 반영은 **설정 → 노션으로 올리기**를 누를 때 합니다.
-다른 기기에서 이어서 볼 땐 **노션에서 내려받기**를 먼저 누르세요.
+입력은 바로 서버에 저장됩니다. 다른 탭·다른 기기는 같은 주소에서 그 변경을 봅니다.
 
 ## 손볼 자리
 
