@@ -1,0 +1,11 @@
+{
+  "name": "ddl-brand",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test": "node --test"
+  },
+  "devDependencies": {
+    "puppeteer-core": "^24.15.0"
+  }
+}
